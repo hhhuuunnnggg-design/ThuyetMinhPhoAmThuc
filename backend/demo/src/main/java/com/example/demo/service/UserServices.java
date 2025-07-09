@@ -170,6 +170,10 @@ public class UserServices {
                 .build();
     }
 
+    public void handleDeleteUser(Long id) {
+        this.userServiceRepository.deleteById(id);
+    }
+
     // // tìm nhiều giá trị
     // public ResultPaginationDTO fetchAllUser(Specification<User> spec, Pageable
     // pageable) {

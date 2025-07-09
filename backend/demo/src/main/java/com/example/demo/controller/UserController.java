@@ -1,7 +1,11 @@
 package com.example.demo.controller;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -55,15 +59,14 @@ public class UserController {
         return ResponseEntity.ok(userService.convertToResUpdateUserDTO(updatedUser));
     }
 
-    // // tìm all user
-    // @GetMapping("")
-    // @ApiMessage("fetch all users")
-    // public ResponseEntity<?> getAllUser(
-    // @Filter Specification<User> spec,
-    // Pageable pageable) {
-    // return
-    // ResponseEntity.status(HttpStatus.OK).body(this.userService.fetchAllUser(spec,
-    // pageable));
-    // }
+    // xóa
+    @DeleteMapping("/{id}")
+    @ApiMessage(value = "delete a user")
+    public ResponseEntity<Map<String, String>> deleteUser(@PathVariable long id) throws IdInvalidException {
+        this.userService.handleDeleteUser(id);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Đã xóa thành công");
+        return ResponseEntity.ok(response);
+    }
 
 }
