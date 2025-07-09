@@ -174,29 +174,8 @@ public class UserServices {
         this.userServiceRepository.deleteById(id);
     }
 
-    // // tìm nhiều giá trị
-    // public ResultPaginationDTO fetchAllUser(Specification<User> spec, Pageable
-    // pageable) {
-    // Page<User> pageUser = this.userServiceRepository.findAll(spec, pageable);
-    // ResultPaginationDTO rs = new ResultPaginationDTO();
-    // ResultPaginationDTO.Meta mt = new ResultPaginationDTO.Meta();
-
-    // mt.setPage(pageable.getPageNumber() + 1);
-    // mt.setPageSize(pageable.getPageSize());
-
-    // mt.setPages(pageUser.getTotalPages());
-    // mt.setTotal(pageUser.getTotalElements());
-
-    // rs.setMeta(mt);
-
-    // // remove sensitive data
-    // List<ResUserDTO> listUser = pageUser.getContent()
-    // .stream().map(item -> this.convertToResUserDTO(item))
-    // .collect(Collectors.toList());
-
-    // rs.setResult(listUser);
-
-    // return rs;
-    // }
+    public void handleSaveImg(User user) {
+        this.userServiceRepository.save(user);
+    }
 
 }
