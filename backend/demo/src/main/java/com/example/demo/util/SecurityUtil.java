@@ -46,24 +46,22 @@ public class SecurityUtil {
     public String createAccessToken(String email, ResLoginDTO dto) {
         // Dữ liệu người dùng này sẽ được nhúng vào trong token →
         // giúp backend đọc ra thông tin user mà không cần truy DB mỗi lần.
-        ResLoginDTO.UserInsideToken userToken = new ResLoginDTO.UserInsideToken();
-        userToken.setId(dto.getUser().getId());
-        userToken.setEmail(dto.getUser().getEmail());
-        userToken.setIs_admin(dto.getUser().getIs_admin());
-        userToken.setFullName(dto.getUser().getFullname());
-        // hùng tự thêm
-        userToken.setRole(dto.getUser().getRole());
         // thiết lập thời gian sống cho token
         Instant now = Instant.now();
         Instant validity = now.plus(this.accessTokenExpiration, ChronoUnit.SECONDS);
 
         // @formatter:off
-//        dữ liệu chính trong token
+//        dữ liệu chính trong token - chỉ đưa primitive values để tránh reflection issues
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuedAt(now)
                 .expiresAt(validity)
                 .subject(email)
-                .claim("user", userToken)
+                .claim("user_id", dto.getUser().getId())
+                .claim("user_email", dto.getUser().getEmail())
+                .claim("user_fullname", dto.getUser().getFullname())
+                .claim("user_is_admin", dto.getUser().getIs_admin())
+                .claim("user_role_id", dto.getUser().getRole() != null ? dto.getUser().getRole().getId() : null)
+                .claim("user_role_name", dto.getUser().getRole() != null ? dto.getUser().getRole().getName() : null)
                 .build();
 
 //        Mã hóa JWT bằng thuật toán HS512 và trả về chuỗi token dạng eyJhbGciOi...
@@ -76,20 +74,17 @@ public class SecurityUtil {
         Instant now = Instant.now();
         Instant validity = now.plus(this.refreshTokenExpiration, ChronoUnit.SECONDS);
 
-        ResLoginDTO.UserInsideToken userToken = new ResLoginDTO.UserInsideToken();
-        userToken.setId(dto.getUser().getId());
-        userToken.setEmail(dto.getUser().getEmail());
-        userToken.setIs_admin(dto.getUser().getIs_admin());
-        userToken.setFullName(dto.getUser().getFullname());
-        // hùng tự thêm
-        userToken.setRole(dto.getUser().getRole());
-        //userToken.setRole(dto.getUser().getRole());
         // @formatter:off
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuedAt(now)
                 .expiresAt(validity)
                 .subject(email)
-                .claim("user", userToken)
+                .claim("user_id", dto.getUser().getId())
+                .claim("user_email", dto.getUser().getEmail())
+                .claim("user_fullname", dto.getUser().getFullname())
+                .claim("user_is_admin", dto.getUser().getIs_admin())
+                .claim("user_role_id", dto.getUser().getRole() != null ? dto.getUser().getRole().getId() : null)
+                .claim("user_role_name", dto.getUser().getRole() != null ? dto.getUser().getRole().getName() : null)
                 .build();
 
         JwsHeader jwsHeader = JwsHeader.with(JWT_ALGORITHM).build();

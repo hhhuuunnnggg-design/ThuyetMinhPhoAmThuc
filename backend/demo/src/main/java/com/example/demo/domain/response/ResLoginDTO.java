@@ -36,15 +36,4 @@ public class ResLoginDTO {
         private UserLogin user;
     }
 
-    @Data
-    @AllArgsConstructor
-    @NoArgsConstructor
-    public static class UserInsideToken {
-        private long id;
-        private String email;
-        private Boolean is_admin;
-        private String fullName;
-        private Role role;
-    }
-
 }
