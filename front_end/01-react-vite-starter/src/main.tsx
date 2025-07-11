@@ -8,6 +8,7 @@ import LoginPage from "./pages/client/auth/login";
 import RegisterPage from "./pages/client/auth/register";
 import BookPage from "./pages/client/book";
 
+import HomePage from "./pages/client/home";
 import "./styles/global.scss";
 
 const router = createBrowserRouter([
@@ -22,6 +23,10 @@ const router = createBrowserRouter([
             <BookPage />
           </div>
         ),
+      },
+      {
+        index: true,
+        element: <HomePage />,
       },
       {
         path: "/about",
