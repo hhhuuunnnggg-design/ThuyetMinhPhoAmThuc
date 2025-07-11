@@ -2,10 +2,19 @@
 //import { loginAPI } from "@/services/api";
 import { registerAPI } from "@/services/api";
 import type { FormProps } from "antd";
-import { Button, DatePicker, Divider, Form, Input, Select, Steps } from "antd";
+import {
+  App,
+  Button,
+  DatePicker,
+  Divider,
+  Form,
+  Input,
+  Select,
+  Steps,
+} from "antd";
 import type { Dayjs } from "dayjs";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./register.scss";
 
 // loại dữ liệu mà bạn phải điền vào
@@ -39,6 +48,8 @@ interface UserData {
 }
 
 const RegisterPage = () => {
+  const { message } = App.useApp();
+  const navigate = useNavigate();
   const [isSubmit, setIsSubmit] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [form] = Form.useForm();
@@ -63,6 +74,15 @@ const RegisterPage = () => {
     if (values.bio) userData.bio = values.bio;
 
     const res = await registerAPI(userData);
+    if (res.data) {
+      //success
+      message.success("Đăng ký user thành công.");
+      navigate("/login");
+    } else {
+      //error
+      console.log(">>> Register error: ", res);
+      message.error(res.mesage);
+    }
     console.log(">>> Register response: ", res);
 
     setIsSubmit(false);

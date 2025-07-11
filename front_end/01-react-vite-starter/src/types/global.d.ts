@@ -5,7 +5,7 @@ declare global {
   // dạng trả về của data type
   interface IBackendRes<T> {
     error?: string | string[];
-    message: string;
+    mesage: string;
     statusCode: number | string;
     data?: T;
   }
