@@ -45,4 +45,7 @@ declare global {
     fullname: string;
     is_admin: boolean;
   }
+  interface IFetchAccount {
+    user: IUser;
+  }
 }
