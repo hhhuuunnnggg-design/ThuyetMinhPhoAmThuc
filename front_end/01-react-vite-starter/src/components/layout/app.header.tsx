@@ -1,4 +1,5 @@
 import Restricted from "@/components/common/restricted";
+import { useCurrentApp } from "@/components/context/app.context";
 import { logout } from "@/redux/slice/auth.slice";
 import { RootState } from "@/redux/store";
 import { logoutAPI } from "@/services/api";
@@ -10,11 +11,14 @@ const AppHeader = () => {
   const user = useSelector((state: RootState) => state.auth.user);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { setIsAuthenticated, setUser } = useCurrentApp();
 
   const handleLogout = async () => {
     try {
       await logoutAPI();
       dispatch(logout());
+      setIsAuthenticated(false);
+      setUser(null);
       localStorage.removeItem("access_token");
       message.success("Đăng xuất thành công!");
       navigate("/login");

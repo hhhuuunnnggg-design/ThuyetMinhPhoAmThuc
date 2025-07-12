@@ -26,7 +26,7 @@ const LoginPage = () => {
           })
         );
         message.success("Đăng nhập thành công!");
-        navigate("/");
+        navigate("/admin");
       }
     } catch (error: any) {
       message.error(error.mesage || "Đăng nhập thất bại!");
