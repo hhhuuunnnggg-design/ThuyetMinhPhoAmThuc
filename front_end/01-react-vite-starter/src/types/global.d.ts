@@ -1,8 +1,7 @@
 export {};
 
-// output type
 declare global {
-  // dạng trả về của data type
+  // Backend response structure
   interface IBackendRes<T> {
     error?: string | string[];
     mesage: string;
@@ -20,7 +19,41 @@ declare global {
     results: T[];
   }
 
-  //các data type
+  // Permission interface
+  interface IPermission {
+    id: number;
+    name: string;
+    apiPath: string;
+    method: string;
+    module: string;
+    createdAt: string;
+    updatedAt: string | null;
+    createdBy: string;
+    updatedBy: string | null;
+  }
+
+  // Role interface
+  interface IRole {
+    id: number;
+    name: string;
+    description: string;
+    active: boolean;
+    createdAt: string;
+    updatedAt: string | null;
+    createdBy: string;
+    updatedBy: string | null;
+    permissions: IPermission[];
+  }
+
+  // User interface
+  interface IUser {
+    id: number;
+    email: string;
+    fullname: string;
+    role: IRole;
+  }
+
+  // Data types
   interface ILogin {
     access_token: string;
     user: {
@@ -28,6 +61,7 @@ declare global {
       email: string;
       fullname: string;
       is_admin: boolean;
+      role: IRole;
     };
   }
 
@@ -39,13 +73,17 @@ declare global {
     createdAt: string;
   }
 
-  interface IUser {
-    id: number;
-    email: string;
-    fullname: string;
-    is_admin: boolean;
-  }
   interface IFetchAccount {
     user: IUser;
+  }
+
+  // User data for admin table
+  interface IUserData {
+    id: number;
+    email: string;
+    firstName: string;
+    lastName: string;
+    gender: string;
+    createdAt: string;
   }
 }

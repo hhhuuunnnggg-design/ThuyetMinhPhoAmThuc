@@ -1,8 +1,11 @@
+import store from "@/redux/store";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { Provider } from "react-redux";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import Layout from "./layout";
+import UsersPage from "./pages/admin/users";
 import AboutPage from "./pages/client/about";
 import LoginPage from "./pages/client/auth/login";
 import RegisterPage from "./pages/client/auth/register";
@@ -19,52 +22,41 @@ const router = createBrowserRouter([
     element: <Layout />,
     children: [
       {
-        path: "/book",
-        element: (
-          <div>
-            <BookPage />
-          </div>
-        ),
-      },
-      {
         index: true,
         element: <HomePage />,
       },
       {
+        path: "/book",
+        element: <BookPage />,
+      },
+      {
         path: "/about",
-        element: (
-          <div>
-            <AboutPage />
-          </div>
-        ),
+        element: <AboutPage />,
+      },
+      {
+        path: "/admin",
+        element: <UsersPage />,
       },
     ],
   },
   {
     path: "/login",
-    element: (
-      <div>
-        <LoginPage />
-      </div>
-    ),
+    element: <LoginPage />,
   },
   {
     path: "/register",
-    element: (
-      <div>
-        <RegisterPage />
-      </div>
-    ),
+    element: <RegisterPage />,
   },
 ]);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    {/* <Layout /> */}
-    <App>
-      <AppProvider>
-        <RouterProvider router={router} />
-      </AppProvider>
-    </App>
+    <Provider store={store}>
+      <App>
+        <AppProvider>
+          <RouterProvider router={router} />
+        </AppProvider>
+      </App>
+    </Provider>
   </StrictMode>
 );

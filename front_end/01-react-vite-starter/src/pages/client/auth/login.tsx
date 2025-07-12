@@ -1,96 +1,66 @@
-import { useCurrentApp } from "@/components/context/app.context";
+import { setAuth } from "@/redux/slice/auth.slice";
 import { loginAPI } from "@/services/api";
-import type { FormProps } from "antd";
-import { App, Button, Divider, Form, Input } from "antd";
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Button, Form, Input, message } from "antd";
+import { useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import "./login.scss";
 
-type FieldType = {
+interface LoginFormValues {
   email: string;
   password: string;
-};
+}
 
 const LoginPage = () => {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [isSubmit, setIsSubmit] = useState(false);
-  const { message, notification } = App.useApp();
-  const { setIsAuthenticated, setUser } = useCurrentApp();
 
-  const onFinish: FormProps<FieldType>["onFinish"] = async (values) => {
-    const { email, password } = values;
-    setIsSubmit(true);
-    const res = await loginAPI(email, password);
-    setIsSubmit(false);
-    if (res?.data) {
-      setIsAuthenticated(true);
-      // console.log(res);
-      // console.log(res.data);
-      setUser(res.data.user);
-      localStorage.setItem("access_token", res.data.access_token);
-
-      message.success("Đăng nhập tài khoản thành công!");
-      navigate("/");
-    } else {
-      notification.error({
-        message: "Bạn đã nhập sai mật khẩu hoặc email",
-        description:
-          res.mesage && Array.isArray(res.mesage) ? res.mesage[0] : res.mesage,
-        duration: 5,
-      });
+  const onFinish = async (values: LoginFormValues) => {
+    try {
+      const res = await loginAPI(values.email, values.password);
+      if (res && res.data) {
+        localStorage.setItem("access_token", res.data.access_token);
+        dispatch(
+          setAuth({
+            isAuthenticated: true,
+            user: res.data.user,
+          })
+        );
+        message.success("Đăng nhập thành công!");
+        navigate("/");
+      }
+    } catch (error: any) {
+      message.error(error.mesage || "Đăng nhập thất bại!");
     }
   };
 
   return (
     <div className="login-page">
-      <main className="main">
-        <div className="container">
-          <section className="wrapper">
-            <div className="heading">
-              <h2 className="text text-large">Đăng Nhập</h2>
-              <Divider />
-            </div>
-            <Form name="login-form" onFinish={onFinish} autoComplete="off">
-              <Form.Item<FieldType>
-                labelCol={{ span: 24 }} //whole column
-                label="Email"
-                name="email"
-                rules={[
-                  { required: true, message: "Email không được để trống!" },
-                  { type: "email", message: "Email không đúng định dạng!" },
-                ]}
-              >
-                <Input />
-              </Form.Item>
-
-              <Form.Item<FieldType>
-                labelCol={{ span: 24 }} //whole column
-                label="Mật khẩu"
-                name="password"
-                rules={[
-                  { required: true, message: "Mật khẩu không được để trống!" },
-                ]}
-              >
-                <Input.Password />
-              </Form.Item>
-
-              <Form.Item>
-                <Button type="primary" htmlType="submit" loading={isSubmit}>
-                  Đăng nhập
-                </Button>
-              </Form.Item>
-              <Divider>Or</Divider>
-              <p className="text text-normal" style={{ textAlign: "center" }}>
-                Chưa có tài khoản ?
-                <span>
-                  <Link to="/register"> Đăng Ký </Link>
-                </span>
-              </p>
-              <br />
-            </Form>
-          </section>
-        </div>
-      </main>
+      <Form
+        name="login"
+        layout="vertical"
+        onFinish={onFinish}
+        style={{ maxWidth: 400, margin: "50px auto" }}
+      >
+        <Form.Item
+          label="Email"
+          name="email"
+          rules={[{ required: true, message: "Vui lòng nhập email!" }]}
+        >
+          <Input />
+        </Form.Item>
+        <Form.Item
+          label="Mật khẩu"
+          name="password"
+          rules={[{ required: true, message: "Vui lòng nhập mật khẩu!" }]}
+        >
+          <Input.Password />
+        </Form.Item>
+        <Form.Item>
+          <Button type="primary" htmlType="submit" block>
+            Đăng nhập
+          </Button>
+        </Form.Item>
+      </Form>
     </div>
   );
 };

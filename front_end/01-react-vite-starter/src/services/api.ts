@@ -1,12 +1,13 @@
 import axios from "@/services/axios.customize";
 import type { Dayjs } from "dayjs";
 
-// only call auth
+// Login API
 export const loginAPI = (email: string, password: string) => {
   const urlBackend = "/api/v1/auth/login";
   return axios.post<IBackendRes<ILogin>>(urlBackend, { email, password });
 };
-//phần test ở posman
+
+// Register API
 export const registerAPI = (userData: {
   email: string;
   password: string;
@@ -24,7 +25,26 @@ export const registerAPI = (userData: {
   return axios.post<IBackendRes<IRegister>>(urlBackend, userData);
 };
 
+// Fetch account API
 export const fetchAccountAPI = () => {
   const urlBackend = "/api/v1/auth/account";
   return axios.get<IBackendRes<IFetchAccount>>(urlBackend);
+};
+
+// Create user API
+export const createUserAPI = (userData: {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  gender: "MALE" | "FEMALE" | "OTHER";
+}) => {
+  const urlBackend = "/api/v1/users/add-user";
+  return axios.post<IBackendRes<any>>(urlBackend, userData);
+};
+
+// Logout API
+export const logoutAPI = () => {
+  const urlBackend = "/api/v1/auth/logout";
+  return axios.post<IBackendRes<any>>(urlBackend);
 };
