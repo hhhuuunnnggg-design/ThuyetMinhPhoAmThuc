@@ -17,6 +17,7 @@
   "dependencies": {
     "@ant-design/icons": "5.5.1",
     "@ant-design/pro-layout": "^7.22.6",
+    "@ant-design/pro-table": "^3.20.1",
     "@reduxjs/toolkit": "1.9.7",
     "antd": "5.21.6",
     "axios": "1.7.7",
