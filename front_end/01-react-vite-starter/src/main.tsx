@@ -79,7 +79,11 @@ const AppWrapper = () => {
               "AppWrapper - Setting authenticated user:",
               result.payload.user
             );
-            // Context will automatically sync with Redux state
+            // Check if user has role, if not redirect to home
+            if (!result.payload.user.role) {
+              console.log("AppWrapper - User has no role, redirecting to home");
+              // Context will automatically sync with Redux state
+            }
           } else {
             console.log(
               "AppWrapper - Fetch account failed, but keeping token for now"

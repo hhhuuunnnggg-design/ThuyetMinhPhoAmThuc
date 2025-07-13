@@ -8,6 +8,34 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
+// Component hiển thị khi không có quyền truy cập
+const AccessDenied = () => {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100vh",
+        textAlign: "center",
+        padding: "20px",
+      }}
+    >
+      <div style={{ fontSize: "48px", marginBottom: "20px" }}>🚫</div>
+      <h1 style={{ color: "#ff4d4f", marginBottom: "10px" }}>
+        Truy cập bị từ chối
+      </h1>
+      <p style={{ fontSize: "18px", color: "#666", marginBottom: "20px" }}>
+        Bạn không có quyền truy cập trang này!
+      </p>
+      <p style={{ fontSize: "16px", color: "#999" }}>
+        Tài khoản không có vai trò hoặc không đủ quyền hạn.
+      </p>
+    </div>
+  );
+};
+
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   permission,
   children,
@@ -34,17 +62,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       return;
     }
 
+    // Kiểm tra role và permissions nhưng không redirect
     if (!user.role) {
       console.log("ProtectedRoute - User has no role");
-      message.error("Tài khoản không có vai trò!");
-      navigate("/");
+      message.error(
+        "Bạn không có quyền truy cập trang này! Tài khoản không có vai trò."
+      );
       return;
     }
 
-    if (!user.role.permissions) {
+    if (!user.role.permissions || user.role.permissions.length === 0) {
       console.log("ProtectedRoute - User role has no permissions");
-      message.error("Tài khoản không có quyền!");
-      navigate("/");
+      message.error(
+        "Bạn không có quyền truy cập trang này! Tài khoản không có quyền hạn."
+      );
       return;
     }
 
@@ -57,7 +88,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
     if (!hasPermission) {
       message.error("Bạn không có quyền truy cập trang này!");
-      navigate("/");
     }
   }, [user, isAuthenticated, loading, permission, navigate]);
 
@@ -72,9 +102,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return null;
   }
 
-  if (!user.role || !user.role.permissions) {
-    console.log("ProtectedRoute - Rendering null (no role/permissions)");
-    return null;
+  // Kiểm tra quyền truy cập và render component tương ứng
+  if (
+    !user.role ||
+    !user.role.permissions ||
+    user.role.permissions.length === 0
+  ) {
+    console.log(
+      "ProtectedRoute - Rendering AccessDenied (no role/permissions)"
+    );
+    return <AccessDenied />;
   }
 
   const hasPermission = user.role.permissions.some(
@@ -82,7 +119,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   );
   console.log("ProtectedRoute - Rendering children:", hasPermission);
 
-  return hasPermission ? <>{children}</> : null;
+  return hasPermission ? <>{children}</> : <AccessDenied />;
 };
 
 export default ProtectedRoute;

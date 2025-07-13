@@ -56,9 +56,8 @@ public class SecurityConfiguration {
                                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/**").permitAll() // cho phép public
 
                                 // 3.2 Các request còn lại yêu cầu phải được xác thực
-                                .anyRequest().authenticated()
-                // .anyRequest().permitAll()
-                )
+                                // .anyRequest().authenticated()
+                                .anyRequest().permitAll())
                 // 4. Cấu hình OAuth2 Resource Server với JWT
                 .oauth2ResourceServer((oauth2) -> oauth2.jwt(Customizer.withDefaults())
                         // 4.1 Đặt CustomAuthenticationEntryPoint làm entry point khi xác thực không

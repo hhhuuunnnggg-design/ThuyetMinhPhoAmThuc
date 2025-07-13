@@ -45,7 +45,15 @@ const LoginPage = () => {
         );
 
         message.success("Đăng nhập thành công!");
-        navigate("/admin/user");
+
+        // Check user role and redirect accordingly
+        if (res.data.user.role) {
+          // User has role (admin) - redirect to admin page
+          navigate("/admin/user");
+        } else {
+          // User has no role (normal user) - redirect to home page
+          navigate("/");
+        }
       } else {
         console.error("Invalid response structure:", res);
         message.error("Response không đúng định dạng!");
