@@ -1,5 +1,9 @@
 package com.example.demo.controller;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
@@ -11,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.domain.Role;
@@ -42,40 +47,44 @@ public class RoleController {
         return ResponseEntity.status(HttpStatus.CREATED).body(this.roleService.create(r));
     }
 
-    @PutMapping("")
+    @PutMapping("/{id}")
     @ApiMessage("Update a role")
-    public ResponseEntity<Role> update(@Valid @RequestBody Role r) throws IdInvalidException {
+    public ResponseEntity<Role> update(@Valid @PathVariable Long id, @RequestBody Role role) throws IdInvalidException {
         // check id
-        if (this.roleService.fetchById(r.getId()) == null) {
-            throw new IdInvalidException("Role với id = " + r.getId() + " không tồn tại");
+        role.setId(id);
+        Role roleUpdate = this.roleService.updateRole(role);
+        if (roleUpdate == null) {
+            throw new IdInvalidException("Role với id = " + role + " không tồn tại");
         }
 
-        // check name
-        // if (this.roleService.existByName(r.getName())) {
-        // throw new IdInvalidException("Role với name = " + r.getName() + " đã tồn
-        // tại");
-        // }
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(this.roleService.update(r));
+        return ResponseEntity.status(HttpStatus.CREATED).body(this.roleService.updateRole(role));
     }
 
     @DeleteMapping("/{id}")
     @ApiMessage("Delete a role")
-    public ResponseEntity<Void> delete(@PathVariable("id") long id) throws IdInvalidException {
+    public ResponseEntity<Map<String, String>> delete(@PathVariable("id") long id) throws IdInvalidException {
         // check id
         if (this.roleService.fetchById(id) == null) {
             throw new IdInvalidException("Role với id = " + id + " không tồn tại");
         }
         this.roleService.delete(id);
-        return ResponseEntity.ok().body(null);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Đã xóa thành công");
+        return ResponseEntity.ok().body(response);
     }
 
-    @GetMapping("")
-    @ApiMessage("Fetch roles")
-    public ResponseEntity<ResultPaginationDTO> getPermissions(
-            @Filter Specification<Role> spec, Pageable pageable) {
+    @GetMapping("/fetch-all")
+    @ApiMessage("fetch all roles")
+    public ResponseEntity<ResultPaginationDTO> getAllRoles(
+            @Filter Specification<Role> spec,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "100") int size) {
 
-        return ResponseEntity.ok(this.roleService.getRoles(spec, pageable));
+        // Convert one-based page to zero-based for Spring Boot
+        Pageable pageable = PageRequest.of(page - 1, size);
+
+        return ResponseEntity.status(HttpStatus.OK).body(
+                this.roleService.getRoles(spec, pageable));
     }
 
 }

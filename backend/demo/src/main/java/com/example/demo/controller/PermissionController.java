@@ -1,25 +1,29 @@
 package com.example.demo.controller;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import com.turkraft.springfilter.boot.Filter;
-
+import com.example.demo.domain.Permission;
+import com.example.demo.domain.dto.ResultPaginationDTO;
 import com.example.demo.service.PermissionService;
 import com.example.demo.util.annotation.ApiMessage;
 import com.example.demo.util.error.IdInvalidException;
-import com.example.demo.domain.Permission;
-import com.example.demo.domain.dto.ResultPaginationDTO;
+import com.turkraft.springfilter.boot.Filter;
 
 import jakarta.validation.Valid;
 
@@ -45,39 +49,52 @@ public class PermissionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(this.permissionService.create(p));
     }
 
-    @PutMapping("")
+    @PutMapping("/{id}")
     @ApiMessage("Update a permission")
-    public ResponseEntity<Permission> update(@Valid @RequestBody Permission p) throws IdInvalidException {
+    public ResponseEntity<Permission> update(@Valid @PathVariable Long id, @RequestBody Permission permission)
+            throws IdInvalidException {
         // check exist by id
-        if (this.permissionService.fetchById(p.getId()) == null) {
-            throw new IdInvalidException("Permission với id = " + p.getId() + " không tồn tại.");
+        permission.setId(id);
+        Permission permissionUpdate = this.permissionService.updatePermission(permission);
+        if (permissionUpdate == null) {
+            throw new IdInvalidException("Permission với id = " + permission + " không tồn tại.");
         }
 
         // check exist by module, apiPath and method
-        if (this.permissionService.isPermissionExist(p)) {
+        if (this.permissionService.isPermissionExist(permission)) {
             throw new IdInvalidException("Permission đã tồn tại.");
         }
 
         // update permission
-        return ResponseEntity.ok().body(this.permissionService.update(p));
+        return ResponseEntity.ok().body(this.permissionService.updatePermission(permission));
     }
 
     @DeleteMapping("/{id}")
     @ApiMessage("delete a permission")
-    public ResponseEntity<Void> delete(@PathVariable("id") long id) throws IdInvalidException {
+    public ResponseEntity<Map<String, String>> delete(@PathVariable("id") long id) throws IdInvalidException {
         // check exist by id
         if (this.permissionService.fetchById(id) == null) {
             throw new IdInvalidException("Permission với id = " + id + " không tồn tại.");
         }
         this.permissionService.delete(id);
-        return ResponseEntity.ok().body(null);
+        // Chuẩn bị response
+        Map<String, String> data = new HashMap<>();
+        data.put("message", "Đã xóa thành công");
+
+        return ResponseEntity.ok().body(data);
     }
 
-    @GetMapping("")
+    @GetMapping("/fetch-all")
     @ApiMessage("Fetch permissions")
     public ResponseEntity<ResultPaginationDTO> getPermissions(
-            @Filter Specification<Permission> spec, Pageable pageable) {
+            @Filter Specification<Permission> spec,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "100") int size) {
 
-        return ResponseEntity.ok(this.permissionService.getPermissions(spec, pageable));
+        // Convert one-based page to zero-based for Spring Boot
+        Pageable pageable = PageRequest.of(page - 1, size);
+
+        return ResponseEntity.status(HttpStatus.OK).body(
+                this.permissionService.getPermissions(spec, pageable));
     }
 }

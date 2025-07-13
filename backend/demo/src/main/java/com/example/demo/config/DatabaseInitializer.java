@@ -64,14 +64,14 @@ public class DatabaseInitializer implements CommandLineRunner {
             arr.add(createPermission("Cập nhật quyền", "/api/v1/permissions/{id}", "PUT", "PERMISSIONS"));
             arr.add(createPermission("Xóa quyền", "/api/v1/permissions/{id}", "DELETE", "PERMISSIONS"));
             arr.add(createPermission("Xem quyền", "/api/v1/permissions/{id}", "GET", "PERMISSIONS"));
-            arr.add(createPermission("Xem danh sách quyền", "/api/v1/permissions", "GET", "PERMISSIONS"));
+            arr.add(createPermission("Xem danh sách quyền", "/api/v1/permissions/fetch-all", "GET", "PERMISSIONS"));
 
             // Roles
             arr.add(createPermission("Tạo vai trò mới", "/api/v1/roles", "POST", "ROLES"));
             arr.add(createPermission("Cập nhật vai trò", "/api/v1/roles/{id}", "PUT", "ROLES"));
             arr.add(createPermission("Xóa vai trò", "/api/v1/roles/{id}", "DELETE", "ROLES"));
             arr.add(createPermission("Xem vai trò", "/api/v1/roles/{id}", "GET", "ROLES"));
-            arr.add(createPermission("Xem danh sách vai trò", "/api/v1/roles", "GET", "ROLES"));
+            arr.add(createPermission("Xem danh sách vai trò", "/api/v1/roles/fetch-all", "GET", "ROLES"));
 
             this.permissionRepository.saveAll(arr);
         }

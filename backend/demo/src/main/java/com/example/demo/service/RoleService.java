@@ -3,6 +3,7 @@ package com.example.demo.service;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -52,7 +53,7 @@ public class RoleService {
         return null;
     }
 
-    public Role update(Role r) {
+    public Role updateRole(Role r) {
         Role roleDB = this.fetchById(r.getId());
         // check permissions
         if (r.getPermissions() != null) {

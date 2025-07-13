@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import java.util.Optional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -37,7 +38,7 @@ public class PermissionService {
         return this.permissionRepository.save(p);
     }
 
-    public Permission update(Permission p) {
+    public Permission updatePermission(Permission p) {
         Permission permissionDB = this.fetchById(p.getId());
         if (permissionDB != null) {
             permissionDB.setName(p.getName());
