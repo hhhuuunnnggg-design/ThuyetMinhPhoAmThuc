@@ -50,6 +50,8 @@ declare global {
     id: number;
     email: string;
     fullname: string;
+    avatar: string;
+    coverPhoto: string;
     role: IRole;
   }
 

@@ -26,6 +26,8 @@ public class ResLoginDTO {
         String email;
         String fullname;
         Boolean is_admin;
+        String avatar;
+        String coverPhoto;
         Role role;
     }
 

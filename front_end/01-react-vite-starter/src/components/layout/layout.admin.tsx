@@ -99,10 +99,6 @@ const LayoutAdmin = () => {
     },
   ];
 
-  const urlAvatar = `${import.meta.env.VITE_BACKEND_URL}/uploads/avatars/${
-    (user as any)?.avatar || "default-avatar.jpg"
-  }`;
-
   // If not authenticated, show loading or redirect
   if (!isAuthenticated) {
     return null;
@@ -155,7 +151,7 @@ const LayoutAdmin = () => {
             </span>
             <Dropdown menu={{ items: itemsDropdown }} trigger={["click"]}>
               <Space style={{ cursor: "pointer" }}>
-                <Avatar src={urlAvatar} />
+                <Avatar src={user?.avatar} />
                 {user?.fullname}
               </Space>
             </Dropdown>
@@ -164,7 +160,7 @@ const LayoutAdmin = () => {
             <Outlet />
           </Content>
           <Footer style={{ padding: 0, textAlign: "center" }}>
-            React Test Fresher &copy; Hỏi Dân IT - Made with <HeartTwoTone />
+            facebook_clone <HeartTwoTone />
           </Footer>
         </Layout>
       </Layout>

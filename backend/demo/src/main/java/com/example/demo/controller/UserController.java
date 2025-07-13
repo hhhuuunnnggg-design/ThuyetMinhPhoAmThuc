@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
@@ -176,7 +177,11 @@ public class UserController {
     @ApiMessage("fetch all users")
     public ResponseEntity<ResultPaginationDTO> getAllUser(
             @Filter Specification<User> spec,
-            Pageable pageable) {
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "100") int size) {
+
+        // Convert one-based page to zero-based for Spring Boot
+        Pageable pageable = PageRequest.of(page - 1, size);
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 this.userService.fetchAllUsers(spec, pageable));

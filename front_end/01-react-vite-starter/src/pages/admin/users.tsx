@@ -2,6 +2,7 @@ import Restricted from "@/components/common/restricted";
 import { useCurrentApp } from "@/components/context/app.context";
 import { createUserAPI, deleteUserAPI, updateUserAPI } from "@/services/api";
 import axios from "@/services/axios.customize";
+import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import ProTable from "@ant-design/pro-table";
 import {
   Button,
@@ -15,6 +16,28 @@ import {
 } from "antd";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+interface IUserData {
+  id: number;
+  email: string;
+  fullname: string;
+  gender: string;
+  role: {
+    id: number;
+    name: string;
+  };
+  createdAt: string;
+  avatar?: string;
+  coverPhoto?: string;
+  dateOfBirth?: string;
+  work?: string;
+  education?: string;
+  currentCity?: string;
+  hometown?: string;
+  bio?: string;
+  blocked: boolean;
+  admin: boolean;
+}
 
 const UsersPage = () => {
   const { user } = useCurrentApp();
@@ -39,8 +62,6 @@ const UsersPage = () => {
       const hasDeletePermission = user.role.permissions.some(
         (p) => p.apiPath === "/api/v1/users/{id}" && p.method === "DELETE"
       );
-      console.log("UsersPage - Has update permission:", hasUpdatePermission);
-      console.log("UsersPage - Has delete permission:", hasDeletePermission);
     }
   }, [user]);
 
@@ -49,6 +70,7 @@ const UsersPage = () => {
       title: "ID",
       dataIndex: "id",
       key: "id",
+      hideInSearch: true,
     },
     {
       title: "Email",
@@ -59,34 +81,51 @@ const UsersPage = () => {
       title: "Họ và tên",
       dataIndex: "fullname",
       key: "fullname",
+      hideInSearch: true,
     },
     {
       title: "Giới tính",
       dataIndex: "gender",
       key: "gender",
+      hideInSearch: true,
     },
     {
       title: "Vai trò",
       dataIndex: ["role", "name"],
       key: "role",
+      valueType: "select" as const,
+      valueEnum: {
+        ADMIN: { text: "Admin" },
+        USER: { text: "User" },
+        TEST: { text: "Test" },
+        TEST1: { text: "Test1" },
+        TEST2: { text: "Test2" },
+      },
     },
     {
       title: "Ngày tạo",
       dataIndex: "createdAt",
       key: "createdAt",
+      hideInSearch: true,
     },
     {
       title: "Thao tác",
       key: "action",
+      hideInSearch: true,
       render: (_: any, record: any) => (
         <Space>
           <Restricted permission="/api/v1/users/{id}" method="PUT">
             <Button
+              style={{
+                backgroundColor: "rgb(255 200 53)", // màu cam đậm (Ant Design orange-6)
+                borderColor: "rgb(255 200 53)",
+                color: "white",
+              }}
               type="primary"
               size="small"
               onClick={() => handleEdit(record)}
             >
-              Sửa
+              <EditOutlined />
             </Button>
           </Restricted>
           <Restricted permission="/api/v1/users/{id}" method="DELETE">
@@ -97,7 +136,7 @@ const UsersPage = () => {
               cancelText="Không"
             >
               <Button type="primary" danger size="small">
-                Xóa
+                <DeleteOutlined />
               </Button>
             </Popconfirm>
           </Restricted>
@@ -164,19 +203,53 @@ const UsersPage = () => {
         columns={columns}
         request={async (params) => {
           try {
+            // Xây dựng mảng filter
+            const filters: string[] = [];
+
+            if (params.email) {
+              filters.push(`email~'${params.email}'`);
+            }
+
+            if (params.role) {
+              // Tìm kiếm chính xác role name
+              filters.push(`role.name~'${params.role}'`);
+            }
+
+            const requestParams = {
+              page: params.current,
+              size: params.pageSize,
+              filter: filters,
+            };
+
+            console.log("Request params:", requestParams);
+            console.log("Filters:", filters);
+
             const res = await axios.get("/api/v1/users/fetch-all", {
-              params: {
-                current: params.current,
-                pageSize: params.pageSize,
+              params: requestParams,
+              paramsSerializer: (params) => {
+                const query = new URLSearchParams();
+                query.append("page", params.page);
+                query.append("size", params.size);
+                params.filter?.forEach((f: any) => query.append("filter", f));
+                return query.toString();
               },
             });
 
             console.log("Users API response:", res);
+            console.log("Response data:", res.data);
+            console.log("Response result:", res.data?.result);
+            console.log("Response meta:", res.data?.meta);
 
             if (res && res.data) {
+              const resultData = res.data.result || [];
+              const totalCount = res.data.meta?.total || 0;
+
+              console.log("Final result data:", resultData);
+              console.log("Final total count:", totalCount);
+
               return {
-                data: res.data.result || [],
-                total: res.data.meta?.total || 0,
+                data: resultData,
+                total: totalCount,
                 success: true,
               };
             }
@@ -199,7 +272,12 @@ const UsersPage = () => {
         pagination={{
           showSizeChanger: true,
         }}
-        search={false}
+        search={{
+          labelWidth: 120,
+          defaultCollapsed: false,
+          searchText: "Tìm kiếm",
+          resetText: "Làm mới",
+        }}
         toolBarRender={() => [
           <Restricted key="create" permission="/api/v1/users/add-user">
             <Button type="primary" onClick={() => setIsModalOpen(true)}>

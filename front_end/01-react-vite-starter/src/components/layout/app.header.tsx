@@ -74,11 +74,6 @@ const AppHeader = () => {
     });
   }
 
-  // Keep urlAvatar as requested, but add temporary avatar property
-  const urlAvatar = `${import.meta.env.VITE_BACKEND_URL}/images/avatar/${
-    (user as any)?.avatar || "default-avatar.jpg"
-  }`;
-
   return (
     <>
       <div className="header-container">
@@ -125,7 +120,7 @@ const AppHeader = () => {
                 {!loading && isAuthenticated && user ? (
                   <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
                     <Space>
-                      <Avatar src={urlAvatar} />
+                      <Avatar src={user?.avatar} />
                       {user?.fullname}
                     </Space>
                   </Dropdown>

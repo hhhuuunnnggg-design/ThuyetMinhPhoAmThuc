@@ -73,6 +73,8 @@ public class AuthController {
                     currentUserDB.getEmail(),
                     fullName,
                     currentUserDB.getIs_admin(),
+                    currentUserDB.getAvatar(),
+                    currentUserDB.getCoverPhoto(),
                     currentUserDB.getRole());
             res.setUser(userLogin);
         }
@@ -117,6 +119,8 @@ public class AuthController {
             userLogin.setFullname(currentUserDB.getLastName() + " " + currentUserDB.getFirstName());
             userLogin.setRole(currentUserDB.getRole());
             userLogin.setIs_admin(currentUserDB.getIs_admin());
+            userLogin.setAvatar(currentUserDB.getAvatar());
+            userLogin.setCoverPhoto(currentUserDB.getCoverPhoto());
             userGetAccount.setUser(userLogin);
         }
 
@@ -150,6 +154,8 @@ public class AuthController {
                     currentUserDB.getEmail(),
                     fullName,
                     currentUserDB.getIs_admin(),
+                    currentUserDB.getAvatar(),
+                    currentUserDB.getCoverPhoto(),
                     currentUserDB.getRole());
             res.setUser(userLogin);
         }

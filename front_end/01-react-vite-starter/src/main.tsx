@@ -12,7 +12,8 @@ import BookPage from "./pages/client/book";
 // import ProtectedRoute from "./components/common/protectedRoute";
 
 import { AppProvider } from "@/components/context/app.context";
-import { App } from "antd";
+import { App, ConfigProvider } from "antd";
+import viVN from "antd/locale/vi_VN";
 import ProtectedRoute from "./components/common/protectedRoute";
 import LayoutAdmin from "./components/layout/layout.admin";
 import UsersPage from "./pages/admin/users";
@@ -114,7 +115,9 @@ createRoot(document.getElementById("root")!).render(
     <Provider store={store}>
       <App>
         <AppProvider>
-          <AppWrapper />
+          <ConfigProvider locale={viVN}>
+            <AppWrapper />
+          </ConfigProvider>
         </AppProvider>
       </App>
     </Provider>
