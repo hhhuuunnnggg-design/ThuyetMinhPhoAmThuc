@@ -15,25 +15,20 @@ const initialState: AuthState = {
   error: null,
 };
 
+// cái này là thunk
 export const fetchAccountThunk = createAsyncThunk(
-  "auth/fetchAccount",
+  "auth/fetchAccount", // ✅ tên action: dùng để sinh ra các action phụ
   async (_, { dispatch, rejectWithValue }) => {
     try {
       const res = await fetchAccountAPI();
-      console.log("fetchAccountThunk - Response:", res);
-
       if (res && res.data) {
-        console.log("fetchAccountThunk - User data:", res.data.user);
         dispatch(setAuth({ isAuthenticated: true, user: res.data.user }));
-        return res.data;
+        return res.data; // ✅ // thành công: sẽ kích hoạt fulfilled
       }
-      console.log("fetchAccountThunk - No data in response");
-      return rejectWithValue("Không nhận được dữ liệu!");
+      return rejectWithValue("Không nhận được dữ liệu!"); //❌ // lỗi: sẽ kích hoạt rejected
     } catch (error: any) {
-      console.log("fetchAccountThunk - Error:", error);
-      // Don't automatically logout, let the caller decide
       return rejectWithValue(
-        error.mesage || "Lấy thông tin tài khoản thất bại!"
+        error.mesage || "Lấy thông tin tài khoản thất bại!" // ❌ // lỗi
       );
     }
   }
@@ -57,6 +52,8 @@ const authSlice = createSlice({
       state.error = null;
     },
   },
+
+  // cái này là thunk
   extraReducers: (builder) => {
     builder
       .addCase(fetchAccountThunk.pending, (state) => {

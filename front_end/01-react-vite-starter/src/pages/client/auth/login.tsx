@@ -45,7 +45,7 @@ const LoginPage = () => {
         );
 
         message.success("Đăng nhập thành công!");
-        navigate("/admin");
+        navigate("/admin/user");
       } else {
         console.error("Invalid response structure:", res);
         message.error("Response không đúng định dạng!");

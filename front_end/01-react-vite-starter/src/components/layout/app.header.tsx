@@ -30,7 +30,7 @@ const AppHeader = () => {
         <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
           <p>Xin chào, {user.fullname}</p>
           <Restricted permission="/api/v1/users/fetch-all">
-            <Link to="/admin">
+            <Link to="/admin/user">
               <Button type="primary">Quản trị</Button>
             </Link>
           </Restricted>

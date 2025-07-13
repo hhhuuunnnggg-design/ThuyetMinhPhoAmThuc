@@ -1,6 +1,7 @@
+import { setAuth } from "@/redux/slice/auth.slice";
 import { RootState } from "@/redux/store";
 import { createContext, useContext, useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 interface IAppContext {
   isAuthenticated: boolean;
@@ -17,17 +18,23 @@ type TProps = {
 };
 
 export const AppProvider = (props: TProps) => {
+  //Tạo Provider AppProvider
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<IUser | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  //➡️ Dùng để lưu giá trị hiện tại trong Context (đồng bộ với Redux).
 
-  // Sync with Redux state
+  const dispatch = useDispatch();
+
+  // Lấy Redux state:
   const reduxUser = useSelector((state: RootState) => state.auth.user);
   const reduxIsAuthenticated = useSelector(
     (state: RootState) => state.auth.isAuthenticated
   );
   const reduxLoading = useSelector((state: RootState) => state.auth.loading);
+  //➡️ Đây là nguồn dữ liệu trung tâm ban đầu, bạn dùng để đồng bộ vào context.
 
+  //  Đồng bộ từ Redux → Context
   useEffect(() => {
     console.log("AppProvider - Syncing with Redux:", {
       reduxUser,
@@ -38,14 +45,29 @@ export const AppProvider = (props: TProps) => {
     setIsAuthenticated(reduxIsAuthenticated);
     setLoading(reduxLoading);
   }, [reduxUser, reduxIsAuthenticated, reduxLoading]);
+  //🔄 Khi Redux thay đổi, Context cũng tự động cập nhật.
+
+  // Đồng bộ từ Context → Redux
+  const handleSetUser = (newUser: IUser) => {
+    setUser(newUser);
+    // Also update Redux state
+    dispatch(setAuth({ isAuthenticated: true, user: newUser }));
+  };
+
+  // Enhanced setIsAuthenticated function that also updates Redux
+  const handleSetIsAuthenticated = (value: boolean) => {
+    setIsAuthenticated(value);
+    // Also update Redux state
+    dispatch(setAuth({ isAuthenticated: value, user: value ? user : null }));
+  };
 
   return (
     <CurrentAppContext.Provider
       value={{
         isAuthenticated,
         user,
-        setIsAuthenticated,
-        setUser,
+        setIsAuthenticated: handleSetIsAuthenticated,
+        setUser: handleSetUser,
         loading,
       }}
     >
