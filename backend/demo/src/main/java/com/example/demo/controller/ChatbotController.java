@@ -41,18 +41,18 @@ public class ChatbotController {
             // Validation
             if (request.getUserId() == null) {
                 return ResponseEntity.badRequest()
-                        .body(new ResponseObject("error", "User ID is required", null));
+                        .body(new ResponseObject("User ID is required"));
             }
 
             if (request.getMessage() == null || request.getMessage().trim().isEmpty()) {
                 return ResponseEntity.badRequest()
-                        .body(new ResponseObject("error", "Message cannot be empty", null));
+                        .body(new ResponseObject("Message cannot be empty"));
             }
 
             // Kiểm tra user có tồn tại không
             if (!chatbotService.userExists(request.getUserId())) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ResponseObject("error", "User not found", null));
+                        .body(new ResponseObject("User not found"));
             }
 
             // Xử lý tin nhắn và lấy phản hồi từ AI
@@ -61,14 +61,12 @@ public class ChatbotController {
                     request.getMessage().trim());
 
             return ResponseEntity.ok(new ResponseObject(
-                    "success",
-                    "Message processed successfully",
                     new ChatbotMessageResponse(botResponse)));
 
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ResponseObject("error", "Internal server error: " + e.getMessage(), null));
+                    .body(new ResponseObject("Internal server error: " + e.getMessage()));
         }
     }
 
@@ -81,12 +79,12 @@ public class ChatbotController {
             // Validation
             if (request.getUserId() == null) {
                 return ResponseEntity.badRequest()
-                        .body(new ResponseObject("error", "User ID is required", null));
+                        .body(new ResponseObject("User ID is required"));
             }
 
             if (request.getMessage() == null || request.getMessage().trim().isEmpty()) {
                 return ResponseEntity.badRequest()
-                        .body(new ResponseObject("error", "Message cannot be empty", null));
+                        .body(new ResponseObject("Message cannot be empty"));
             }
 
             // Lưu tin nhắn của người dùng
@@ -96,13 +94,11 @@ public class ChatbotController {
                     false);
 
             return ResponseEntity.ok(new ResponseObject(
-                    "success",
-                    "User message saved successfully",
                     new ChatbotMessageResponse(userMessage)));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ResponseObject("error", e.getMessage(), null));
+                    .body(new ResponseObject(e.getMessage()));
         }
     }
 
@@ -115,12 +111,12 @@ public class ChatbotController {
             // Validation
             if (request.getUserId() == null) {
                 return ResponseEntity.badRequest()
-                        .body(new ResponseObject("error", "User ID is required", null));
+                        .body(new ResponseObject("User ID is required"));
             }
 
             if (request.getMessage() == null || request.getMessage().trim().isEmpty()) {
                 return ResponseEntity.badRequest()
-                        .body(new ResponseObject("error", "Message cannot be empty", null));
+                        .body(new ResponseObject("Message cannot be empty"));
             }
 
             // Lưu phản hồi của bot
@@ -130,13 +126,11 @@ public class ChatbotController {
                     true);
 
             return ResponseEntity.ok(new ResponseObject(
-                    "success",
-                    "Bot message saved successfully",
                     new ChatbotMessageResponse(botMessage)));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ResponseObject("error", e.getMessage(), null));
+                    .body(new ResponseObject(e.getMessage()));
         }
     }
 
@@ -149,7 +143,7 @@ public class ChatbotController {
             // Kiểm tra user có tồn tại không
             if (!chatbotService.userExists(userId)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ResponseObject("error", "User not found", null));
+                        .body(new ResponseObject("User not found"));
             }
 
             List<ChatbotMessage> messages = chatbotService.getChatHistory(userId);
@@ -157,14 +151,11 @@ public class ChatbotController {
                     .map(ChatbotMessageResponse::new)
                     .collect(Collectors.toList());
 
-            return ResponseEntity.ok(new ResponseObject(
-                    "success",
-                    "Chat history fetched successfully",
-                    responses));
+            return ResponseEntity.ok(new ResponseObject(responses));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ResponseObject("error", e.getMessage(), null));
+                    .body(new ResponseObject(e.getMessage()));
         }
     }
 
@@ -179,7 +170,7 @@ public class ChatbotController {
             // Kiểm tra user có tồn tại không
             if (!chatbotService.userExists(userId)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ResponseObject("error", "User not found", null));
+                        .body(new ResponseObject("User not found"));
             }
 
             List<ChatbotMessage> messages = chatbotService.getRecentMessages(userId, limit);
@@ -187,14 +178,11 @@ public class ChatbotController {
                     .map(ChatbotMessageResponse::new)
                     .collect(Collectors.toList());
 
-            return ResponseEntity.ok(new ResponseObject(
-                    "success",
-                    "Recent messages fetched successfully",
-                    responses));
+            return ResponseEntity.ok(new ResponseObject(responses));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ResponseObject("error", e.getMessage(), null));
+                    .body(new ResponseObject(e.getMessage()));
         }
     }
 
@@ -207,18 +195,15 @@ public class ChatbotController {
             // Kiểm tra user có tồn tại không
             if (!chatbotService.userExists(userId)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ResponseObject("error", "User not found", null));
+                        .body(new ResponseObject("User not found"));
             }
 
             chatbotService.clearChatHistory(userId);
-            return ResponseEntity.ok(new ResponseObject(
-                    "success",
-                    "Chat history cleared successfully",
-                    null));
+            return ResponseEntity.ok(new ResponseObject("Chat history cleared successfully"));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ResponseObject("error", e.getMessage(), null));
+                    .body(new ResponseObject(e.getMessage()));
         }
     }
 }
