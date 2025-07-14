@@ -65,7 +65,7 @@ const LayoutAdmin = () => {
       ],
     },
     {
-      label: <Link to="/admin/test1">Manage Books</Link>,
+      label: <Link to="/admin/role">Manage Role</Link>,
       key: "book",
       icon: <ExceptionOutlined />,
     },

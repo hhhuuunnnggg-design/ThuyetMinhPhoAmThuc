@@ -37,7 +37,7 @@ public class RoleController {
         this.roleService = roleService;
     }
 
-    @PostMapping("")
+    @PostMapping("/create")
     @ApiMessage("Create a role")
     public ResponseEntity<Role> create(@Valid @RequestBody Role r) throws IdInvalidException {
         // check name

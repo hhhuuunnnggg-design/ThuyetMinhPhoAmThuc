@@ -16,6 +16,7 @@ import { App, ConfigProvider } from "antd";
 import viVN from "antd/locale/vi_VN";
 import ProtectedRoute from "./components/common/protectedRoute";
 import LayoutAdmin from "./components/layout/layout.admin";
+import RolePage from "./pages/admin/role";
 import UsersPage from "./pages/admin/users";
 import HomePage from "./pages/client/home";
 import { fetchAccountThunk } from "./redux/slice/auth.slice";
@@ -51,6 +52,10 @@ const router = createBrowserRouter([
       {
         path: "user",
         element: <UsersPage />,
+      },
+      {
+        path: "role",
+        element: <RolePage />,
       },
     ],
   },
