@@ -20,11 +20,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.domain.Comment;
+import com.example.demo.domain.Post;
 import com.example.demo.domain.User;
 import com.example.demo.domain.response.CommentMessage;
+import com.example.demo.domain.response.ResComentsByIdDTO;
 import com.example.demo.service.CommentService;
 import com.example.demo.service.PostService;
 import com.example.demo.service.UserServices;
+import com.example.demo.util.error.IdInvalidException;
 
 @RestController
 @RequestMapping("/api/v1/comments")
@@ -89,10 +92,15 @@ public class CommentController {
         return message;
     }
 
-    // Lấy bình luận theo bài viết
     @GetMapping
-    public ResponseEntity<List<Comment>> getCommentsByPost(@RequestParam Long postId) {
-        return ResponseEntity.ok(commentService.getCommentsByPost(postId));
+    public ResponseEntity<List<ResComentsByIdDTO>> getCommentsByPost(@RequestParam Long postId)
+            throws IdInvalidException {
+        Post post = commentService.handleFindByIdPost(postId);
+        if (post == null) {
+            throw new IdInvalidException("không tồn tại bài post với id: " + postId);
+        }
+        List<ResComentsByIdDTO> dtos = commentService.convertToResComentsByIdDTO(postId);
+        return ResponseEntity.ok(dtos);
     }
 
     // Lấy bình luận theo id
