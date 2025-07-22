@@ -53,7 +53,7 @@ public class CommentController {
 
     // Tạo bình luận mới
     @PostMapping("/create")
-    public ResponseEntity<Comment> addComment(
+    public ResponseEntity<ResComentsByIdDTO> addComment(
             @RequestParam Long postId,
             @RequestParam Long userId,
             @RequestParam String content) {
@@ -80,9 +80,10 @@ public class CommentController {
         }
 
         // Gửi comment mới qua WebSocket
-        webSocketController.broadcastComment(postId, new CommentMessage("NEW_COMMENT", created));
+        ResComentsByIdDTO dto = commentService.convertToResComentsByIdDTO(created);
+        webSocketController.broadcastComment(postId, new CommentMessage("NEW_COMMENT", dto));
 
-        return ResponseEntity.ok(created);
+        return ResponseEntity.ok(dto);
     }
 
     // Message mapping cho WebSocket
@@ -151,5 +152,26 @@ public class CommentController {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         }
     }
+
+    // public ResComentsByIdDTO convertToResComentsByIdDTO(Comment comment) {
+    // ResComentsByIdDTO.UserGetAccount userDto = new
+    // ResComentsByIdDTO.UserGetAccount(
+    // comment.getUser().getId(),
+    // comment.getUser().getEmail(),
+    // comment.getUser().getFirstName() + " " + comment.getUser().getLastName(),
+    // comment.getUser().getAvatar(),
+    // comment.getUser().getIs_blocked());
+    // ResComentsByIdDTO.Post postDto = new ResComentsByIdDTO.Post(
+    // comment.getPost().getId(),
+    // comment.getPost().getContent(),
+    // comment.getPost().getImageUrl(),
+    // comment.getPost().getVideoUrl());
+    // return new ResComentsByIdDTO(
+    // comment.getId(),
+    // comment.getContent(),
+    // comment.getCreatedAt().toString(),
+    // userDto,
+    // postDto);
+    // }
 
 }

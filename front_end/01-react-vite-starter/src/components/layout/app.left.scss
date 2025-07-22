@@ -1,0 +1,32 @@
+.app-left {
+  width: 280px;
+  background-color: #f0f2f5;
+  padding: 16px;
+
+  a {
+    color: #1c1e21;
+    text-decoration: none;
+    &:hover {
+      background-color: #e4e6eb;
+      border-radius: 8px;
+    }
+  }
+
+  .ant-list-header {
+    padding: 0;
+  }
+
+  .ant-list-item {
+    padding: 8px 0;
+
+    border-block-end: 0px solid rgba(30, 3, 3, 0.06);
+    &:hover {
+      background-color: #e4e6eb;
+      border-radius: 8px;
+    }
+  }
+
+  .ant-divider {
+    margin: 12px 0;
+  }
+}

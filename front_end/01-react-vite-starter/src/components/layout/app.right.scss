@@ -1,0 +1,60 @@
+.app-right {
+  width: 360px;
+  background-color: #f0f2f5;
+  padding: 16px;
+
+  a {
+    color: #1c1e21;
+    text-decoration: none;
+    &:hover {
+      background-color: #e4e6eb;
+      border-radius: 8px;
+    }
+  }
+
+  .ant-list-header {
+    padding: 0;
+  }
+
+  .ant-list-item {
+    padding: 8px 0;
+    &:hover {
+      background-color: #e4e6eb;
+      border-radius: 8px;
+    }
+  }
+
+  .ant-divider {
+    margin: 12px 0;
+  }
+
+  .ad-container {
+    margin-bottom: 16px;
+    img {
+      width: 100%;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+  }
+
+  .online-indicator {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    background-color: #31a24c;
+    border-radius: 50%;
+    border: 2px solid #fff;
+  }
+
+  .search-icon {
+    background-image: url("https://static.xx.fbcdn.net/rsrc.php/v4/yv/r/iWYTX6KlzeM.png");
+    background-position: 0px -163px;
+    background-size: auto;
+    width: 20px;
+    height: 20px;
+    background-repeat: no-repeat;
+    display: inline-block;
+  }
+}

@@ -109,30 +109,35 @@ public class CommentService {
         return commentRepository.countByUser(user);
     }
 
+    public ResComentsByIdDTO convertToResComentsByIdDTO(Comment comment) {
+        ResComentsByIdDTO.UserGetAccount userDto = new ResComentsByIdDTO.UserGetAccount(
+                comment.getUser().getId(),
+                comment.getUser().getEmail(),
+                comment.getUser().getFirstName() + " " + comment.getUser().getLastName(),
+                comment.getUser().getAvatar(),
+                comment.getUser().getIs_blocked());
+        ResComentsByIdDTO.Post postDto = new ResComentsByIdDTO.Post(
+                comment.getPost().getId(),
+                comment.getPost().getContent(),
+                comment.getPost().getImageUrl(),
+                comment.getPost().getVideoUrl());
+        return new ResComentsByIdDTO(
+                comment.getId(),
+                comment.getContent(),
+                comment.getCreatedAt().toString(),
+                userDto,
+                postDto);
+    }
+
+    public List<ResComentsByIdDTO> convertToResComentsByIdDTO(List<Comment> comments) {
+        return comments.stream()
+                .map(this::convertToResComentsByIdDTO)
+                .toList();
+    }
+
     public List<ResComentsByIdDTO> convertToResComentsByIdDTO(Long postId) {
         List<Comment> comments = getCommentsByPost(postId);
-        return comments.stream().map(comment -> {
-            // Convert User
-            ResComentsByIdDTO.UserGetAccount userDto = new ResComentsByIdDTO.UserGetAccount(
-                    comment.getUser().getId(),
-                    comment.getUser().getEmail(),
-                    comment.getUser().getFirstName() + " " + comment.getUser().getLastName(),
-                    comment.getUser().getAvatar(),
-                    comment.getUser().getIs_blocked());
-            // Convert Post
-            ResComentsByIdDTO.Post postDto = new ResComentsByIdDTO.Post(
-                    comment.getPost().getId(),
-                    comment.getPost().getContent(),
-                    comment.getPost().getImageUrl(),
-                    comment.getPost().getVideoUrl());
-            // Convert Comment
-            return new ResComentsByIdDTO(
-                    comment.getId(),
-                    comment.getContent(),
-                    comment.getCreatedAt().toString(),
-                    userDto,
-                    postDto);
-        }).toList();
+        return convertToResComentsByIdDTO(comments);
     }
 
     // tìm 1 giá trị
