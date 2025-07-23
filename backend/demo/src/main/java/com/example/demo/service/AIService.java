@@ -62,7 +62,7 @@ public class AIService {
             System.out.println("Needs current info: " + needsCurrentInfo(userMessage));
             System.out.println("WebSearchService: " + (webSearchService != null ? "injected" : "null"));
 
-            String url = "https://generativelanguage.googleapis.com/v1beta/models/" + geminiModel
+            String url = "https://generativelanguage.googleapis.com/v1/models/" + geminiModel
                     + ":generateContent?key=" + geminiApiKey;
 
             HttpHeaders headers = new HttpHeaders();

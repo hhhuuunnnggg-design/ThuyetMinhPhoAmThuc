@@ -21,14 +21,15 @@ import com.example.demo.domain.request.ChatbotMessageRequest;
 import com.example.demo.domain.response.ChatbotMessageResponse;
 import com.example.demo.domain.response.ResponseObject;
 import com.example.demo.service.ChatbotService;
+import com.example.demo.util.annotation.ApiMessage;
+import com.example.demo.util.error.IdInvalidException;
 
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/chatbot")
+@RequestMapping("/api/v1/chatbot")
 @CrossOrigin(origins = "*")
 public class ChatbotController {
-
     @Autowired
     private ChatbotService chatbotService;
 
@@ -36,38 +37,20 @@ public class ChatbotController {
      * Gửi tin nhắn và nhận phản hồi từ AI tự động
      */
     @PostMapping("/send-message")
-    public ResponseEntity<ResponseObject> sendMessage(@Valid @RequestBody ChatbotMessageRequest request) {
-        try {
-            // Validation
-            if (request.getUserId() == null) {
-                return ResponseEntity.badRequest()
-                        .body(new ResponseObject("User ID is required"));
-            }
+    @ApiMessage("Send a message to the AI")
+    public ResponseEntity<ResponseObject> sendMessage(@Valid @RequestBody ChatbotMessageRequest request)
+            throws IdInvalidException {
 
-            if (request.getMessage() == null || request.getMessage().trim().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(new ResponseObject("Message cannot be empty"));
-            }
-
-            // Kiểm tra user có tồn tại không
-            if (!chatbotService.userExists(request.getUserId())) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ResponseObject("User not found"));
-            }
-
-            // Xử lý tin nhắn và lấy phản hồi từ AI
-            ChatbotMessage botResponse = chatbotService.processUserMessage(
-                    request.getUserId(),
-                    request.getMessage().trim());
-
-            return ResponseEntity.ok(new ResponseObject(
-                    new ChatbotMessageResponse(botResponse)));
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ResponseObject("Internal server error: " + e.getMessage()));
+        // Kiểm tra user có tồn tại không
+        if (!chatbotService.userExists(request.getUserId())) {
+            throw new IdInvalidException("user với id = " + request.getUserId() + " không tồn tại...");
         }
+        // Xử lý tin nhắn và lấy phản hồi từ AI
+        ChatbotMessage botResponse = chatbotService.processUserMessage(
+                request.getUserId(),
+                request.getMessage().trim());
+        return ResponseEntity.ok(new ResponseObject(
+                new ChatbotMessageResponse(botResponse)));
     }
 
     /**
@@ -75,31 +58,13 @@ public class ChatbotController {
      */
     @PostMapping("/save-user-message")
     public ResponseEntity<ResponseObject> saveUserMessage(@Valid @RequestBody ChatbotMessageRequest request) {
-        try {
-            // Validation
-            if (request.getUserId() == null) {
-                return ResponseEntity.badRequest()
-                        .body(new ResponseObject("User ID is required"));
-            }
-
-            if (request.getMessage() == null || request.getMessage().trim().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(new ResponseObject("Message cannot be empty"));
-            }
-
-            // Lưu tin nhắn của người dùng
-            ChatbotMessage userMessage = chatbotService.saveMessage(
-                    request.getUserId(),
-                    request.getMessage().trim(),
-                    false);
-
-            return ResponseEntity.ok(new ResponseObject(
-                    new ChatbotMessageResponse(userMessage)));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ResponseObject(e.getMessage()));
-        }
+        // Lưu tin nhắn của người dùng
+        ChatbotMessage userMessage = chatbotService.saveMessage(
+                request.getUserId(),
+                request.getMessage().trim(),
+                false);
+        return ResponseEntity.ok(new ResponseObject(
+                new ChatbotMessageResponse(userMessage)));
     }
 
     /**
@@ -107,56 +72,29 @@ public class ChatbotController {
      */
     @PostMapping("/save-bot-message")
     public ResponseEntity<ResponseObject> saveBotMessage(@Valid @RequestBody ChatbotMessageRequest request) {
-        try {
-            // Validation
-            if (request.getUserId() == null) {
-                return ResponseEntity.badRequest()
-                        .body(new ResponseObject("User ID is required"));
-            }
-
-            if (request.getMessage() == null || request.getMessage().trim().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(new ResponseObject("Message cannot be empty"));
-            }
-
-            // Lưu phản hồi của bot
-            ChatbotMessage botMessage = chatbotService.saveMessage(
-                    request.getUserId(),
-                    request.getMessage().trim(),
-                    true);
-
-            return ResponseEntity.ok(new ResponseObject(
-                    new ChatbotMessageResponse(botMessage)));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ResponseObject(e.getMessage()));
-        }
+        // Lưu phản hồi của bot
+        ChatbotMessage botMessage = chatbotService.saveMessage(
+                request.getUserId(),
+                request.getMessage().trim(),
+                true);
+        return ResponseEntity.ok(new ResponseObject(
+                new ChatbotMessageResponse(botMessage)));
     }
 
     /**
      * Lấy lịch sử trò chuyện của một người dùng
      */
     @GetMapping("/history/{userId}")
-    public ResponseEntity<ResponseObject> getChatHistory(@PathVariable Long userId) {
-        try {
-            // Kiểm tra user có tồn tại không
-            if (!chatbotService.userExists(userId)) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ResponseObject("User not found"));
-            }
-
-            List<ChatbotMessage> messages = chatbotService.getChatHistory(userId);
-            List<ChatbotMessageResponse> responses = messages.stream()
-                    .map(ChatbotMessageResponse::new)
-                    .collect(Collectors.toList());
-
-            return ResponseEntity.ok(new ResponseObject(responses));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ResponseObject(e.getMessage()));
+    public ResponseEntity<ResponseObject> getChatHistory(@PathVariable Long userId) throws IdInvalidException {
+        // Kiểm tra user có tồn tại không
+        if (!chatbotService.userExists(userId)) {
+            throw new IdInvalidException("user với id = " + userId + " không tồn tại...");
         }
+        List<ChatbotMessage> messages = chatbotService.getChatHistory(userId);
+        List<ChatbotMessageResponse> responses = messages.stream()
+                .map(ChatbotMessageResponse::new)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(new ResponseObject(responses));
     }
 
     /**
@@ -170,7 +108,7 @@ public class ChatbotController {
             // Kiểm tra user có tồn tại không
             if (!chatbotService.userExists(userId)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ResponseObject("User not found"));
+                        .body(new ResponseObject("User not found101112"));
             }
 
             List<ChatbotMessage> messages = chatbotService.getRecentMessages(userId, limit);
@@ -190,20 +128,12 @@ public class ChatbotController {
      * Xóa lịch sử trò chuyện của một người dùng
      */
     @DeleteMapping("/history/{userId}")
-    public ResponseEntity<ResponseObject> clearChatHistory(@PathVariable Long userId) {
-        try {
-            // Kiểm tra user có tồn tại không
-            if (!chatbotService.userExists(userId)) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ResponseObject("User not found"));
-            }
-
-            chatbotService.clearChatHistory(userId);
-            return ResponseEntity.ok(new ResponseObject("Chat history cleared successfully"));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ResponseObject(e.getMessage()));
+    public ResponseEntity<ResponseObject> clearChatHistory(@PathVariable Long userId) throws IdInvalidException {
+        // Kiểm tra user có tồn tại không
+        if (!chatbotService.userExists(userId)) {
+            throw new IdInvalidException("user với id = " + userId + " không tồn tại nên không thể xóa lịch sử chat");
         }
+        chatbotService.clearChatHistory(userId);
+        return ResponseEntity.ok(new ResponseObject("Chat history cleared successfully"));
     }
 }

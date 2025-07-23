@@ -11,9 +11,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ChatbotMessageRequest {
 
-    @NotNull(message = "User ID is required")
+    @NotNull(message = "user id không được để trống")
     private Long userId;
 
-    @NotBlank(message = "Message cannot be empty")
+    @NotBlank(message = "message không được để trống")
     private String message;
 }
