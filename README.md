@@ -1,8 +1,10 @@
-# 📱 Clone Facebook 2025
+# 💻 Clone Facebook 2025
 
 Dự án mô phỏng một mạng xã hội kiểu Facebook với các tính năng hiện đại như:
 
 - 🔐 Đăng nhập / Đăng ký (JWT + Spring Security)
+- 🚫 Chặn truy cập trái phép & redirect về trang đăng nhập
+- 🔑 Tự động gắn token khi gọi API từ frontend bằng Axios interceptor
 - 📝 Đăng bài viết, bình luận, thích bài viết
 - 💬 Trò chuyện realtime bằng WebSocket
 - 🤖 Chat với bot AI
@@ -74,15 +76,21 @@ npm install
 npm run dev
 ```
 
-# 🔑 Tài khoản mẫu
+### ✅ 3. Thông tin hỗ trợ
 
-email:admin@gmail.com
-password:123456
+```bash
+# 🔑 Tài khoản admin
+- email:admin@gmail.com
+- password:123456
 
-# API mẫu (Swagger)
+cd front_end/01-react-vite-starter
 
-Truy cập tài liệu Swagger UI tại: 👉 http://localhost:8080/swagger-ui/index.html
+# 🌐API mẫu (Swagger)
+
+- Truy cập tài liệu Swagger UI tại:
+- 👉http://localhost:8080/swagger-ui/index.html
 
 # 👨‍💻 Liên hệ
 
-Email:nguyendinhhungtc2020@gmail.com
+- Email:nguyendinhhungtc2020@gmail.com
+```
