@@ -1,1 +1,86 @@
-# clode_facebook_2025
+# 📱 Clone Facebook 2025
+
+Dự án mô phỏng một mạng xã hội kiểu Facebook với các tính năng hiện đại như:
+
+- 🔐 Đăng nhập / Đăng ký (JWT + Spring Security)
+- 📝 Đăng bài viết, bình luận, thích bài viết
+- 💬 Trò chuyện realtime bằng WebSocket
+- 🤖 Chat với bot AI
+- 📞 Gọi thoại qua trình duyệt
+- ⚙️ Phân quyền động theo vai trò (Admin/User)
+- 🌐 API mô tả bằng Swagger OpenAPI
+
+---
+
+## 🛠️ Công nghệ sử dụng
+
+### 🔙 Backend (Spring Boot)
+
+- ☕ **Java 17**, **Spring Boot 3.2.5**
+- 🔐 Spring Security + JWT
+- 🔁 WebSocket (chat realtime + gọi điện)
+- 🧠 AI Bot API
+- 🗃️ Spring Data JPA (MySQL)
+- 🧪 Hibernate Validator
+- 🧾 Swagger OpenAPI (Tài liệu API)
+
+### 🎨 Frontend (React + Vite + TypeScript)
+
+- ⚛️ React 18 + Vite
+- 🧑‍🎨 Ant Design UI
+- 🧭 React Router DOM
+- 📦 Axios (REST client)
+- 🌍 Redux Toolkit (quản lý trạng thái)
+
+---
+
+## ⚙️ Cấu trúc cổng dịch vụ
+
+| Thành phần | Công nghệ   | Cổng   |
+| ---------- | ----------- | ------ |
+| Backend    | Spring Boot | `8080` |
+| Frontend   | React Vite  | `3000` |
+
+---
+
+## 🚀 Hướng dẫn chạy project
+
+### ✅ 1. Chạy Backend
+
+```bash
+# Di chuyển vào thư mục backend
+cd backend
+
+# Build project
+./mvnw clean install
+
+# Chạy ứng dụng
+./mvnw spring-boot:run
+```
+
+### ✅ 1. Chạy Frontend
+
+# Di chuyển vào thư mục frontend
+
+cd front_end/01-react-vite-starter
+
+# Cài đặt thư viện
+
+npm install
+
+# Chạy Vite dev server
+
+npm run dev
+
+# 🔑 Tài khoản mẫu
+
+email:admin@gmail.com
+password:123456
+
+# API mẫu (Swagger)
+
+Truy cập tài liệu Swagger UI tại: 👉 http://localhost:8080/swagger-ui/index.html
+
+# 👨‍💻 Liên hệ
+
+Email:nguyendinhhungtc2020@gmail.com

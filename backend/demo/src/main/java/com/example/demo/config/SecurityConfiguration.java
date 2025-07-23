@@ -43,6 +43,14 @@ public class SecurityConfiguration {
             HttpSecurity http,
             CustomAuthenticationEntryPoint customAuthenticationEntryPoint) throws Exception {
 
+        String[] whiteList = {
+                "/",
+                "/storage/**",
+                "/api/v1/email/**",
+                "/v3/api-docs/**",
+                "/swagger-ui/**",
+                "/swagger-ui.html"
+        };
         http
                 // 1. Tắt CSRF (Cross-Site Request Forgery) protection
                 .csrf(c -> c.disable())
@@ -51,6 +59,7 @@ public class SecurityConfiguration {
                 // 3. Cấu hình quyền truy cập cho các request
                 .authorizeHttpRequests(
                         authz -> authz
+                                .requestMatchers(whiteList).permitAll()
                                 // 3.1 Cho phép truy cập không cần xác thực cho trang chủ ("/") và trang đăng
                                 // nhập ("/login")
                                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/**").permitAll() // cho phép public
