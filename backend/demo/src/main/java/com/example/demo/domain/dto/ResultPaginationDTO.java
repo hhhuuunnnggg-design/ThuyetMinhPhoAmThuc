@@ -2,6 +2,9 @@ package com.example.demo.domain.dto;
 
 import lombok.Data;
 
+/**
+ * DTO cho kết quả phân trang
+ */
 @Data
 public class ResultPaginationDTO {
     private Meta meta;

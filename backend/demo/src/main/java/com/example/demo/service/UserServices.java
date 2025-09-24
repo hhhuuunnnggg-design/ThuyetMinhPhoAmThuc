@@ -13,8 +13,6 @@ public interface UserServices {
 
     User handleGetUserByUsernames(String username);
 
-    User getUserByPostId(Long postId);
-
     User handleGetUserByUsername(String username);
 
     void updateUserToken(String token, String email);
