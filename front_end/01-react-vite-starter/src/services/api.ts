@@ -205,3 +205,8 @@ export const sendChatbotMessageAPI = (userId: number, message: string) => {
 export const fetchChatbotHistoryAPI = (userId: number) => {
   return axios.get(`/api/v1/chatbot/history/${userId}`);
 };
+
+export const fetchAllMethod = () => {
+  const urlBackend = "/api/v1/permissions/fetch-all";
+  return axios.get<IBackendRes<any>>(urlBackend);
+};
