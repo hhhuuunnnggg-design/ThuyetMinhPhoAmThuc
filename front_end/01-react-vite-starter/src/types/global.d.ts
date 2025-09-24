@@ -50,8 +50,8 @@ declare global {
     id: number;
     email: string;
     fullname: string;
-    avatar: string;
-    coverPhoto: string;
+    avatar?: string;
+    coverPhoto?: string;
     role: IRole;
   }
 
@@ -64,6 +64,8 @@ declare global {
       fullname: string;
       is_admin: boolean;
       role: IRole;
+      avatar?: string;
+      coverPhoto?: string;
     };
   }
 
