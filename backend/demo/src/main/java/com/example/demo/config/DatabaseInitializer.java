@@ -93,6 +93,7 @@ public class DatabaseInitializer implements CommandLineRunner {
         if (countUsers == 0) {
             User adminUser = new User();
             adminUser.setEmail("admin@gmail.com");
+            adminUser.setAvatar("https://wellavn.com/wp-content/uploads/2025/07/anh-gai-xinh-2k-12.jpg");
             adminUser.setFirstName("Super");
             adminUser.setLastName("Admin");
             adminUser.setGender(genderEnum.MALE);
