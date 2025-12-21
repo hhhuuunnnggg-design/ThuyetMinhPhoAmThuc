@@ -1,0 +1,9 @@
+{
+  "recommendations": [],
+  "unwantedRecommendations": [
+    // Tránh các extension nặng không cần thiết
+    "ms-python.python",
+    "bradlc.vscode-tailwindcss",
+    "eamodio.gitlens"
+  ]
+}

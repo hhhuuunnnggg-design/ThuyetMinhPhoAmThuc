@@ -1,0 +1,24 @@
+{
+  "recommendations": [
+    // ESLint - Linting cho JavaScript/TypeScript
+    "dbaeumer.vscode-eslint",
+
+    // Prettier - Format code
+    "esbenp.prettier-vscode",
+
+    // React Snippets - Hữu ích cho React development
+    "dsznajder.es7-react-js-snippets"
+  ],
+  "unwantedRecommendations": [
+    // Tránh extension Java
+    "vscjava.vscode-java-pack",
+    "redhat.java",
+    "vscjava.vscode-maven",
+    "vmware.vscode-spring-boot",
+
+    // Tránh extension nặng không cần thiết
+    "ms-python.python",
+    "bradlc.vscode-tailwindcss",
+    "eamodio.gitlens"
+  ]
+}

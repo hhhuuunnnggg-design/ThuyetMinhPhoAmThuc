@@ -1,0 +1,34 @@
+{
+  // ============================================
+  // CẤU HÌNH CHUNG CHO TOÀN BỘ WORKSPACE
+  // Cấu hình riêng cho backend/frontend nằm trong từng thư mục
+  // ============================================
+
+  // Loại trừ thư mục lớn khỏi file watcher
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "**/target/**": true,
+    "**/dist/**": true,
+    "**/uploads/**": true
+  },
+
+  // Loại trừ khỏi search
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/target": true,
+    "**/dist": true,
+    "**/uploads": true,
+    "**/.git": true
+  },
+
+  // Tắt auto-save để giảm I/O
+  "files.autoSave": "off",
+
+  // Tắt minimap để tiết kiệm RAM
+  "editor.minimap.enabled": false,
+
+  // Tắt git autofetch
+  "git.autofetch": false
+}
