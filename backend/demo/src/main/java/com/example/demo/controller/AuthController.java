@@ -19,7 +19,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.domain.User;
-import com.example.demo.domain.request.ReqLoginDTO;
+import com.example.demo.domain.request.auth.ReqLoginDTO;
+import com.example.demo.domain.request.auth.ReqRegisterDTO;
 import com.example.demo.domain.response.ResCreateUserDTO;
 import com.example.demo.domain.response.ResLoginDTO;
 import com.example.demo.service.UserServices;
@@ -222,16 +223,23 @@ public class AuthController {
 
     @PostMapping("/auth/register")
     @ApiMessage("Register a new user")
-    public ResponseEntity<ResCreateUserDTO> register(@Valid @RequestBody User postManUser) throws IdInvalidException {
-        boolean isEmailExist = this.userService.isEmailExist(postManUser.getEmail());
+    public ResponseEntity<ResCreateUserDTO> register(@Valid @RequestBody ReqRegisterDTO reqRegisterDTO)
+            throws IdInvalidException {
+        boolean isEmailExist = this.userService.isEmailExist(reqRegisterDTO.getEmail());
         if (isEmailExist) {
             throw new IdInvalidException(
-                    "Email " + postManUser.getEmail() + "đã tồn tại, vui lòng sử dụng email khác.");
+                    "Email " + reqRegisterDTO.getEmail() + " đã tồn tại, vui lòng sử dụng email khác.");
         }
-        String hashPassword = this.passwordEncoder.encode(postManUser.getPassword());
-        postManUser.setPassword(hashPassword);
-        User ericUser = this.userService.handleCreateUser(postManUser);
-        return ResponseEntity.status(HttpStatus.CREATED).body(this.userService.convertToResCreateUserDTO(ericUser));
+
+        // Map từ DTO sang Entity
+        User newUser = new User();
+        newUser.setEmail(reqRegisterDTO.getEmail());
+        newUser.setPassword(this.passwordEncoder.encode(reqRegisterDTO.getPassword()));
+        newUser.setFirstName(reqRegisterDTO.getFirstName());
+        newUser.setLastName(reqRegisterDTO.getLastName());
+
+        User createdUser = this.userService.handleCreateUser(newUser);
+        return ResponseEntity.status(HttpStatus.CREATED).body(this.userService.convertToResCreateUserDTO(createdUser));
     }
 
 }

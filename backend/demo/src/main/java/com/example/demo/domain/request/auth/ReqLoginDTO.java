@@ -1,4 +1,4 @@
-package com.example.demo.domain.request;
+package com.example.demo.domain.request.auth;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.AccessLevel;

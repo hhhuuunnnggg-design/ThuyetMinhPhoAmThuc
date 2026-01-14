@@ -5,6 +5,8 @@ import org.springframework.data.jpa.domain.Specification;
 
 import com.example.demo.domain.Permission;
 import com.example.demo.domain.dto.ResultPaginationDTO;
+import com.example.demo.domain.request.Permission.UpsertPermissionDTO;
+import com.example.demo.util.error.IdInvalidException;
 
 public interface PermissionService {
 
@@ -14,9 +16,13 @@ public interface PermissionService {
 
     Permission create(Permission p);
 
+    Permission createFromDTO(UpsertPermissionDTO dto) throws IdInvalidException;
+
     Permission updatePermission(Permission p);
 
-    void delete(long id);
+    Permission updatePermissionFromDTO(long id, UpsertPermissionDTO dto) throws IdInvalidException;
+
+    void delete(long id) throws IdInvalidException;
 
     ResultPaginationDTO getPermissions(Specification<Permission> spec, Pageable pageable);
 }
