@@ -24,6 +24,8 @@ public class PermissionInterceptorConfiguration implements WebMvcConfigurer {
         String[] whiteList = {
                 "/",
                 "/api/v1/auth/**",
+                "/swagger-ui/**",
+                "/v3/api-docs/**"
 
         };
 
