@@ -4,29 +4,28 @@ import Restricted from "@/components/common/restricted";
 import { useCurrentApp } from "@/components/context/app.context";
 import { logout } from "@/redux/slice/auth.slice";
 import {
-    AccountBookTwoTone,
-    ApiTwoTone,
-    CloudTwoTone,
-    MessageTwoTone,
-    NotificationTwoTone,
-    OpenAIFilled,
-    VideoCameraTwoTone,
+  AccountBookTwoTone,
+  ApiTwoTone,
+  CloudTwoTone,
+  MessageTwoTone,
+  NotificationTwoTone,
+  OpenAIFilled,
+  VideoCameraTwoTone,
 } from "@ant-design/icons";
 import {
-    Avatar,
-    Badge,
-    Button,
-    Divider,
-    Drawer,
-    Dropdown,
-    message,
-    Space,
+  Avatar,
+  Badge,
+  Button,
+  Divider,
+  Drawer,
+  Dropdown,
+  message,
+  Space,
 } from "antd";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import "./AppHeader.scss";
-import ModalChatbotAI from "./ModalChatbotAI";
 
 const AppHeader = () => {
   const [openDrawer, setOpenDrawer] = useState(false);
@@ -251,7 +250,7 @@ const AppHeader = () => {
           <OpenAIFilled style={{ fontSize: 24 }} />
         </Button>
       )}
-      {showChat && <ModalChatbotAI onClose={() => setShowChat(false)} />}
+      {/* {showChat && <ModalChatbotAI onClose={() => setShowChat(false)} />} */}
     </>
   );
 };
