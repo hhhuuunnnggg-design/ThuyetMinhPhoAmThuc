@@ -1,4 +1,5 @@
 import { loginAPI } from "@/api";
+import { ROUTES, STORAGE_KEYS } from "@/constants";
 import { setAuth } from "@/redux/slice/auth.slice";
 import { Button, Divider, Form, Input, message } from "antd";
 import { useState } from "react";
@@ -32,7 +33,7 @@ const LoginPage = () => {
           return;
         }
 
-        localStorage.setItem("access_token", res.data.access_token);
+        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, res.data.access_token);
 
         // Update Redux store - context will automatically sync
         dispatch(
@@ -47,9 +48,9 @@ const LoginPage = () => {
         // Check user role and redirect accordingly
         if (res.data.user.role) {
           // User has role (admin) - redirect to admin page
-          navigate("/admin/user");
+          navigate(ROUTES.ADMIN.USER);
         } else {
-          navigate("/");
+          navigate(ROUTES.HOME);
         }
       } else {
         message.error(res.message);
@@ -109,7 +110,7 @@ const LoginPage = () => {
               <p className="text text-normal" style={{ textAlign: "center" }}>
                 Chưa có tài khoản ?
                 <span>
-                  <Link to="/register"> Đăng Ký </Link>
+                  <Link to={ROUTES.REGISTER}> Đăng Ký </Link>
                 </span>
               </p>
               <br />

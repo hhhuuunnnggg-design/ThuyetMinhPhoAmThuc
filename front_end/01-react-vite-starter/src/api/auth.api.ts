@@ -1,13 +1,12 @@
 // api/auth.api.ts
 import axios from "@/api/axios";
+import { API_ENDPOINTS } from "@/constants";
 import type { Dayjs } from "dayjs";
 
 // Login API
 export const loginAPI = (email: string, password: string) => {
-  const urlBackend = "/api/v1/auth/login";
-
   return axios
-    .post<IBackendRes<ILogin>>(urlBackend, { email, password })
+    .post<IBackendRes<ILogin>>(API_ENDPOINTS.AUTH.LOGIN, { email, password })
     .then((res) => {
       return res;
     });
@@ -27,21 +26,17 @@ export const registerAPI = (userData: {
   hometown?: string;
   bio?: string;
 }) => {
-  const urlBackend = "/api/v1/auth/register";
-  return axios.post<IBackendRes<IRegister>>(urlBackend, userData);
+  return axios.post<IBackendRes<IRegister>>(API_ENDPOINTS.AUTH.REGISTER, userData);
 };
 
 // Fetch account API
 export const fetchAccountAPI = () => {
-  const urlBackend = "/api/v1/auth/account";
-
-  return axios.get<IBackendRes<IFetchAccount>>(urlBackend).then((res) => {
+  return axios.get<IBackendRes<IFetchAccount>>(API_ENDPOINTS.AUTH.ACCOUNT).then((res) => {
     return res;
   });
 };
 
 // Logout API
 export const logoutAPI = () => {
-  const urlBackend = "/api/v1/auth/logout";
-  return axios.post<IBackendRes<any>>(urlBackend);
+  return axios.post<IBackendRes<any>>(API_ENDPOINTS.AUTH.LOGOUT);
 };

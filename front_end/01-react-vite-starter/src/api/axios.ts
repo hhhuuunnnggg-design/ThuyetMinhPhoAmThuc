@@ -1,10 +1,13 @@
 // api/axios.ts
 import axios from "axios";
+import { config } from "@/config";
+import { API_ENDPOINTS, ROUTES, STORAGE_KEYS } from "@/constants";
 
 // Tạo instance axios
 const instance = axios.create({
-  baseURL: import.meta.env.VITE_BACKEND_URL,
+  baseURL: config.api.baseURL,
   withCredentials: true, // ⚡ Bắt buộc để gửi cookie refresh_token
+  timeout: config.api.timeout,
 });
 
 // =========================
@@ -12,7 +15,7 @@ const instance = axios.create({
 // =========================
 instance.interceptors.request.use(
   function (config) {
-    const token = localStorage.getItem("access_token");
+    const token = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
     if (token) {
       config.headers["Authorization"] = `Bearer ${token}`;
     }
@@ -42,7 +45,7 @@ instance.interceptors.response.use(
         console.log("gọi API refresh token");
         // Gọi API refresh token
         const refreshResponse = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/v1/auth/refresh`,
+          `${config.api.baseURL}${API_ENDPOINTS.AUTH.REFRESH}`,
           {
             withCredentials: true, // ⚡ Gửi cookie refresh_token
           }
@@ -56,7 +59,7 @@ instance.interceptors.response.use(
 
         if (newAccessToken) {
           // Lưu token mới vào localStorage
-          localStorage.setItem("access_token", newAccessToken);
+          localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
 
           // Gắn lại token mới vào header của request cũ
           originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
@@ -70,8 +73,8 @@ instance.interceptors.response.use(
         console.error("Refresh token failed:", refreshError);
 
         // Nếu refresh token thất bại → logout
-        localStorage.removeItem("access_token");
-        window.location.href = "/login";
+        localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+        window.location.href = ROUTES.LOGIN;
 
         return Promise.reject(refreshError);
       }

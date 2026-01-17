@@ -1,4 +1,5 @@
 import { logoutAPI } from "@/api";
+import { ROUTES, STORAGE_KEYS } from "@/constants";
 import { useCurrentApp } from "@/components/context/app.context";
 import {
     AppstoreOutlined,
@@ -37,9 +38,9 @@ const AdminLayout = () => {
       await logoutAPI();
       setUser(null);
       setIsAuthenticated(false);
-      localStorage.removeItem("access_token");
+      localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
       message.success("Đăng xuất thành công!");
-      navigate("/login");
+      navigate(ROUTES.LOGIN);
     } catch (error: any) {
       message.error(error?.message || "Đăng xuất thất bại!");
     }
@@ -53,7 +54,7 @@ const AdminLayout = () => {
 
   const items: MenuItem[] = [
     {
-      label: <Link to="/admin">Dashboard</Link>,
+      label: <Link to={ROUTES.ADMIN.BASE}>Dashboard</Link>,
       key: "dashboard",
       icon: <AppstoreOutlined />,
     },
@@ -63,7 +64,7 @@ const AdminLayout = () => {
       icon: <UserOutlined />,
       children: [
         {
-          label: <Link to="/admin/user">CRUD</Link>,
+          label: <Link to={ROUTES.ADMIN.USER}>CRUD</Link>,
           key: "crud",
           icon: <TeamOutlined />,
         },
@@ -73,7 +74,7 @@ const AdminLayout = () => {
     ...(hasPermission("/api/v1/roles/fetch-all", "GET")
       ? [
           {
-            label: <Link to="/admin/role">Manage Role</Link>,
+            label: <Link to={ROUTES.ADMIN.ROLE}>Manage Role</Link>,
             key: "role",
             icon: <ExceptionOutlined />,
           },
@@ -83,7 +84,7 @@ const AdminLayout = () => {
     ...(hasPermission("/api/v1/permissions/fetch-all", "GET")
       ? [
           {
-            label: <Link to="/admin/permission">Manage Permission</Link>,
+            label: <Link to={ROUTES.ADMIN.PERMISSION}>Manage Permission</Link>,
             key: "permission",
             icon: <DollarCircleOutlined />,
           },
@@ -101,7 +102,7 @@ const AdminLayout = () => {
       key: "account",
     },
     {
-      label: <Link to={"/"}>Trang chủ</Link>,
+      label: <Link to={ROUTES.HOME}>Trang chủ</Link>,
       key: "home",
     },
     {

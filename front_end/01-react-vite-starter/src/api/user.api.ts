@@ -1,5 +1,6 @@
 // api/user.api.ts
 import axios from "@/api/axios";
+import { API_ENDPOINTS } from "@/constants";
 
 // Create user API
 export const createUserAPI = (userData: {
@@ -9,8 +10,7 @@ export const createUserAPI = (userData: {
   lastName: string;
   gender: "MALE" | "FEMALE" | "OTHER";
 }) => {
-  const urlBackend = "/api/v1/users/add-user";
-  return axios.post<IBackendRes<any>>(urlBackend, userData);
+  return axios.post<IBackendRes<any>>(API_ENDPOINTS.USERS.CREATE, userData);
 };
 
 // Update user API
@@ -23,20 +23,17 @@ export const updateUserAPI = (
     gender: "MALE" | "FEMALE" | "OTHER";
   }
 ) => {
-  const urlBackend = `/api/v1/users/${userId}`;
-  return axios.put<IBackendRes<any>>(urlBackend, userData);
+  return axios.put<IBackendRes<any>>(API_ENDPOINTS.USERS.UPDATE(userId), userData);
 };
 
 // Delete user API
 export const deleteUserAPI = (userId: number) => {
-  const urlBackend = `/api/v1/users/${userId}`;
-  return axios.delete<IBackendRes<any>>(urlBackend);
+  return axios.delete<IBackendRes<any>>(API_ENDPOINTS.USERS.DELETE(userId));
 };
 
 // Change user activity (block/unblock) API
 export const changeUserActivityAPI = (userId: number) => {
-  const urlBackend = `/api/v1/users/changeActivity/${userId}`;
-  return axios.put<IBackendRes<any>>(urlBackend);
+  return axios.put<IBackendRes<any>>(API_ENDPOINTS.USERS.CHANGE_ACTIVITY(userId));
 };
 
 // Admin create user API
@@ -45,8 +42,7 @@ export const adminCreateUserAPI = (userData: {
   password: string;
   roleId?: number;
 }) => {
-  const urlBackend = "/api/v1/users/admin/create";
-  return axios.post<IBackendRes<any>>(urlBackend, userData);
+  return axios.post<IBackendRes<any>>(API_ENDPOINTS.USERS.ADMIN_CREATE, userData);
 };
 
 // Admin update user API
@@ -58,6 +54,5 @@ export const adminUpdateUserAPI = (
     roleId?: number;
   }
 ) => {
-  const urlBackend = `/api/v1/users/admin/${userId}`;
-  return axios.put<IBackendRes<any>>(urlBackend, userData);
+  return axios.put<IBackendRes<any>>(API_ENDPOINTS.USERS.ADMIN_UPDATE(userId), userData);
 };

@@ -1,3 +1,4 @@
+import { ROUTES } from "@/constants";
 import { useCurrentApp } from "@/components/context/app.context";
 import { Outlet, useLocation } from "react-router-dom";
 import AppHeader from "./AppHeader";
@@ -7,10 +8,10 @@ function ClientLayout() {
   const { user, isAuthenticated } = useCurrentApp();
 
   const isAuthPage =
-    location.pathname === "/login" || location.pathname === "/register";
+    location.pathname === ROUTES.LOGIN || location.pathname === ROUTES.REGISTER;
 
   // Kiểm tra xem có phải trang admin không
-  const isAdminPage = location.pathname.startsWith("/admin");
+  const isAdminPage = location.pathname.startsWith(ROUTES.ADMIN.BASE);
 
   // Kiểm tra user có quyền truy cập admin không
   const hasAdminAccess =

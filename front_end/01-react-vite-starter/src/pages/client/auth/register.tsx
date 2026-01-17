@@ -1,5 +1,3 @@
-// import { loginAPI } from "@/services/api";
-//import { loginAPI } from "@/services/api";
 import { registerAPI } from "@/api";
 import type { FormProps } from "antd";
 import {

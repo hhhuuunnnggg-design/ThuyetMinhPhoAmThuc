@@ -2,6 +2,7 @@
 import { logoutAPI } from "@/api";
 import Restricted from "@/components/common/restricted";
 import { useCurrentApp } from "@/components/context/app.context";
+import { ROUTES, STORAGE_KEYS } from "@/constants";
 import { logout } from "@/redux/slice/auth.slice";
 import {
   AccountBookTwoTone,
@@ -9,8 +10,7 @@ import {
   CloudTwoTone,
   MessageTwoTone,
   NotificationTwoTone,
-  OpenAIFilled,
-  VideoCameraTwoTone,
+  VideoCameraTwoTone
 } from "@ant-design/icons";
 import {
   Avatar,
@@ -33,7 +33,7 @@ const AppHeader = () => {
     useCurrentApp();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [showChat, setShowChat] = useState(false);
+  // const [showChat, setShowChat] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -41,9 +41,9 @@ const AppHeader = () => {
       dispatch(logout());
       setUser(null);
       setIsAuthenticated(false);
-      localStorage.removeItem("access_token");
+      localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
       message.success("Đăng xuất thành công!");
-      navigate("/login");
+      navigate(ROUTES.LOGIN);
     } catch (error: any) {
       message.error(error?.message || "Đăng xuất thất bại!");
     }
@@ -72,7 +72,7 @@ const AppHeader = () => {
     menuItems.unshift({
       label: (
         <Restricted permission="/api/v1/users/fetch-all">
-          <Link to="/admin/user">Trang quản trị</Link>
+          <Link to={ROUTES.ADMIN.USER}>Trang quản trị</Link>
         </Restricted>
       ),
       key: "admin",
@@ -103,7 +103,7 @@ const AppHeader = () => {
     {
       icon: <AccountBookTwoTone />,
       key: "home",
-      onClick: () => navigate("/"),
+      onClick: () => navigate(ROUTES.HOME),
     },
     {
       icon: <VideoCameraTwoTone />,
@@ -134,7 +134,7 @@ const AppHeader = () => {
               ☰
             </div>
             <div className="page-header__logo">
-              <Link to="/" className="logo">
+              <Link to={ROUTES.HOME} className="logo">
                 <div style={{ display: "flex", alignItems: "center" }}>
                   <img
                     style={{ width: "40px", height: "40px" }}
@@ -199,7 +199,7 @@ const AppHeader = () => {
         open={openDrawer}
       >
         {!isAuthenticated ? (
-          <Button type="primary" onClick={() => navigate("/login")}>
+          <Button type="primary" onClick={() => navigate(ROUTES.LOGIN)}>
             Đăng nhập
           </Button>
         ) : (
@@ -215,7 +215,7 @@ const AppHeader = () => {
             {user?.role !== null && (
               <Restricted permission="/api/v1/users/fetch-all">
                 <p>
-                  <Link to="/admin/user">Trang quản trị</Link>
+                  <Link to={ROUTES.ADMIN.USER}>Trang quản trị</Link>
                 </p>
                 <Divider />
               </Restricted>
@@ -229,28 +229,7 @@ const AppHeader = () => {
           </>
         )}
       </Drawer>
-      {isAuthenticated && (
-        <Button
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            position: "fixed",
-            bottom: "16px",
-            right: "16px",
-            background: "#fff",
-            width: "48px",
-            height: "48px",
-            borderRadius: "9999px",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-            zIndex: 1000,
-          }}
-          onClick={() => setShowChat(true)}
-        >
-          <OpenAIFilled style={{ fontSize: 24 }} />
-        </Button>
-      )}
-      {/* {showChat && <ModalChatbotAI onClose={() => setShowChat(false)} />} */}
+      
     </>
   );
 };

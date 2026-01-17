@@ -1,5 +1,6 @@
 // api/permission.api.ts
 import axios from "@/api/axios";
+import { API_ENDPOINTS } from "@/constants";
 
 // Create permission API
 export const createPermissionAPI = (permissionData: {
@@ -8,8 +9,7 @@ export const createPermissionAPI = (permissionData: {
   method: string;
   module: string;
 }) => {
-  const urlBackend = "/api/v1/permissions/create";
-  return axios.post<IBackendRes<any>>(urlBackend, permissionData);
+  return axios.post<IBackendRes<any>>(API_ENDPOINTS.PERMISSIONS.CREATE, permissionData);
 };
 
 // Update permission API
@@ -22,24 +22,20 @@ export const updatePermissionAPI = (
     module: string;
   }
 ) => {
-  const urlBackend = `/api/v1/permissions/${permissionId}`;
-  return axios.put<IBackendRes<any>>(urlBackend, permissionData);
+  return axios.put<IBackendRes<any>>(API_ENDPOINTS.PERMISSIONS.UPDATE(permissionId), permissionData);
 };
 
 // Delete permission API
 export const deletePermissionAPI = (permissionId: number) => {
-  const urlBackend = `/api/v1/permissions/${permissionId}`;
-  return axios.delete<IBackendRes<any>>(urlBackend);
+  return axios.delete<IBackendRes<any>>(API_ENDPOINTS.PERMISSIONS.DELETE(permissionId));
 };
 
 // Fetch all permissions API
 export const fetchAllPermissionsAPI = (params?: any) => {
-  const urlBackend = "/api/v1/permissions/fetch-all";
-  return axios.get<IBackendRes<any>>(urlBackend, { params });
+  return axios.get<IBackendRes<any>>(API_ENDPOINTS.PERMISSIONS.FETCH_ALL, { params });
 };
 
 // Fetch all methods (alias for fetchAllPermissionsAPI)
 export const fetchAllMethod = () => {
-  const urlBackend = "/api/v1/permissions/fetch-all";
-  return axios.get<IBackendRes<any>>(urlBackend);
+  return axios.get<IBackendRes<any>>(API_ENDPOINTS.PERMISSIONS.FETCH_ALL);
 };

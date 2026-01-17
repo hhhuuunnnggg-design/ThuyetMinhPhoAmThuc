@@ -1,3 +1,4 @@
+import { ROUTES } from "@/constants";
 import { useCurrentApp } from "@/components/context/app.context";
 import { Button, message, Result } from "antd";
 import { useEffect } from "react";
@@ -21,7 +22,7 @@ const AccessDenied = () => {
       title="403"
       subTitle="Sorry, you are not authorized to access this page."
       extra={
-        <Button type="primary" onClick={() => navigate("/")}>
+        <Button type="primary" onClick={() => navigate(ROUTES.HOME)}>
           Back Home
         </Button>
       }
@@ -44,7 +45,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
     if (!isAuthenticated || !user) {
       message.error("Bạn chưa đăng nhập!");
-      navigate("/login");
+      navigate(ROUTES.LOGIN);
       return;
     }
 
@@ -119,7 +120,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
 
     if (!isAuthenticated || !user) {
       message.error("Bạn chưa đăng nhập!");
-      navigate("/login");
+      navigate(ROUTES.LOGIN);
       return;
     }
 

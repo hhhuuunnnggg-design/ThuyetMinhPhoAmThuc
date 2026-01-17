@@ -22,6 +22,7 @@ import PermissionPage from "./components/admin/Permission/PermissionTable";
 // import RolePage from "./pages/admin/role";
 import RolePage from "./components/admin/Role/RoleTable";
 
+import { ROUTES, STORAGE_KEYS } from "@/constants";
 import { fetchAccountThunk } from "@/redux/slice/auth.slice";
 import UsersPage from "./components/admin/User/UserTable";
 import ErrorPage from "./components/common/ErrorPageRoute";
@@ -29,7 +30,7 @@ import "./styles/global.scss";
 
 const router = createBrowserRouter([
   {
-    path: "/",
+    path: ROUTES.HOME,
     element: <ClientLayout />,
     errorElement: <ErrorPage />,
     children: [
@@ -40,7 +41,7 @@ const router = createBrowserRouter([
     ],
   },
   {
-    path: "/admin",
+    path: ROUTES.ADMIN.BASE,
     element: (
       <AdminRoute>
         <AdminLayout />
@@ -63,12 +64,12 @@ const router = createBrowserRouter([
     ],
   },
   {
-    path: "/login",
+    path: ROUTES.LOGIN,
     element: <LoginPage />,
     errorElement: <ErrorPage />,
   },
   {
-    path: "/register",
+    path: ROUTES.REGISTER,
     element: <RegisterPage />,
     errorElement: <ErrorPage />,
   },
@@ -82,16 +83,12 @@ const AppWrapper = () => {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
-  
+    const token = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
 
     if (token) {
-     
       dispatch(fetchAccountThunk() as any)
         .then((result: any) => {
-        
           if (fetchAccountThunk.fulfilled.match(result)) {
-           
             // Check if user has role, if not redirect to home
             if (!result.payload.user.role) {
               console.log("AppWrapper - User has no role, redirecting to home");
@@ -109,11 +106,9 @@ const AppWrapper = () => {
           // Context will automatically sync with Redux state
           // Only remove token on specific errors
           if (error?.response?.status === 401) {
-            localStorage.removeItem("access_token");
+            localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
           }
         });
-    } else {
-      
     }
   }, [dispatch]);
 
