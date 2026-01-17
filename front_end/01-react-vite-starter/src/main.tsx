@@ -96,18 +96,15 @@ const AppWrapper = () => {
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
-    console.log("AppWrapper - Token found:", token);
+  
 
     if (token) {
-      console.log("AppWrapper - Fetching account...");
+     
       dispatch(fetchAccountThunk() as any)
         .then((result: any) => {
-          console.log("AppWrapper - Fetch account result:", result);
+        
           if (fetchAccountThunk.fulfilled.match(result)) {
-            console.log(
-              "AppWrapper - Setting authenticated user:",
-              result.payload.user
-            );
+           
             // Check if user has role, if not redirect to home
             if (!result.payload.user.role) {
               console.log("AppWrapper - User has no role, redirecting to home");
@@ -129,8 +126,7 @@ const AppWrapper = () => {
           }
         });
     } else {
-      console.log("AppWrapper - No token found");
-      // Context will automatically sync with Redux state
+      
     }
   }, [dispatch]);
 

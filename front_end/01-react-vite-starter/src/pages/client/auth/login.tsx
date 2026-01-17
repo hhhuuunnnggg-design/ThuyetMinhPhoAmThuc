@@ -23,7 +23,7 @@ const LoginPage = () => {
 
       // Check if response has the correct structure
       if (res && res.data) {
-        console.log("Login data:", res.data);
+       
 
         // Check if access_token exists
         if (!res.data.access_token) {

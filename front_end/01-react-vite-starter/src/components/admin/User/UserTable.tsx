@@ -293,8 +293,7 @@ const UsersPage = () => {
               filter: filters,
             };
 
-            console.log("Request params:", requestParams);
-            console.log("Filters:", filters);
+          
 
             const res = await axios.get("/api/v1/users/fetch-all", {
               params: requestParams,

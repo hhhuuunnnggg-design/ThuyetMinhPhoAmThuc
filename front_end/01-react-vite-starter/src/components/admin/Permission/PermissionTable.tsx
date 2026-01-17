@@ -145,8 +145,7 @@ const PermissionPage = () => {
               filter: filters,
             };
 
-            console.log("Request params:", requestParams);
-            console.log("Filters:", filters);
+            
 
             //cái này để log ra MethodOptions
             const res2 = await fetchAllMethod();

@@ -36,11 +36,7 @@ export const AppProvider = (props: TProps) => {
 
   //  Đồng bộ từ Redux → Context
   useEffect(() => {
-    console.log("AppProvider - Syncing with Redux:", {
-      reduxUser,
-      reduxIsAuthenticated,
-      reduxLoading,
-    });
+   
     setUser(reduxUser);
     setIsAuthenticated(reduxIsAuthenticated);
     setLoading(reduxLoading);
