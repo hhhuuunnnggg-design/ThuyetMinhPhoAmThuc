@@ -1,4 +1,5 @@
 import { fetchAllMethod, updatePermissionAPI } from "@/api";
+import { logger } from "@/utils/logger";
 import { Form, Input, message, Modal, Select } from "antd";
 import { useEffect, useState } from "react";
 
@@ -60,7 +61,7 @@ const EditPermissionModal = ({
       }));
       setMethodOptions(newMethodOptions);
     } catch (error) {
-      console.error("Error fetching method options:", error);
+      logger.error("Error fetching method options:", error);
     }
   };
 

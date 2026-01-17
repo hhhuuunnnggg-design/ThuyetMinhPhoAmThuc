@@ -14,16 +14,13 @@ import AdminLayout from "@/components/admin/Layout/AdminLayout";
 import { AppProvider } from "@/components/context/app.context";
 import { App, ConfigProvider } from "antd";
 import viVN from "antd/locale/vi_VN";
-import { AdminRoute } from "./components/common/protectedRoute";
-
-// import PermissionPage from "./pages/admin/permission";
 import PermissionPage from "./components/admin/Permission/PermissionTable";
-
-// import RolePage from "./pages/admin/role";
 import RolePage from "./components/admin/Role/RoleTable";
+import { AdminRoute } from "./components/common/protectedRoute";
 
 import { ROUTES, STORAGE_KEYS } from "@/constants";
 import { fetchAccountThunk } from "@/redux/slice/auth.slice";
+import { logger } from "@/utils/logger";
 import UsersPage from "./components/admin/User/UserTable";
 import ErrorPage from "./components/common/ErrorPageRoute";
 import "./styles/global.scss";
@@ -89,22 +86,15 @@ const AppWrapper = () => {
       dispatch(fetchAccountThunk() as any)
         .then((result: any) => {
           if (fetchAccountThunk.fulfilled.match(result)) {
-            // Check if user has role, if not redirect to home
             if (!result.payload.user.role) {
-              console.log("AppWrapper - User has no role, redirecting to home");
-              // Context will automatically sync with Redux state
+              logger.debug("User has no role");
             }
           } else {
-            console.log(
-              "AppWrapper - Fetch account failed, but keeping token for now"
-            );
-            // Context will automatically sync with Redux state
+            logger.warn("Fetch account failed, but keeping token");
           }
         })
         .catch((error: any) => {
-          console.log("AppWrapper - Fetch account error:", error);
-          // Context will automatically sync with Redux state
-          // Only remove token on specific errors
+          logger.error("Fetch account error:", error);
           if (error?.response?.status === 401) {
             localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
           }

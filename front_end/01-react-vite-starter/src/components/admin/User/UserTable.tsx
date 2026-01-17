@@ -2,6 +2,7 @@ import { changeUserActivityAPI, deleteUserAPI } from "@/api";
 import axios from "@/api/axios";
 import Restricted from "@/components/common/restricted";
 import { useCurrentApp } from "@/components/context/app.context";
+import { logger } from "@/utils/logger";
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import ProTable from "@ant-design/pro-table";
 import { Avatar, Button, Image, message, Popconfirm, Space, Tag } from "antd";
@@ -59,7 +60,7 @@ const UsersPage = () => {
 
         setRoleEnum(enumData); // ✅ cập nhật valueEnum
       } catch (error) {
-        console.error("Lỗi khi lấy danh sách roles:", error);
+        logger.error("Error fetching roles:", error);
       }
     }
 
@@ -321,7 +322,7 @@ const UsersPage = () => {
               success: false,
             };
           } catch (error) {
-            console.error("Users API error:", error);
+            logger.error("Users API error:", error);
             return {
               data: [],
               total: 0,

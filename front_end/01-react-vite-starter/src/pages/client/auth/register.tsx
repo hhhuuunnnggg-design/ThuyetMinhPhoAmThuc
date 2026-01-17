@@ -1,4 +1,5 @@
 import { registerAPI } from "@/api";
+import { ROUTES } from "@/constants";
 import type { FormProps } from "antd";
 import {
   App,
@@ -65,15 +66,11 @@ const RegisterPage = () => {
 
     const res = await registerAPI(userData);
     if (res.data) {
-      //success
       message.success("Đăng ký user thành công.");
-      navigate("/login");
+      navigate(ROUTES.LOGIN);
     } else {
-      //error
-      console.log(">>> Register error: ", res);
-      message.error(res.message);
+      message.error(res.message || "Đăng ký thất bại!");
     }
-    console.log(">>> Register response: ", res);
 
     setIsSubmit(false);
   };
@@ -86,8 +83,8 @@ const RegisterPage = () => {
       .then(() => {
         setCurrentStep(currentStep + 1);
       })
-      .catch((errorInfo) => {
-        console.log("Điền thiếu thông tin kìa thằng ngu", errorInfo);
+      .catch(() => {
+        // Validation failed, user will see error messages
       });
   };
 

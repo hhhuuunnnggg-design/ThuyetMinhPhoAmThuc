@@ -1,6 +1,3 @@
-# Trung Tâm Anh Ngữ
-
-Dự án mô phỏng Clone lại Các Website trung tâm tiếng anh
 
 - 🔐 Đăng nhập / Đăng ký (JWT + Spring Security)
 - 🚫 Chặn truy cập trái phép & redirect về trang đăng nhập

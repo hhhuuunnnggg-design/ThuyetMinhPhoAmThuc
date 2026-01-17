@@ -1,6 +1,7 @@
 import { deleteRoleAPI } from "@/api";
 import axios from "@/api/axios";
 import Restricted from "@/components/common/restricted";
+import { logger } from "@/utils/logger";
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import ProTable from "@ant-design/pro-table";
 import { Button, message, Popconfirm, Space } from "antd";
@@ -172,7 +173,7 @@ const RolePage = () => {
               success: false,
             };
           } catch (error) {
-            console.error("Roles API error:", error);
+            logger.error("Roles API error:", error);
             return {
               data: [],
               total: 0,

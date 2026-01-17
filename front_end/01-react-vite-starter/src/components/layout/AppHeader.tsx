@@ -1,4 +1,3 @@
-//import ChatBox from "@/components/common/ChatBox";
 import { logoutAPI } from "@/api";
 import Restricted from "@/components/common/restricted";
 import { useCurrentApp } from "@/components/context/app.context";
@@ -87,7 +86,9 @@ const AppHeader = () => {
         </Badge>
       ),
       key: "messages",
-      onClick: () => console.log("Messages"),
+      onClick: () => {
+        // TODO: Implement messages feature
+      },
     },
     {
       icon: (
@@ -96,7 +97,9 @@ const AppHeader = () => {
         </Badge>
       ),
       key: "notifications",
-      onClick: () => console.log("Notifications"),
+      onClick: () => {
+        // TODO: Implement notifications feature
+      },
     },
   ];
   const navIcons1 = [
@@ -108,17 +111,23 @@ const AppHeader = () => {
     {
       icon: <VideoCameraTwoTone />,
       key: "video",
-      onClick: () => console.log("Video"),
+      onClick: () => {
+        // TODO: Implement video feature
+      },
     },
     {
       icon: <ApiTwoTone />,
       key: "group",
-      onClick: () => console.log("group"),
+      onClick: () => {
+        // TODO: Implement group feature
+      },
     },
     {
       icon: <CloudTwoTone />,
       key: "feed",
-      onClick: () => console.log("feed"),
+      onClick: () => {
+        // TODO: Implement feed feature
+      },
     },
   ];
 

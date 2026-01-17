@@ -1,4 +1,5 @@
 import { createRoleAPI, fetchAllPermissionsAPI } from "@/api";
+import { logger } from "@/utils/logger";
 import { Checkbox, Divider, Form, Input, message, Modal, Switch } from "antd";
 import { useEffect, useState } from "react";
 
@@ -36,11 +37,11 @@ const AddRoleModal = ({ open, onCancel, onSuccess }: AddRoleModalProps) => {
       if (Array.isArray(permissionsData)) {
         setPermissions(permissionsData);
       } else {
-        console.error("Permissions data is not an array:", permissionsData);
+        logger.error("Permissions data is not an array:", permissionsData);
         message.error("Không thể tải danh sách quyền!");
       }
     } catch (error: any) {
-      console.error("Error fetching permissions:", error);
+      logger.error("Error fetching permissions:", error);
       message.error("Lỗi khi tải danh sách quyền!");
     } finally {
       setLoadingPermissions(false);

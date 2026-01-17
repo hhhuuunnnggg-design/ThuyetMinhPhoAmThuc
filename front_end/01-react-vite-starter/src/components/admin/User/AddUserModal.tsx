@@ -1,4 +1,5 @@
 import { adminCreateUserAPI, fetchAllRolesAPI } from "@/api";
+import { logger } from "@/utils/logger";
 import { Form, Input, message, Modal, Select } from "antd";
 import { useEffect, useState } from "react";
 
@@ -37,7 +38,7 @@ const AddUserModal = ({ isOpen, onClose, onSuccess }: AddUserModalProps) => {
         setRoles(rolesData.filter((role: IRole) => role.active));
       }
     } catch (error: any) {
-      console.error("Error fetching roles:", error);
+      logger.error("Error fetching roles:", error);
       message.error("Lỗi khi tải danh sách vai trò!");
     } finally {
       setLoadingRoles(false);

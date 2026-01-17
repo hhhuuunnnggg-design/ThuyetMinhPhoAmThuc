@@ -1,5 +1,6 @@
 import { deletePermissionAPI, fetchAllMethod } from "@/api";
 import axios from "@/api/axios";
+import { logger } from "@/utils/logger";
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import ProTable from "@ant-design/pro-table";
 import { Button, message, Popconfirm, Space } from "antd";
@@ -186,7 +187,7 @@ const PermissionPage = () => {
               success: false,
             };
           } catch (error) {
-            console.error("Users API error:", error);
+            logger.error("Permissions API error:", error);
             return {
               data: [],
               total: 0,

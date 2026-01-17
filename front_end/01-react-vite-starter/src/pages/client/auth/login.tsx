@@ -1,6 +1,7 @@
 import { loginAPI } from "@/api";
 import { ROUTES, STORAGE_KEYS } from "@/constants";
 import { setAuth } from "@/redux/slice/auth.slice";
+import { logger } from "@/utils/logger";
 import { Button, Divider, Form, Input, message } from "antd";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
@@ -22,20 +23,15 @@ const LoginPage = () => {
       setIsSubmit(true);
       const res = await loginAPI(values.email, values.password);
 
-      // Check if response has the correct structure
-      if (res && res.data) {
-       
-
-        // Check if access_token exists
+      if (res?.data) {
         if (!res.data.access_token) {
-          console.error("No access_token in response:", res.data);
+          logger.error("No access_token in response:", res.data);
           message.error("Không nhận được token đăng nhập!");
           return;
         }
 
         localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, res.data.access_token);
 
-        // Update Redux store - context will automatically sync
         dispatch(
           setAuth({
             isAuthenticated: true,
@@ -45,19 +41,18 @@ const LoginPage = () => {
 
         message.success("Đăng nhập thành công!");
 
-        // Check user role and redirect accordingly
-        if (res.data.user.role) {
-          // User has role (admin) - redirect to admin page
-          navigate(ROUTES.ADMIN.USER);
-        } else {
-          navigate(ROUTES.HOME);
-        }
+        const redirectPath = res.data.user.role
+          ? ROUTES.ADMIN.USER
+          : ROUTES.HOME;
+        navigate(redirectPath);
       } else {
-        message.error(res.message);
+        message.error(res.message || "Đăng nhập thất bại!");
       }
-    } catch (error: any) {
-      console.error("Login error:", error);
-      message.error(error.message || "Đăng nhập thất bại!");
+    } catch (error) {
+      logger.error("Login error:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Đăng nhập thất bại!";
+      message.error(errorMessage);
     } finally {
       setIsSubmit(false);
     }
@@ -79,7 +74,7 @@ const LoginPage = () => {
             </div>
             <Form name="login-form" onFinish={onFinish} autoComplete="off">
               <Form.Item<FieldType>
-                labelCol={{ span: 24 }} //whole column
+                labelCol={{ span: 24 }}
                 label="Email"
                 name="email"
                 rules={[
@@ -91,7 +86,7 @@ const LoginPage = () => {
               </Form.Item>
 
               <Form.Item<FieldType>
-                labelCol={{ span: 24 }} //whole column
+                labelCol={{ span: 24 }}
                 label="Mật khẩu"
                 name="password"
                 rules={[
