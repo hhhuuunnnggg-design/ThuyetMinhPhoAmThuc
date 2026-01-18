@@ -1,7 +1,6 @@
 import { changeUserActivityAPI, deleteUserAPI } from "@/api";
 import axios from "@/api/axios";
 import Restricted from "@/components/common/restricted";
-import { useCurrentApp } from "@/components/context/app.context";
 import { logger } from "@/utils/logger";
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import ProTable from "@ant-design/pro-table";
@@ -35,7 +34,6 @@ interface IUserData {
 }
 
 const UsersPage = () => {
-  const { user } = useCurrentApp();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
