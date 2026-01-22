@@ -1,96 +1,96 @@
-package com.example.demo.config;
+// package com.example.demo.config;
 
-import java.util.List;
+// import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.AntPathMatcher;
-import org.springframework.web.servlet.HandlerInterceptor;
-import org.springframework.web.servlet.HandlerMapping;
+// import org.springframework.beans.factory.annotation.Autowired;
+// import org.springframework.transaction.annotation.Transactional;
+// import org.springframework.util.AntPathMatcher;
+// import org.springframework.web.servlet.HandlerInterceptor;
+// import org.springframework.web.servlet.HandlerMapping;
 
-import com.example.demo.domain.Permission;
-import com.example.demo.domain.Role;
-import com.example.demo.domain.User;
-import com.example.demo.service.UserServices;
-import com.example.demo.util.SecurityUtil;
-import com.example.demo.util.error.PermissionException;
+// import com.example.demo.domain.Permission;
+// import com.example.demo.domain.Role;
+// import com.example.demo.domain.User;
+// import com.example.demo.service.UserServices;
+// import com.example.demo.util.SecurityUtil;
+// import com.example.demo.util.error.PermissionException;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+// import jakarta.servlet.http.HttpServletRequest;
+// import jakarta.servlet.http.HttpServletResponse;
 
-public class PermissionInterceptor implements HandlerInterceptor {
+// public class PermissionInterceptor implements HandlerInterceptor {
 
-    @Autowired
-    private UserServices userService;
+// @Autowired
+// private UserServices userService;
 
-    private final AntPathMatcher pathMatcher = new AntPathMatcher();
+// private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
-    @Override
-    @Transactional
-    public boolean preHandle(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            Object handler) throws Exception {
+// @Override
+// @Transactional
+// public boolean preHandle(
+// HttpServletRequest request,
+// HttpServletResponse response,
+// Object handler) throws Exception {
 
-        String pathPattern = (String) request.getAttribute(
-                HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
-        String requestURI = request.getRequestURI();
-        String httpMethod = request.getMethod();
+// String pathPattern = (String) request.getAttribute(
+// HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+// String requestURI = request.getRequestURI();
+// String httpMethod = request.getMethod();
 
-        System.out.println(">>> RUN preHandle");
-        System.out.println(">>> pathPattern = " + pathPattern);
-        System.out.println(">>> httpMethod = " + httpMethod);
-        System.out.println(">>> requestURI = " + requestURI);
+// System.out.println(">>> RUN preHandle");
+// System.out.println(">>> pathPattern = " + pathPattern);
+// System.out.println(">>> httpMethod = " + httpMethod);
+// System.out.println(">>> requestURI = " + requestURI);
 
-        // ==================== CHECK PERMISSION ====================
+// // ==================== CHECK PERMISSION ====================
 
-        String email = SecurityUtil.getCurrentUserLogin().orElse("");
+// String email = SecurityUtil.getCurrentUserLogin().orElse("");
 
-        // Chưa login thì cho đi tiếp (tuỳ policy)
-        if (email == null || email.isEmpty()) {
-            return true;
-        }
+// // Chưa login thì cho đi tiếp (tuỳ policy)
+// if (email == null || email.isEmpty()) {
+// return true;
+// }
 
-        User user = userService.handleGetUserByUsername(email);
-        if (user == null) {
-            throw new PermissionException("Không tìm thấy người dùng.");
-        }
+// User user = userService.handleGetUserByUsername(email);
+// if (user == null) {
+// throw new PermissionException("Không tìm thấy người dùng.");
+// }
 
-        Role role = user.getRole();
-        if (role == null) {
-            throw new PermissionException("Người dùng chưa được gán role.");
-        }
+// Role role = user.getRole();
+// if (role == null) {
+// throw new PermissionException("Người dùng chưa được gán role.");
+// }
 
-        List<Permission> permissions = role.getPermissions();
+// List<Permission> permissions = role.getPermissions();
 
-        boolean isAllow = permissions.stream().anyMatch(permission -> {
-            String permissionPath = permission.getApiPath();
-            String permissionMethod = permission.getMethod();
+// boolean isAllow = permissions.stream().anyMatch(permission -> {
+// String permissionPath = permission.getApiPath();
+// String permissionMethod = permission.getMethod();
 
-            // So sánh method trước
-            if (!permissionMethod.equalsIgnoreCase(httpMethod)) {
-                return false;
-            }
+// // So sánh method trước
+// if (!permissionMethod.equalsIgnoreCase(httpMethod)) {
+// return false;
+// }
 
-            // Nếu path pattern từ HandlerMapping có sẵn, so sánh trực tiếp
-            if (pathPattern != null) {
-                return permissionPath.equals(pathPattern);
-            }
+// // Nếu path pattern từ HandlerMapping có sẵn, so sánh trực tiếp
+// if (pathPattern != null) {
+// return permissionPath.equals(pathPattern);
+// }
 
-            // Nếu path pattern null, match requestURI với permission pattern
-            // Convert {id} -> * để dùng AntPathMatcher
-            String antPattern = permissionPath.replaceAll("\\{[^}]+\\}", "*");
-            return pathMatcher.match(antPattern, requestURI);
-        });
+// // Nếu path pattern null, match requestURI với permission pattern
+// // Convert {id} -> * để dùng AntPathMatcher
+// String antPattern = permissionPath.replaceAll("\\{[^}]+\\}", "*");
+// return pathMatcher.match(antPattern, requestURI);
+// });
 
-        if (!isAllow) {
-            throw new PermissionException(
-                    "Bạn không có quyền truy cập endpoint này. "
-                            + "PathPattern: " + pathPattern
-                            + ", URI: " + requestURI
-                            + ", Method: " + httpMethod);
-        }
+// if (!isAllow) {
+// throw new PermissionException(
+// "Bạn không có quyền truy cập endpoint này. "
+// + "PathPattern: " + pathPattern
+// + ", URI: " + requestURI
+// + ", Method: " + httpMethod);
+// }
 
-        return true;
-    }
-}
+// return true;
+// }
+// }
