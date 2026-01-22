@@ -40,3 +40,19 @@ export const fetchAccountAPI = () => {
 export const logoutAPI = () => {
   return axios.post<IBackendRes<any>>(API_ENDPOINTS.AUTH.LOGOUT);
 };
+
+// Social Login - Redirect to OAuth provider
+export const socialLoginAPI = (loginType: "google" | "facebook") => {
+  const url = API_ENDPOINTS.AUTH.SOCIAL_LOGIN(loginType);
+  // Redirect to backend, which will redirect to OAuth provider
+  window.location.href = `${import.meta.env.VITE_BACKEND_URL || "http://localhost:8081"}${url}`;
+};
+
+// Social Login Callback - Handle OAuth callback
+export const socialLoginCallbackAPI = (
+  loginType: "google" | "facebook",
+  code: string
+) => {
+  const url = API_ENDPOINTS.AUTH.SOCIAL_CALLBACK(loginType, code);
+  return axios.get<IBackendRes<ILogin>>(url);
+};

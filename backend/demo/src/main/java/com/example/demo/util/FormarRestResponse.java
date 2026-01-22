@@ -2,6 +2,7 @@ package com.example.demo.util;
 
 import org.springframework.core.MethodParameter;
 import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -39,6 +40,16 @@ public class FormarRestResponse implements ResponseBodyAdvice {
 
         String path = request.getURI().getPath();
         if (path.startsWith("/v3/api-docs") || path.startsWith("/swagger-ui")) {
+            return body;
+        }
+
+        // Skip wrapping for redirect responses (3xx status codes)
+        if (status >= 300 && status < 400) {
+            return body;
+        }
+
+        // Skip wrapping if response has LOCATION header (redirect)
+        if (response.getHeaders().containsKey(HttpHeaders.LOCATION)) {
             return body;
         }
 

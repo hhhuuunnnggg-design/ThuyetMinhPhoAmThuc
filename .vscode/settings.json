@@ -30,5 +30,8 @@
   "editor.minimap.enabled": false,
 
   // Tắt git autofetch
-  "git.autofetch": false
+  "git.autofetch": false,
+  "java.project.sourcePaths": [
+    "front_end/01-react-vite-starter"
+  ]
 }

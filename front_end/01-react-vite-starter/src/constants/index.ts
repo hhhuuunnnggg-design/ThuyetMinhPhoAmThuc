@@ -8,6 +8,10 @@ export const API_ENDPOINTS = {
     LOGOUT: "/api/v1/auth/logout",
     ACCOUNT: "/api/v1/auth/account",
     REFRESH: "/api/v1/auth/refresh",
+    SOCIAL_LOGIN: (loginType: "google" | "facebook") =>
+      `/api/v1/auth/social/login?login_type=${loginType}`,
+    SOCIAL_CALLBACK: (loginType: "google" | "facebook", code: string) =>
+      `/api/v1/auth/social/callback?login_type=${loginType}&code=${code}`,
   },
   USERS: {
     FETCH_ALL: "/api/v1/users/fetch-all",

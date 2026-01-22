@@ -1,18 +1,18 @@
-package com.example.demo.controller;
+// package com.example.demo.controller;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+// import org.springframework.beans.factory.annotation.Value;
+// import org.springframework.web.bind.annotation.GetMapping;
+// import org.springframework.web.bind.annotation.RestController;
 
-@RestController
-public class TestController {
+// @RestController
+// public class TestController {
 
-    @Value("${spring.datasource.url}")
-    private String dbUrl;
+// @Value("${spring.datasource.url}")
+// private String dbUrl;
 
-    @GetMapping("/test-env")
-    public String test() {
+// @GetMapping("/test-env")
+// public String test() {
 
-        return dbUrl;
-    }
-}
+// return dbUrl;
+// }
+// }
