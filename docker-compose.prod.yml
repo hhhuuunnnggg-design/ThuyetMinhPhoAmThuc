@@ -1,60 +1,60 @@
-version: '3.8'
+# version: '3.8'
 
-# Production override file
-# Sử dụng: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# # Production override file
+# # Sử dụng: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
-services:
-  backend:
-    # Override image với tag cụ thể cho production
-    image: ${BACKEND_IMAGE:-ghcr.io/your-username/your-repo/backend:latest}
-    # Logging configuration
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    # Resource limits
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
+# services:
+#   backend:
+#     # Override image với tag cụ thể cho production
+#     image: ${BACKEND_IMAGE:-ghcr.io/your-username/your-repo/backend:latest}
+#     # Logging configuration
+#     logging:
+#       driver: "json-file"
+#       options:
+#         max-size: "10m"
+#         max-file: "3"
+#     # Resource limits
+#     deploy:
+#       resources:
+#         limits:
+#           cpus: '1'
+#           memory: 1G
+#         reservations:
+#           cpus: '0.5'
+#           memory: 512M
 
-  frontend:
-    # Override image với tag cụ thể cho production
-    image: ${FRONTEND_IMAGE:-ghcr.io/your-username/your-repo/frontend:latest}
-    # Logging configuration
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    # Resource limits
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-        reservations:
-          cpus: '0.25'
-          memory: 256M
+#   frontend:
+#     # Override image với tag cụ thể cho production
+#     image: ${FRONTEND_IMAGE:-ghcr.io/your-username/your-repo/frontend:latest}
+#     # Logging configuration
+#     logging:
+#       driver: "json-file"
+#       options:
+#         max-size: "10m"
+#         max-file: "3"
+#     # Resource limits
+#     deploy:
+#       resources:
+#         limits:
+#           cpus: '0.5'
+#           memory: 512M
+#         reservations:
+#           cpus: '0.25'
+#           memory: 256M
 
-  mysql:
-    # Logging configuration
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    # Resource limits
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
+#   mysql:
+#     # Logging configuration
+#     logging:
+#       driver: "json-file"
+#       options:
+#         max-size: "10m"
+#         max-file: "3"
+#     # Resource limits
+#     deploy:
+#       resources:
+#         limits:
+#           cpus: '1'
+#           memory: 1G
+#         reservations:
+#           cpus: '0.5'
+#           memory: 512M

@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   # MySQL Database
@@ -15,7 +15,6 @@ services:
       - "${DB_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./backend/demo/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - app-network
     healthcheck:
@@ -24,9 +23,37 @@ services:
       timeout: 5s
       retries: 5
 
+  # phpMyAdmin - Web interface for MySQL
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: auth-phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: ${DB_USERNAME:-appuser}
+      PMA_PASSWORD: ${DB_PASSWORD:-apppassword}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      UPLOAD_LIMIT: 300M
+    ports:
+      - "${PHPMYADMIN_PORT:-8081}:80"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+
   # Backend Spring Boot
   backend:
-    image: ${BACKEND_IMAGE:-ghcr.io/your-username/your-repo/backend:latest}
+    build:
+      context: ./backend/demo
+      dockerfile: Dockerfile
     container_name: auth-backend
     restart: unless-stopped
     depends_on:
@@ -46,19 +73,22 @@ services:
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
       interval: 30s
-      timeout: 10s
-      retries: 3
+      timeout: 3s
       start_period: 40s
+      retries: 3
 
   # Frontend React
   frontend:
-    image: ${FRONTEND_IMAGE:-ghcr.io/your-username/your-repo/frontend:latest}
+    build:
+      context: ./front_end/01-react-vite-starter
+      dockerfile: Dockerfile
+      args:
+        VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://localhost:8080}
     container_name: auth-frontend
     restart: unless-stopped
     depends_on:
-      - backend
-    environment:
-      - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://localhost:8080}
+      backend:
+        condition: service_healthy
     ports:
       - "${FRONTEND_PORT:-3000}:80"
     networks:
@@ -67,6 +97,7 @@ services:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
       timeout: 3s
+      start_period: 5s
       retries: 3
 
 volumes:

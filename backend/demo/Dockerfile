@@ -16,6 +16,9 @@ FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
+# Cài wget cho health check
+RUN apk add --no-cache wget
+
 # Tạo user non-root để chạy ứng dụng (bảo mật)
 RUN addgroup -S spring && adduser -S spring -G spring
 
