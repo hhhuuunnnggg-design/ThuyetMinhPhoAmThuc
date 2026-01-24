@@ -1,0 +1,18 @@
+.tts-page {
+  min-height: 100vh;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+  .ant-card {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+  }
+
+  .ant-form-item-label > label {
+    font-weight: 500;
+  }
+
+  audio {
+    border-radius: 4px;
+  }
+}

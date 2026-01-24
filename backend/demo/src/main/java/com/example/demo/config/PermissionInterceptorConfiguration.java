@@ -1,35 +1,35 @@
-package com.example.demo.config;
+// package com.example.demo.config;
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+// import org.springframework.context.annotation.Bean;
+// import org.springframework.context.annotation.Configuration;
+// import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+// import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-@Configuration
-// Lớp cấu hình interceptor kiểm tra quyền hạn
-public class PermissionInterceptorConfiguration implements WebMvcConfigurer {
+// @Configuration
+// // Lớp cấu hình interceptor kiểm tra quyền hạn
+// public class PermissionInterceptorConfiguration implements WebMvcConfigurer {
 
-    @Bean
-    public PermissionInterceptor permissionInterceptor() {
-        return new PermissionInterceptor();
-    }
+// @Bean
+// public PermissionInterceptor permissionInterceptor() {
+// return new PermissionInterceptor();
+// }
 
-    /**
-     * Danh sách endpoint được phép truy cập
-     * (không bị chặn bởi PermissionInterceptor)
-     */
-    @Override
-    public void addInterceptors(InterceptorRegistry registry) {
+// /**
+// * Danh sách endpoint được phép truy cập
+// * (không bị chặn bởi PermissionInterceptor)
+// */
+// @Override
+// public void addInterceptors(InterceptorRegistry registry) {
 
-        String[] whiteList = {
-                "/",
-                "/api/v1/auth/**",
-                "/api/v1/auth/social/login/**",
-                "/swagger-ui/**",
-                "/v3/api-docs/**"
-        };
+// String[] whiteList = {
+// "/",
+// "/api/v1/auth/**",
+// "/api/v1/auth/social/login/**",
+// "/swagger-ui/**",
+// "/v3/api-docs/**"
+// };
 
-        registry.addInterceptor(permissionInterceptor())
-                .excludePathPatterns(whiteList);
-    }
-}
+// registry.addInterceptor(permissionInterceptor())
+// .excludePathPatterns(whiteList);
+// }
+// }

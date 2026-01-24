@@ -1,4 +1,4 @@
-package com.example.demo.domain.response;
+package com.example.demo.domain.response.tts;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -10,6 +10,9 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class ResponseObject {
-    Object voices;
+public class ResVoiceDTO {
+    String name;
+    String description;
+    String code;
+    String location;
 }

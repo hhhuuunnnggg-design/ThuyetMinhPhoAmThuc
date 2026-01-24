@@ -9,6 +9,7 @@ declare global {
     data?: T;
   }
 
+
   interface IModelPaginate<T> {
     meta: {
       page: number;
@@ -103,4 +104,6 @@ declare global {
     isBlocked: boolean;
     isAdmin: boolean;
   }
+
+
 }

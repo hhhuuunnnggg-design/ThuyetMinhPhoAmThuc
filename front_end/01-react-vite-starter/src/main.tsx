@@ -9,6 +9,7 @@ import ClientLayout from "@/components/layout/ClientLayout";
 import LoginPage from "./pages/client/auth/login";
 import RegisterPage from "./pages/client/auth/register";
 import BookPage from "./pages/client/book";
+import TTSPage from "./pages/client/tts";
 
 import AdminLayout from "@/components/admin/Layout/AdminLayout";
 import { AppProvider } from "@/components/context/app.context";
@@ -34,6 +35,10 @@ const router = createBrowserRouter([
       {
         path: "/book",
         element: <BookPage />,
+      },
+      {
+        path: ROUTES.TTS,
+        element: <TTSPage />,
       },
     ],
   },

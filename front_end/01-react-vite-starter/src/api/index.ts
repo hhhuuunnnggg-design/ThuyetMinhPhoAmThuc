@@ -6,6 +6,7 @@ export * from "./comment.api";
 export * from "./permission.api";
 export * from "./post.api";
 export * from "./role.api";
+export * from "./tts.api";
 export * from "./user.api";
 // Re-export axios as named export for convenience
 export { default } from "./axios";

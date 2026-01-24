@@ -25,6 +25,11 @@ instance.interceptors.request.use(
 
 instance.interceptors.response.use(
   (response) => {
+    // Nếu responseType là blob, trả về response.data (đã là Blob)
+    // Nếu không, trả về response.data như bình thường
+    if (response.config.responseType === "blob") {
+      return response.data;
+    }
     return response.data;
   },
   async (error) => {

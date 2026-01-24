@@ -75,6 +75,12 @@ public class DatabaseInitializer implements CommandLineRunner {
             arr.add(createPermission("Xóa vai trò", "/api/v1/roles/{id}", "DELETE", "ROLES"));
             arr.add(createPermission("Xem danh sách vai trò", "/api/v1/roles/fetch-all", "GET", "ROLES"));
 
+            // TTS permissions
+            // arr.add(createPermission("Chuyển đổi text thành speech",
+            // "/api/v1/tts/synthesize", "POST", "TTS"));
+            // arr.add(createPermission("Xem danh sách giọng đọc", "/api/v1/tts/voices",
+            // "GET", "TTS"));
+
             this.permissionRepository.saveAll(arr);
         }
 

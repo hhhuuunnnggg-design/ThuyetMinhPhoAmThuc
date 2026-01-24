@@ -34,6 +34,10 @@ export const API_ENDPOINTS = {
     UPDATE: (id: number) => `/api/v1/permissions/${id}`,
     DELETE: (id: number) => `/api/v1/permissions/${id}`,
   },
+  TTS: {
+    SYNTHESIZE: "/api/v1/tts/synthesize",
+    VOICES: "/api/v1/tts/voices",
+  },
 } as const;
 
 export const STORAGE_KEYS = {
@@ -50,4 +54,5 @@ export const ROUTES = {
     ROLE: "/admin/role",
     PERMISSION: "/admin/permission",
   },
+  TTS: "/tts",
 } as const;
