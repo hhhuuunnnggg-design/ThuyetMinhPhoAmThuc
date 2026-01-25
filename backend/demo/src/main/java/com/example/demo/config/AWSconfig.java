@@ -8,6 +8,7 @@ import org.springframework.util.StringUtils;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
@@ -40,6 +41,8 @@ public class AWSconfig {
         return S3Client.builder()
                 // Thiết lập khu vực AWS từ giá trị của biến
                 .region(Region.of(region))
+                // Chỉ định rõ HTTP client để tránh conflict
+                .httpClient(ApacheHttpClient.builder().build())
                 // credentialsProvider cung cấp thông tin xác thực (accessKey và secretKey) cho
                 // S3Client.
                 .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey)))

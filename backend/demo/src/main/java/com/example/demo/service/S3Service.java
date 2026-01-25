@@ -12,4 +12,8 @@ public interface S3Service {
     void deleteFile(String fileName) throws Exception;
 
     String getFileUrl(String fileName);
+    
+    String getPresignedUrl(String fileName, int expirationMinutes) throws Exception;
+    
+    java.io.InputStream getFileInputStream(String fileName) throws Exception;
 }

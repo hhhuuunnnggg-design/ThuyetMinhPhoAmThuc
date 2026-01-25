@@ -3,6 +3,7 @@ package com.example.demo.service;
 import java.io.IOException;
 import java.util.List;
 
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -25,4 +26,6 @@ public interface TTSAudioService {
     void deleteTTSAudio(Long id) throws IOException, IdInvalidException;
 
     TTSAudio updateTTSAudio(Long id, ReqTTSDTO request) throws IOException, IdInvalidException;
+    
+    Resource getAudioResourceFromS3(String fileName) throws IOException;
 }

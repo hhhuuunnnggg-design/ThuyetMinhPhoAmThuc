@@ -1,0 +1,134 @@
+{
+  "examples": [
+    {
+      "description": "Test cơ bản với MP3",
+      "request": {
+        "text": "Xin chào, đây là test text-to-speech",
+        "voice": "hcm-diemmy",
+        "speed": 1.0,
+        "ttsReturnOption": 3,
+        "withoutFilter": false
+      },
+      "expectedResponse": {
+        "statusCode": 200,
+        "message": "Tạo và lưu audio thành công",
+        "data": {
+          "text": "Xin chào, đây là test text-to-speech",
+          "voice": "hcm-diemmy",
+          "speed": 1.0,
+          "format": 3
+        }
+      }
+    },
+    {
+      "description": "Test với WAV format",
+      "request": {
+        "text": "Test với định dạng WAV",
+        "voice": "hn-quynhanh",
+        "speed": 1.2,
+        "ttsReturnOption": 2,
+        "withoutFilter": true
+      }
+    },
+    {
+      "description": "Test với tốc độ chậm",
+      "request": {
+        "text": "Đây là test với tốc độ chậm",
+        "voice": "hue-maingoc",
+        "speed": 0.8,
+        "ttsReturnOption": 3,
+        "withoutFilter": false
+      }
+    },
+    {
+      "description": "Test với tốc độ nhanh",
+      "request": {
+        "text": "Đây là test với tốc độ nhanh",
+        "voice": "hn-thanhtung",
+        "speed": 1.2,
+        "ttsReturnOption": 3,
+        "withoutFilter": false
+      }
+    },
+    {
+      "description": "Test với text dài",
+      "request": {
+        "text": "Đây là một đoạn text dài để test khả năng xử lý của hệ thống. Text này có nhiều từ và câu để đảm bảo rằng API có thể xử lý được các trường hợp thực tế.",
+        "voice": "hcm-minhquan",
+        "speed": 1.0,
+        "ttsReturnOption": 3,
+        "withoutFilter": false
+      }
+    },
+    {
+      "description": "Test với các giọng khác nhau",
+      "voices": [
+        {
+          "voice": "hn-quynhanh",
+          "text": "Quỳnh Anh - Nữ miền Bắc"
+        },
+        {
+          "voice": "hcm-diemmy",
+          "text": "Diễm My - Nữ miền Nam"
+        },
+        {
+          "voice": "hue-maingoc",
+          "text": "Mai Ngọc - Nữ miền Trung"
+        },
+        {
+          "voice": "hn-thanhtung",
+          "text": "Thanh Tùng - Nam miền Bắc"
+        },
+        {
+          "voice": "hcm-minhquan",
+          "text": "Minh Quân - Nam miền Nam"
+        },
+        {
+          "voice": "hue-baoquoc",
+          "text": "Bảo Quốc - Nam miền Trung"
+        }
+      ]
+    }
+  ],
+  "curlExamples": [
+    {
+      "description": "Curl command để test API (cần thay YOUR_TOKEN)",
+      "command": "curl -X POST http://localhost:8081/api/v1/tts/synthesize-and-save \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Bearer YOUR_TOKEN\" \\\n  -d '{\n    \"text\": \"Xin chào, đây là test text-to-speech\",\n    \"voice\": \"hcm-diemmy\",\n    \"speed\": 1.0,\n    \"ttsReturnOption\": 3,\n    \"withoutFilter\": false\n  }'"
+    }
+  ],
+  "postmanCollection": {
+    "info": {
+      "name": "TTS Synthesize and Save API",
+      "description": "Test API tạo và lưu TTS audio"
+    },
+    "item": [
+      {
+        "name": "Synthesize and Save - MP3",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Bearer {{access_token}}"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"text\": \"Xin chào, đây là test text-to-speech\",\n  \"voice\": \"hcm-diemmy\",\n  \"speed\": 1.0,\n  \"ttsReturnOption\": 3,\n  \"withoutFilter\": false\n}"
+          },
+          "url": {
+            "raw": "http://localhost:8081/api/v1/tts/synthesize-and-save",
+            "protocol": "http",
+            "host": ["localhost"],
+            "port": "8081",
+            "path": ["api", "v1", "tts", "synthesize-and-save"]
+          }
+        }
+      }
+    ]
+  }
+}

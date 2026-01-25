@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,7 +24,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.domain.TTSAudio;
 import com.example.demo.domain.dto.ResultPaginationDTO;
 import com.example.demo.domain.request.tts.ReqTTSDTO;
-import com.example.demo.domain.response.RestResponse;
 import com.example.demo.domain.response.tts.ResTTSAudioDTO;
 import com.example.demo.domain.response.tts.ResVoiceDTO;
 import com.example.demo.domain.response.tts.ResVoicesDTO;
@@ -56,24 +56,20 @@ public class TTSController {
 
     @GetMapping("/voices")
     @ApiMessage("Lấy danh sách giọng đọc có sẵn")
-    public ResponseEntity<RestResponse<ResVoicesDTO>> getAvailableVoices() throws IOException {
+    public ResponseEntity<ResVoicesDTO> getAvailableVoices() throws IOException {
         ResVoiceDTO[] voicesArray = ttsService.getAvailableVoices();
         List<ResVoiceDTO> voicesList = Arrays.asList(voicesArray);
 
         ResVoicesDTO voicesData = new ResVoicesDTO(voicesList);
 
-        RestResponse<ResVoicesDTO> response = new RestResponse<>();
-        response.setStatusCode(200);
-        response.setError(null);
-        response.setMessage("Lấy danh sách giọng đọc có sẵn");
-        response.setData(voicesData);
-
-        return ResponseEntity.ok(response);
+        // Trả về ResVoicesDTO trực tiếp, FormarRestResponse sẽ tự động wrap thành
+        // RestResponse
+        return ResponseEntity.ok(voicesData);
     }
 
     @PostMapping("/synthesize-and-save")
     @ApiMessage("Chuyển đổi text thành speech và lưu lên S3")
-    public ResponseEntity<RestResponse<ResTTSAudioDTO>> synthesizeAndSave(@Valid @RequestBody ReqTTSDTO request)
+    public ResponseEntity<ResTTSAudioDTO> synthesizeAndSave(@Valid @RequestBody ReqTTSDTO request)
             throws IOException, IdInvalidException {
         // Tạo audio
         ResponseEntity<Resource> audioResponse = ttsService.synthesizeSpeech(request);
@@ -99,13 +95,22 @@ public class TTSController {
 
         ResTTSAudioDTO dto = convertToDTO(ttsAudio);
 
-        RestResponse<ResTTSAudioDTO> response = new RestResponse<>();
-        response.setStatusCode(200);
-        response.setError(null);
-        response.setMessage("Tạo và lưu audio thành công");
-        response.setData(dto);
+        // Log thông tin file đã tạo
+        System.out.println("========================================");
+        System.out.println("📝 TTS AUDIO ĐÃ ĐƯỢC TẠO!");
+        System.out.println("🆔 ID: " + dto.getId());
+        System.out.println("📄 File Name: " + dto.getFileName());
+        if (dto.getS3Url() != null) {
+            System.out.println("🔗 S3 URL: " + dto.getS3Url());
+        } else {
+            System.out.println("⚠️  S3 URL: null (chưa upload lên S3)");
+        }
+        System.out.println("📊 File Size: " + dto.getFileSize() + " bytes");
+        System.out.println("========================================");
 
-        return ResponseEntity.ok(response);
+        // Trả về ResTTSAudioDTO trực tiếp, FormarRestResponse sẽ tự động wrap thành
+        // RestResponse
+        return ResponseEntity.ok(dto);
     }
 
     @GetMapping("/audios")
@@ -132,67 +137,144 @@ public class TTSController {
 
     @GetMapping("/audios/my")
     @ApiMessage("Lấy danh sách TTS audios của user hiện tại")
-    public ResponseEntity<RestResponse<List<ResTTSAudioDTO>>> getMyTTSAudios() throws IdInvalidException {
+    public ResponseEntity<List<ResTTSAudioDTO>> getMyTTSAudios() throws IdInvalidException {
         String createdBy = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new IdInvalidException("Người dùng chưa đăng nhập"));
 
         List<ResTTSAudioDTO> audios = ttsAudioService.getTTSAudiosByUser(createdBy);
 
-        RestResponse<List<ResTTSAudioDTO>> response = new RestResponse<>();
-        response.setStatusCode(200);
-        response.setError(null);
-        response.setMessage("Lấy danh sách audio thành công");
-        response.setData(audios);
-
-        return ResponseEntity.ok(response);
+        // Trả về List trực tiếp, FormarRestResponse sẽ tự động wrap thành RestResponse
+        return ResponseEntity.ok(audios);
     }
 
     @GetMapping("/audios/{id}")
     @ApiMessage("Lấy TTS audio theo ID")
-    public ResponseEntity<RestResponse<ResTTSAudioDTO>> getTTSAudioById(@PathVariable Long id)
+    public ResponseEntity<ResTTSAudioDTO> getTTSAudioById(@PathVariable Long id)
             throws IdInvalidException {
         TTSAudio ttsAudio = ttsAudioService.getTTSAudioById(id);
         ResTTSAudioDTO dto = convertToDTO(ttsAudio);
 
-        RestResponse<ResTTSAudioDTO> response = new RestResponse<>();
-        response.setStatusCode(200);
-        response.setError(null);
-        response.setMessage("Lấy audio thành công");
-        response.setData(dto);
+        // Trả về ResTTSAudioDTO trực tiếp, FormarRestResponse sẽ tự động wrap thành
+        // RestResponse
+        return ResponseEntity.ok(dto);
+    }
 
-        return ResponseEntity.ok(response);
+    @GetMapping("/audios/{id}/download")
+    @ApiMessage("Tải xuống hoặc phát TTS audio")
+    public ResponseEntity<Resource> downloadTTSAudio(@PathVariable Long id)
+            throws IOException, IdInvalidException {
+        TTSAudio ttsAudio = ttsAudioService.getTTSAudioById(id);
+
+        // Nếu có S3 URL, serve file từ S3 thông qua backend (tránh Access Denied)
+        if (ttsAudio.getS3Url() != null && !ttsAudio.getS3Url().isEmpty()) {
+            try {
+                // Lấy file từ S3 thông qua S3Service
+                Resource resource = ttsAudioService.getAudioResourceFromS3(ttsAudio.getFileName());
+                if (resource != null && resource.exists()) {
+                    HttpHeaders headers = new HttpHeaders();
+                    headers.setContentType(org.springframework.http.MediaType.parseMediaType(ttsAudio.getMimeType()));
+                    headers.setContentLength(ttsAudio.getFileSize());
+
+                    // Encode filename
+                    String fileName = ttsAudio.getFileName();
+                    String actualFileName = fileName.contains("/")
+                            ? fileName.substring(fileName.lastIndexOf("/") + 1)
+                            : fileName;
+                    try {
+                        String encodedFileName = java.net.URLEncoder
+                                .encode(actualFileName, java.nio.charset.StandardCharsets.UTF_8)
+                                .replace("+", "%20");
+                        String asciiFileName = actualFileName.replaceAll("[^a-zA-Z0-9._-]", "_");
+                        String contentDisposition = String.format("inline; filename=\"%s\"; filename*=UTF-8''%s",
+                                asciiFileName, encodedFileName);
+                        headers.set("Content-Disposition", contentDisposition);
+                    } catch (Exception e) {
+                        String safeFileName = actualFileName.replaceAll("[^a-zA-Z0-9._-]", "_");
+                        headers.setContentDispositionFormData("inline", safeFileName);
+                    }
+
+                    return ResponseEntity.ok()
+                            .headers(headers)
+                            .body(resource);
+                }
+            } catch (Exception e) {
+                // Nếu không lấy được từ S3, fallback về regenerate
+                System.err.println("WARNING: Không thể lấy file từ S3: " + e.getMessage());
+            }
+        }
+
+        // Nếu không có S3 URL, regenerate audio từ metadata
+        ReqTTSDTO request = new ReqTTSDTO();
+        request.setText(ttsAudio.getText());
+        request.setVoice(ttsAudio.getVoice());
+        request.setSpeed(ttsAudio.getSpeed());
+        request.setTtsReturnOption(ttsAudio.getFormat());
+        request.setWithoutFilter(ttsAudio.getWithoutFilter());
+
+        // Tạo lại audio
+        ResponseEntity<Resource> audioResponse = ttsService.synthesizeSpeech(request);
+        Resource resource = audioResponse.getBody();
+
+        if (resource == null) {
+            throw new IdInvalidException("Không thể tạo lại audio");
+        }
+
+        // Set headers
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(org.springframework.http.MediaType.parseMediaType(ttsAudio.getMimeType()));
+        headers.setContentLength(ttsAudio.getFileSize());
+
+        // Encode filename để tránh lỗi Unicode trong Content-Disposition header
+        String fileName = ttsAudio.getFileName();
+        // Lấy tên file từ path (nếu có folder prefix)
+        String actualFileName = fileName.contains("/")
+                ? fileName.substring(fileName.lastIndexOf("/") + 1)
+                : fileName;
+
+        // Encode filename theo RFC 5987 để hỗ trợ Unicode
+        // Sử dụng filename* với UTF-8 encoding
+        try {
+            String encodedFileName = java.net.URLEncoder.encode(actualFileName, java.nio.charset.StandardCharsets.UTF_8)
+                    .replace("+", "%20");
+            // Tạo ASCII-safe filename cho fallback
+            String asciiFileName = actualFileName.replaceAll("[^a-zA-Z0-9._-]", "_");
+            String contentDisposition = String.format("attachment; filename=\"%s\"; filename*=UTF-8''%s",
+                    asciiFileName, encodedFileName);
+            headers.set("Content-Disposition", contentDisposition);
+        } catch (Exception e) {
+            // Fallback: chỉ dùng ASCII filename nếu encode thất bại
+            String safeFileName = actualFileName.replaceAll("[^a-zA-Z0-9._-]", "_");
+            headers.setContentDispositionFormData("attachment", safeFileName);
+        }
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(resource);
     }
 
     @PutMapping("/audios/{id}")
     @ApiMessage("Cập nhật TTS audio")
-    public ResponseEntity<RestResponse<ResTTSAudioDTO>> updateTTSAudio(
+    public ResponseEntity<ResTTSAudioDTO> updateTTSAudio(
             @PathVariable Long id,
             @Valid @RequestBody ReqTTSDTO request) throws IOException, IdInvalidException {
         TTSAudio ttsAudio = ttsAudioService.updateTTSAudio(id, request);
         ResTTSAudioDTO dto = convertToDTO(ttsAudio);
 
-        RestResponse<ResTTSAudioDTO> response = new RestResponse<>();
-        response.setStatusCode(200);
-        response.setError(null);
-        response.setMessage("Cập nhật audio thành công");
-        response.setData(dto);
-
-        return ResponseEntity.ok(response);
+        // Trả về ResTTSAudioDTO trực tiếp, FormarRestResponse sẽ tự động wrap thành
+        // RestResponse
+        return ResponseEntity.ok(dto);
     }
 
     @DeleteMapping("/audios/{id}")
     @ApiMessage("Xóa TTS audio")
-    public ResponseEntity<RestResponse<Void>> deleteTTSAudio(@PathVariable Long id)
+    public ResponseEntity<Void> deleteTTSAudio(@PathVariable Long id)
             throws IOException, IdInvalidException {
         ttsAudioService.deleteTTSAudio(id);
 
-        RestResponse<Void> response = new RestResponse<>();
-        response.setStatusCode(200);
-        response.setError(null);
-        response.setMessage("Xóa audio thành công");
-        response.setData(null);
-
-        return ResponseEntity.ok(response);
+        // Trả về Void (204 No Content) hoặc có thể trả về message
+        // FormarRestResponse sẽ tự động wrap thành RestResponse với message từ
+        // @ApiMessage
+        return ResponseEntity.ok().build();
     }
 
     // Helper methods

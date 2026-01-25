@@ -2,11 +2,15 @@ package com.example.demo.service.impl;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -30,12 +34,20 @@ public class TTSAudioServiceImpl implements TTSAudioService {
     @Autowired(required = false)
     private S3Service s3Service;
 
+    @Value("${spring.aws.bucket-name:trung-tam-anh-ngu}")
+    private String bucketName;
+
     @Override
     @Transactional
     public TTSAudio createTTSAudio(ReqTTSDTO request, byte[] audioData, String fileName, String createdBy)
             throws IOException {
         String contentType = request.getTtsReturnOption() == 2 ? "audio/wav" : "audio/mpeg";
         String s3Url = null;
+
+        // Tính toán S3 URL (để log ra dù có upload thành công hay không)
+        String fullFileName = "tts-audios/" + fileName;
+        String expectedS3Url = String.format("https://%s.s3.amazonaws.com/%s",
+                bucketName, fullFileName);
 
         // Thử upload lên S3 nếu S3Service có sẵn
         if (s3Service != null) {
@@ -45,15 +57,43 @@ public class TTSAudioServiceImpl implements TTSAudioService {
                         fileName,
                         contentType,
                         "tts-audios");
+
+                // Log thành công
+                System.out.println("========================================");
+                System.out.println("✅ UPLOAD S3 THÀNH CÔNG!");
+                System.out.println("📁 Bucket: " + bucketName);
+                System.out.println("📂 Folder: tts-audios");
+                System.out.println("📄 File Name: " + fileName);
+                System.out.println("🔗 S3 URL: " + s3Url);
+                System.out.println("🌐 S3 Console Link: https://s3.console.aws.amazon.com/s3/buckets/" +
+                        bucketName + "/tts-audios?region=ap-southeast-1&tab=objects");
+                System.out.println("========================================");
             } catch (Exception e) {
-                // Log warning nhưng vẫn cho phép tạo audio mà không có S3 URL
-                System.err.println("WARNING: Không thể upload file lên S3: " + e.getMessage());
-                System.err.println("Audio sẽ được tạo mà không có S3 URL. Vui lòng kiểm tra AWS credentials.");
+                // Log warning và URL sẽ là gì nếu upload thành công
+                System.err.println("========================================");
+                System.err.println("❌ UPLOAD S3 THẤT BẠI!");
+                System.err.println("📁 Bucket: " + bucketName);
+                System.err.println("📂 Folder: tts-audios");
+                System.err.println("📄 File Name: " + fileName);
+                System.err.println("🔗 URL sẽ là (nếu upload thành công): " + expectedS3Url);
+                System.err.println("🌐 S3 Console Link: https://s3.console.aws.amazon.com/s3/buckets/" +
+                        bucketName + "/tts-audios?region=ap-southeast-1&tab=objects");
+                System.err.println("⚠️  Lỗi: " + e.getMessage());
+                System.err.println("========================================");
                 // Có thể throw exception nếu muốn bắt buộc phải có S3
                 // throw new IOException("Lỗi khi upload file lên S3: " + e.getMessage(), e);
             }
         } else {
-            System.err.println("WARNING: S3Service không khả dụng. Audio sẽ được tạo mà không có S3 URL.");
+            System.err.println("========================================");
+            System.err.println("⚠️  S3Service KHÔNG KHẢ DỤNG!");
+            System.err.println("📁 Bucket: " + bucketName);
+            System.err.println("📂 Folder: tts-audios");
+            System.err.println("📄 File Name: " + fileName);
+            System.err.println("🔗 URL sẽ là (nếu upload thành công): " + expectedS3Url);
+            System.err.println("🌐 S3 Console Link: https://s3.console.aws.amazon.com/s3/buckets/" +
+                    bucketName + "/tts-audios?region=ap-southeast-1&tab=objects");
+            System.err.println("💡 Vui lòng cấu hình AWS credentials trong application.properties");
+            System.err.println("========================================");
         }
 
         // Tạo entity (vẫn tạo được ngay cả khi không có S3)
@@ -126,6 +166,20 @@ public class TTSAudioServiceImpl implements TTSAudioService {
         ttsAudio.setWithoutFilter(request.getWithoutFilter());
         ttsAudio.setUpdatedAt(Instant.now());
         return ttsAudioRepository.save(ttsAudio);
+    }
+
+    @Override
+    public Resource getAudioResourceFromS3(String fileName) throws IOException {
+        if (s3Service == null) {
+            throw new IOException("S3Service không khả dụng");
+        }
+        
+        try {
+            InputStream inputStream = s3Service.getFileInputStream(fileName);
+            return new InputStreamResource(inputStream);
+        } catch (Exception e) {
+            throw new IOException("Không thể lấy file từ S3: " + e.getMessage(), e);
+        }
     }
 
     private ResTTSAudioDTO convertToDTO(TTSAudio ttsAudio) {

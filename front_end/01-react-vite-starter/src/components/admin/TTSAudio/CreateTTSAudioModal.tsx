@@ -34,6 +34,7 @@ const CreateTTSAudioModal = ({ open, onCancel, onSuccess }: CreateTTSAudioModalP
         setVoices(response.data.voices);
       } else {
         logger.warn("Invalid voices response format:", response);
+        logger.warn("Invalid voices response format2:", response?.data?.voices);
         message.warning("Không thể tải danh sách giọng đọc từ API");
       }
     } catch (error: any) {

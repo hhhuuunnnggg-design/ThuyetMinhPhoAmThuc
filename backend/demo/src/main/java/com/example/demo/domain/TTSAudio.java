@@ -45,8 +45,8 @@ public class TTSAudio {
     @Column(nullable = false)
     String fileName; // Tên file trên S3
 
-    @Column(nullable = false)
-    String s3Url; // URL file trên S3
+    @Column(nullable = true) // Cho phép null khi S3 không được cấu hình
+    String s3Url; // URL file trên S3 (có thể null nếu S3 không khả dụng)
 
     @Column(nullable = false)
     Long fileSize; // Kích thước file (bytes)

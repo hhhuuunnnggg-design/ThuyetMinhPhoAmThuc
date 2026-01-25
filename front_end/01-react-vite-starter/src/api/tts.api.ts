@@ -81,3 +81,10 @@ export const updateTTSAudioAPI = (id: number, request: TTSRequest) => {
 export const deleteTTSAudioAPI = (id: number) => {
   return axios.delete<IBackendRes<void>>(API_ENDPOINTS.TTS.AUDIO_BY_ID(id));
 };
+
+// Tải xuống hoặc phát TTS audio (sử dụng khi không có S3 URL)
+export const downloadTTSAudioAPI = (id: number) => {
+  return axios.get<Blob>(API_ENDPOINTS.TTS.AUDIO_DOWNLOAD(id), {
+    responseType: "blob",
+  });
+};

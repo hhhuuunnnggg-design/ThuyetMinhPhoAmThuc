@@ -1,5 +1,7 @@
 import { deleteTTSAudioAPI, getTTSAudiosAPI, type TTSAudio } from "@/api/tts.api";
 import Restricted from "@/components/common/restricted";
+import { config } from "@/config";
+import { API_ENDPOINTS } from "@/constants";
 import { logger } from "@/utils/logger";
 import { DeleteOutlined, EditOutlined, PlayCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import ProTable from "@ant-design/pro-table";
@@ -30,12 +32,11 @@ const TTSAudioTable = () => {
     }
   };
 
-  const handlePlayAudio = (s3Url: string | null) => {
-    if (!s3Url) {
-      message.warning("Audio không có URL. Vui lòng kiểm tra cấu hình S3.");
-      return;
-    }
-    window.open(s3Url, "_blank");
+  const handlePlayAudio = (record: TTSAudio) => {
+    // Luôn sử dụng endpoint backend để tránh Access Denied từ S3
+    // Backend sẽ lấy file từ S3 và serve trực tiếp (không cần public access)
+    const downloadUrl = `${config.api.baseURL}${API_ENDPOINTS.TTS.AUDIO_DOWNLOAD(record.id)}`;
+    window.open(downloadUrl, "_blank");
   };
 
   const formatFileSize = (bytes: number) => {
@@ -123,13 +124,12 @@ const TTSAudioTable = () => {
       fixed: "right" as const,
       render: (_: any, record: TTSAudio) => (
         <Space>
-          <Tooltip title={record.s3Url ? "Phát audio" : "Audio không có URL"}>
+          <Tooltip title={record.s3Url ? "Phát audio từ S3" : "Phát audio (regenerate)"}>
             <Button
               type="primary"
               icon={<PlayCircleOutlined />}
               size="small"
-              onClick={() => handlePlayAudio(record.s3Url)}
-              disabled={!record.s3Url}
+              onClick={() => handlePlayAudio(record)}
             />
           </Tooltip>
           <Tooltip title="Chỉnh sửa">

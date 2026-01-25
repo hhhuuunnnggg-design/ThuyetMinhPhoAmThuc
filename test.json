@@ -1,105 +1,53 @@
 {
     "statusCode": 200,
     "error": null,
-    "message": "Lấy danh sách giọng đọc có sẵn",
-    "data": {
-        "voices": [
-            {
-                "name": "Quỳnh Anh chất lượng cao",
-                "description": "Nữ miền Bắc",
-                "code": "hn-quynhanh",
-                "location": "BAC"
-            },
-            {
-                "name": "Diễm My chất lượng cao",
-                "description": "Nữ miền Nam",
-                "code": "hcm-diemmy",
-                "location": "NAM"
-            },
-            {
-                "name": "Mai Ngọc chất lượng cao",
-                "description": "Nữ miền Trung",
-                "code": "hue-maingoc",
-                "location": "TRUNG"
-            },
-            {
-                "name": "Phương Trang chất lượng cao",
-                "description": "Nữ miền Bắc",
-                "code": "hn-phuongtrang",
-                "location": "BAC"
-            },
-            {
-                "name": "Thảo Chi chất lượng cao",
-                "description": "Nữ miền Bắc",
-                "code": "hn-thaochi",
-                "location": "BAC"
-            },
-            {
-                "name": "Thanh Hà chất lượng cao",
-                "description": "Nữ miền Bắc",
-                "code": "hn-thanhha",
-                "location": "BAC"
-            },
-            {
-                "name": "Phương Ly chất lượng cao",
-                "description": "Nữ miền Nam",
-                "code": "hcm-phuongly",
-                "location": "NAM"
-            },
-            {
-                "name": "Thùy Dung chất lượng cao",
-                "description": "Nữ miền Nam",
-                "code": "hcm-thuydung",
-                "location": "NAM"
-            },
-            {
-                "name": "Thanh Tùng",
-                "description": "Nam miền Bắc",
-                "code": "hn-thanhtung",
-                "location": "BAC"
-            },
-            {
-                "name": "Bảo Quốc",
-                "description": "Nam miền Trung",
-                "code": "hue-baoquoc",
-                "location": "TRUNG"
-            },
-            {
-                "name": "Minh Quân",
-                "description": "Nam miền Nam",
-                "code": "hcm-minhquan",
-                "location": "NAM"
-            },
-            {
-                "name": "Thanh Phương chất lượng cao",
-                "description": "Nữ miền Bắc",
-                "code": "hn-thanhphuong",
-                "location": "BAC"
-            },
-            {
-                "name": "Nam Khánh chất lượng cao",
-                "description": "Nam miền Bắc",
-                "code": "hn-namkhanh",
-                "location": "BAC"
-            },
-            {
-                "name": "Lê Yến chất lượng cao",
-                "description": "Nữ miền Nam",
-                "code": "hn-leyen",
-                "location": "NAM"
-            },
-            {
-                "name": "Tiến Quân chất lượng cao",
-                "description": "Nam miền Bắc",
-                "code": "hn-tienquan",
-                "location": "BAC"
-            },
-            {
-                "name": "Thùy Duyên chất lượng cao",
-                "description": "Nữ miền Nam",
-                "code": "hcm-thuyduyen",
-                "location": "NAM"
-            }
-        ]
-    }
-}
+    "message": "Lấy danh sách TTS audios của user hiện tại",
+    "data":  [
+        {
+          "id": 9,
+          "text": "Người đừng lặng im đến thế vì lặng im sẽ giết chết con tim, và ai sẽ là người cho em hi vọng ",
+          "voice": "hcm-diemmy",
+          "speed": 1,
+          "format": 2,
+          "withoutFilter": false,
+          "fileName": "tts-audios/người-đừng-lặng-im-đến-thế-vì--diemmy-1769342980715.mp3",
+          "s3Url": "https://trung-tam-anh-ngu.s3.amazonaws.com/tts-audios/người-đừng-lặng-im-đến-thế-vì--diemmy-1769342980715.mp3",
+          "fileSize": 28212,
+          "mimeType": "audio/mpeg",
+          "createdAt": "2026-01-25T12:09:41.022853Z",
+          "updatedAt": "2026-01-25T12:13:46.378236Z",
+          "createdBy": "anonymousUser"
+        },
+        {
+          "id": 8,
+          "text": "gió ạ haha ha huhu",
+          "voice": "hcm-diemmy",
+          "speed": 1,
+          "format": 3,
+          "withoutFilter": false,
+          "fileName": "tts-audios/gió-ạ-haha-ha-huhu-diemmy-1769342652311.mp3",
+          "s3Url": "https://trung-tam-anh-ngu.s3.amazonaws.com/tts-audios/gió-ạ-haha-ha-huhu-diemmy-1769342652311.mp3",
+          "fileSize": 14628,
+          "mimeType": "audio/mpeg",
+          "createdAt": "2026-01-25T12:04:12.723497Z",
+          "updatedAt": null,
+          "createdBy": "anonymousUser"
+        },
+        {
+          "id": 7,
+          "text": "thương em bờ vai nhỏ nhoi, đôi mắt hóa mây đêm, thương sao mùa hoa lý hương, vương vấn vãi êm đềm",
+          "voice": "hcm-diemmy",
+          "speed": 1,
+          "format": 3,
+          "withoutFilter": false,
+          "fileName": "tts-audios/thương-em-bờ-vai-nhỏ-nhoi-đôi-diemmy-1769339971589.mp3",
+          "s3Url": "https://trung-tam-anh-ngu.s3.amazonaws.com/tts-audios/thương-em-bờ-vai-nhỏ-nhoi-đôi-diemmy-1769339971589.mp3",
+          "fileSize": 49110,
+          "mimeType": "audio/mpeg",
+          "createdAt": "2026-01-25T11:19:32.076814Z",
+          "updatedAt": null,
+          "createdBy": "anonymousUser"
+        }
+      ]
+    
+  }
