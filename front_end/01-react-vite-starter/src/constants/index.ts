@@ -36,7 +36,11 @@ export const API_ENDPOINTS = {
   },
   TTS: {
     SYNTHESIZE: "/api/v1/tts/synthesize",
+    SYNTHESIZE_AND_SAVE: "/api/v1/tts/synthesize-and-save",
     VOICES: "/api/v1/tts/voices",
+    AUDIOS: "/api/v1/tts/audios",
+    MY_AUDIOS: "/api/v1/tts/audios/my",
+    AUDIO_BY_ID: (id: number) => `/api/v1/tts/audios/${id}`,
   },
 } as const;
 
@@ -53,6 +57,7 @@ export const ROUTES = {
     USER: "/admin/user",
     ROLE: "/admin/role",
     PERMISSION: "/admin/permission",
+    TTS_AUDIO: "/admin/tts-audio",
   },
   TTS: "/tts",
 } as const;

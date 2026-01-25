@@ -4,12 +4,14 @@ interface RestrictedProps {
   permission: string;
   method?: string;
   children: React.ReactNode;
+  fallback?: React.ReactNode;
 }
 // cái này dùng để ẩn các api mà user(admin) không có quyền truy cập
 const Restricted: React.FC<RestrictedProps> = ({
   permission,
   method,
   children,
+  fallback,
 }) => {
   const { user, isAuthenticated, loading } = useCurrentApp();
 
@@ -27,7 +29,11 @@ const Restricted: React.FC<RestrictedProps> = ({
       })) ||
     false;
 
-  return hasPermission ? <>{children}</> : null;
+  if (!hasPermission) {
+    return fallback ? <>{fallback}</> : null;
+  }
+
+  return <>{children}</>;
 };
 
 export default Restricted;

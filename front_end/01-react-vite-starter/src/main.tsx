@@ -17,6 +17,7 @@ import { App, ConfigProvider } from "antd";
 import viVN from "antd/locale/vi_VN";
 import PermissionPage from "./components/admin/Permission/PermissionTable";
 import RolePage from "./components/admin/Role/RoleTable";
+import TTSAudioPage from "./components/admin/TTSAudio/TTSAudioTable";
 import { AdminRoute } from "./components/common/protectedRoute";
 
 import { ROUTES, STORAGE_KEYS } from "@/constants";
@@ -62,6 +63,10 @@ const router = createBrowserRouter([
       {
         path: "permission",
         element: <PermissionPage />,
+      },
+      {
+        path: "tts-audio",
+        element: <TTSAudioPage />,
       },
     ],
   },

@@ -76,10 +76,22 @@ public class DatabaseInitializer implements CommandLineRunner {
             arr.add(createPermission("Xem danh sách vai trò", "/api/v1/roles/fetch-all", "GET", "ROLES"));
 
             // TTS permissions
-            // arr.add(createPermission("Chuyển đổi text thành speech",
-            // "/api/v1/tts/synthesize", "POST", "TTS"));
-            // arr.add(createPermission("Xem danh sách giọng đọc", "/api/v1/tts/voices",
-            // "GET", "TTS"));
+            arr.add(createPermission("Chuyển đổi text thành speech",
+                    "/api/v1/tts/synthesize", "POST", "TTS"));
+            arr.add(createPermission("Xem danh sách giọng đọc", "/api/v1/tts/voices",
+                    "GET", "TTS"));
+            arr.add(createPermission("Tạo và lưu audio lên S3",
+                    "/api/v1/tts/synthesize-and-save", "POST", "TTS"));
+            arr.add(createPermission("Xem danh sách TTS audios",
+                    "/api/v1/tts/audios", "GET", "TTS"));
+            arr.add(createPermission("Xem danh sách TTS audios của mình",
+                    "/api/v1/tts/audios/my", "GET", "TTS"));
+            arr.add(createPermission("Xem TTS audio theo ID",
+                    "/api/v1/tts/audios/{id}", "GET", "TTS"));
+            arr.add(createPermission("Cập nhật TTS audio",
+                    "/api/v1/tts/audios/{id}", "PUT", "TTS"));
+            arr.add(createPermission("Xóa TTS audio",
+                    "/api/v1/tts/audios/{id}", "DELETE", "TTS"));
 
             this.permissionRepository.saveAll(arr);
         }

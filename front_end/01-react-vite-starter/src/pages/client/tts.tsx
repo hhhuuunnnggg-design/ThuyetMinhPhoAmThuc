@@ -1,4 +1,10 @@
-import { getVoicesAPI, synthesizeSpeechAPI, type TTSRequest, type Voice } from "@/api/tts.api";
+import {
+  getVoicesAPI,
+  synthesizeSpeechAPI,
+  synthesizeAndSaveAPI,
+  type TTSRequest,
+  type Voice,
+} from "@/api/tts.api";
 import { PauseCircleOutlined, PlayCircleOutlined, SoundOutlined } from "@ant-design/icons";
 import { Button, Card, Checkbox, Form, Input, message, Select, Slider, Space, Spin } from "antd";
 import { useEffect, useRef, useState } from "react";
@@ -15,6 +21,7 @@ const TTSPage = () => {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [savingToS3, setSavingToS3] = useState(false);
   const [currentAudioInfo, setCurrentAudioInfo] = useState<{
     text: string;
     voice: string;
@@ -122,6 +129,34 @@ const TTSPage = () => {
       message.error("Lỗi khi tạo audio: " + (error?.message || "Lỗi không xác định"));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveToS3 = async () => {
+    if (!currentAudioInfo) {
+      message.warning("Chưa có audio để lưu");
+      return;
+    }
+
+    try {
+      setSavingToS3(true);
+      const values = form.getFieldsValue();
+      const response = await synthesizeAndSaveAPI({
+        text: values.text,
+        voice: values.voice,
+        speed: values.speed || 1.0,
+        ttsReturnOption: values.ttsReturnOption || 3,
+        withoutFilter: values.withoutFilter || false,
+      });
+
+      if (response?.data) {
+        message.success("Đã lưu audio lên S3 thành công!");
+        console.log("Audio saved to S3:", response.data);
+      }
+    } catch (error: any) {
+      message.error("Lỗi khi lưu audio lên S3: " + (error?.message || "Lỗi không xác định"));
+    } finally {
+      setSavingToS3(false);
     }
   };
 
@@ -331,9 +366,18 @@ const TTSPage = () => {
               onEnded={() => setIsPlaying(false)}
             />
             <div style={{ marginTop: 10 }}>
-              <a href={audioUrl} download={generateFileName()}>
-                <Button>Tải xuống</Button>
-              </a>
+              <Space>
+                <a href={audioUrl} download={generateFileName()}>
+                  <Button>Tải xuống</Button>
+                </a>
+                <Button
+                  type="primary"
+                  onClick={handleSaveToS3}
+                  loading={savingToS3}
+                >
+                  Lưu lên S3
+                </Button>
+              </Space>
             </div>
           </Card>
         )}

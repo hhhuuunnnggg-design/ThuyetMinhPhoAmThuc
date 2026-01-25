@@ -1,15 +1,16 @@
 import { logoutAPI } from "@/api";
-import { ROUTES, STORAGE_KEYS } from "@/constants";
 import { useCurrentApp } from "@/components/context/app.context";
+import { ROUTES, STORAGE_KEYS } from "@/constants";
 import {
-    AppstoreOutlined,
-    DollarCircleOutlined,
-    ExceptionOutlined,
-    HeartTwoTone,
-    MenuFoldOutlined,
-    MenuUnfoldOutlined,
-    TeamOutlined,
-    UserOutlined,
+  AppstoreOutlined,
+  DollarCircleOutlined,
+  ExceptionOutlined,
+  HeartTwoTone,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  SoundOutlined,
+  TeamOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Avatar, Dropdown, Layout, Menu, Space, message } from "antd";
@@ -87,6 +88,16 @@ const AdminLayout = () => {
             label: <Link to={ROUTES.ADMIN.PERMISSION}>Manage Permission</Link>,
             key: "permission",
             icon: <DollarCircleOutlined />,
+          },
+        ]
+      : []),
+    // Ẩn Manage TTS Audio nếu không có quyền xem TTS audios
+    ...(hasPermission("/api/v1/tts/audios", "GET")
+      ? [
+          {
+            label: <Link to={ROUTES.ADMIN.TTS_AUDIO}>Manage TTS Audio</Link>,
+            key: "tts-audio",
+            icon: <SoundOutlined />,
           },
         ]
       : []),
