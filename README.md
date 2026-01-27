@@ -32,8 +32,8 @@
 
 | Thành phần | Công nghệ   | Cổng   |
 | ---------- | ----------- | ------ |
-| Backend    | Spring Boot | `8081` |
-| Frontend   | React Vite  | `3001` |
+| Backend    | Spring Boot | `8080` |
+| Frontend   | React Vite  | `3000` |
 
 ---
 
@@ -78,7 +78,7 @@ npm run dev
 # 🌐API mẫu (Swagger)
 
 - Truy cập tài liệu Swagger UI tại:
-- 👉http://localhost:8081/swagger-ui/index.html
+- 👉http://localhost:8080/swagger-ui/index.html
 
 # 👨‍💻 Liên hệ
 
@@ -97,8 +97,8 @@ docker-compose up --build -d
 
 
 # Các port trong đây
-frontend: 3001
-backend:8081
+frontend: 3000
+backend:8080
 gui phpmyadmin: 8082
 ```
 

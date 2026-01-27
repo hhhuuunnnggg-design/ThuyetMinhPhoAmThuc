@@ -137,7 +137,7 @@ public class UserController {
         Files.copy(avatarFile.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
 
         // Đường dẫn URL đầy đủ
-        String avatarUrl = "http://localhost:8081/uploads/avatars/" + uniqueFileName;
+        String avatarUrl = "http://localhost:8080/uploads/avatars/" + uniqueFileName;
 
         User user = userService.handleFindByIdUser(userId);
         if (user != null) {
@@ -172,7 +172,7 @@ public class UserController {
         Files.copy(avatarFile.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
 
         // Đường dẫn URL đầy đủ
-        String avatarUrl = "http://localhost:8081/uploads/cover_photo/" + uniqueFileName;
+        String avatarUrl = "http://localhost:8080/uploads/cover_photo/" + uniqueFileName;
 
         User user = userService.handleFindByIdUser(userId);
         if (user != null) {

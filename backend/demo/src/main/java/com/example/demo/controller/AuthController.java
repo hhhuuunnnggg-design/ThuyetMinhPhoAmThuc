@@ -62,7 +62,7 @@ public class AuthController {
     @Value("${app.cookie.same-site:Lax}")
     private String cookieSameSite;
 
-    @Value("${app.frontend.url:http://localhost:3001}")
+    @Value("${app.frontend.url:http://localhost:3000}")
     private String frontendUrl;
 
     public AuthController(

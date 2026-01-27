@@ -93,7 +93,7 @@
   "curlExamples": [
     {
       "description": "Curl command để test API (cần thay YOUR_TOKEN)",
-      "command": "curl -X POST http://localhost:8081/api/v1/tts/synthesize-and-save \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Bearer YOUR_TOKEN\" \\\n  -d '{\n    \"text\": \"Xin chào, đây là test text-to-speech\",\n    \"voice\": \"hcm-diemmy\",\n    \"speed\": 1.0,\n    \"ttsReturnOption\": 3,\n    \"withoutFilter\": false\n  }'"
+      "command": "curl -X POST http://localhost:8080/api/v1/tts/synthesize-and-save \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Bearer YOUR_TOKEN\" \\\n  -d '{\n    \"text\": \"Xin chào, đây là test text-to-speech\",\n    \"voice\": \"hcm-diemmy\",\n    \"speed\": 1.0,\n    \"ttsReturnOption\": 3,\n    \"withoutFilter\": false\n  }'"
     }
   ],
   "postmanCollection": {
@@ -121,10 +121,10 @@
             "raw": "{\n  \"text\": \"Xin chào, đây là test text-to-speech\",\n  \"voice\": \"hcm-diemmy\",\n  \"speed\": 1.0,\n  \"ttsReturnOption\": 3,\n  \"withoutFilter\": false\n}"
           },
           "url": {
-            "raw": "http://localhost:8081/api/v1/tts/synthesize-and-save",
+            "raw": "http://localhost:8080/api/v1/tts/synthesize-and-save",
             "protocol": "http",
             "host": ["localhost"],
-            "port": "8081",
+            "port": "8080",
             "path": ["api", "v1", "tts", "synthesize-and-save"]
           }
         }

@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     server: {
-      port: Number(env.VITE_FRONTEND_PORT) || 3001,
+      port: Number(env.VITE_FRONTEND_PORT) || 3000,
     },
     resolve: {
       alias: {

@@ -14,7 +14,7 @@ RUN npm ci --only=production=false
 COPY . .
 
 # Build arguments cho environment variables
-ARG VITE_BACKEND_URL=http://localhost:8081
+ARG VITE_BACKEND_URL=http://localhost:8080
 ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
 
 # Build application
