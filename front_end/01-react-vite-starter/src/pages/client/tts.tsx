@@ -1,7 +1,7 @@
 import {
   getVoicesAPI,
-  synthesizeSpeechAPI,
   synthesizeAndSaveAPI,
+  synthesizeSpeechAPI,
   type TTSRequest,
   type Voice,
 } from "@/api/tts.api";
@@ -196,6 +196,7 @@ const TTSPage = () => {
     // Lấy preview text (30 ký tự đầu, loại bỏ ký tự đặc biệt)
     const textPreview = currentAudioInfo.text
       .slice(0, 30)
+      // cspell:disable-next-line -- danh sách ký tự tiếng Việt phục vụ regex sanitize
       .replace(/[^a-zA-Z0-9\sàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/gi, "")
       .replace(/\s+/g, "-")
       .toLowerCase()
