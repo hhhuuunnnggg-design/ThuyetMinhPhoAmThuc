@@ -47,7 +47,7 @@ jobs:
       - name: Build application
         working-directory: front_end/01-react-vite-starter
         env:
-          VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL || 'http://localhost:8081' }}
+          VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL || 'http://localhost:8080' }}
         run: npm run build
 
       - name: Upload build artifacts
@@ -104,7 +104,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            VITE_BACKEND_URL=${{ secrets.VITE_BACKEND_URL || 'http://localhost:8081' }}
+            VITE_BACKEND_URL=${{ secrets.VITE_BACKEND_URL || 'http://localhost:8080' }}
 
   deploy:
     name: Deploy to Production

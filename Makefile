@@ -30,7 +30,7 @@ build-backend: ## Build backend image
 	cd backend/demo && docker build -t auth-backend:latest .
 
 build-frontend: ## Build frontend image
-	cd front_end/01-react-vite-starter && docker build -t auth-frontend:latest --build-arg VITE_BACKEND_URL=http://localhost:8081 .
+	cd front_end/01-react-vite-starter && docker build -t auth-frontend:latest --build-arg VITE_BACKEND_URL=http://localhost:8080 .
 
 prod-up: ## Khởi động production mode
 	docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d

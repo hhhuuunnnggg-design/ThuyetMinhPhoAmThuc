@@ -45,7 +45,7 @@ export const logoutAPI = () => {
 export const socialLoginAPI = (loginType: "google" | "facebook") => {
   const url = API_ENDPOINTS.AUTH.SOCIAL_LOGIN(loginType);
   // Redirect to backend, which will redirect to OAuth provider
-  window.location.href = `${import.meta.env.VITE_BACKEND_URL || "http://localhost:8081"}${url}`;
+  window.location.href = `${import.meta.env.VITE_BACKEND_URL || "http://localhost:8080"}${url}`;
 };
 
 // Social Login Callback - Handle OAuth callback
