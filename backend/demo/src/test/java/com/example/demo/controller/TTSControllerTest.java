@@ -1,18 +1,32 @@
 package com.example.demo.controller;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.io.ByteArrayInputStream;
+import java.time.Instant;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.example.demo.domain.TTSAudio;
+import com.example.demo.domain.request.tts.ReqTTSDTO;
+import com.example.demo.service.TTSAudioService;
+import com.example.demo.service.TTSService;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -22,6 +36,50 @@ class TTSControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockBean
+    private TTSService ttsService;
+
+    @MockBean
+    private TTSAudioService ttsAudioService;
+
+    @BeforeEach
+    void setupMocks() throws Exception {
+        when(ttsService.synthesizeSpeech(any(ReqTTSDTO.class))).thenAnswer(invocation -> {
+            ReqTTSDTO req = invocation.getArgument(0);
+            boolean isWav = req.getTtsReturnOption() != null && req.getTtsReturnOption() == 2;
+            byte[] fakeAudio = (isWav ? "fake-wav" : "fake-mp3").getBytes();
+
+            Resource resource = new InputStreamResource(new ByteArrayInputStream(fakeAudio));
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType(isWav ? "audio/wav" : "audio/mpeg"));
+            return ResponseEntity.ok().headers(headers).body(resource);
+        });
+
+        when(ttsAudioService.createTTSAudio(any(ReqTTSDTO.class), any(byte[].class), anyString(), anyString()))
+                .thenAnswer(invocation -> {
+                    ReqTTSDTO req = invocation.getArgument(0);
+                    byte[] audio = invocation.getArgument(1);
+                    String fileName = invocation.getArgument(2);
+                    String createdBy = invocation.getArgument(3);
+
+                    boolean isWav = req.getTtsReturnOption() != null && req.getTtsReturnOption() == 2;
+                    return TTSAudio.builder()
+                            .id(1L)
+                            .text(req.getText())
+                            .voice(req.getVoice())
+                            .speed(req.getSpeed())
+                            .format(req.getTtsReturnOption())
+                            .withoutFilter(req.getWithoutFilter())
+                            .fileName(fileName)
+                            .s3Url(null)
+                            .fileSize((long) audio.length)
+                            .mimeType(isWav ? "audio/wav" : "audio/mpeg")
+                            .createdAt(Instant.now())
+                            .createdBy(createdBy)
+                            .build();
+                });
+    }
 
     @Test
     void testSynthesizeAndSave_Success() throws Exception {
@@ -40,8 +98,8 @@ class TTSControllerTest {
         mockMvc.perform(post("/api/v1/tts/synthesize-and-save")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody)
-                // .header("Authorization", "Bearer YOUR_TOKEN_HERE") // Uncomment và thêm token
-                )
+        // .header("Authorization", "Bearer YOUR_TOKEN_HERE") // Uncomment và thêm token
+        )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.statusCode").value(200))
                 .andExpect(jsonPath("$.message").value("Tạo và lưu audio thành công"))
@@ -65,8 +123,8 @@ class TTSControllerTest {
         mockMvc.perform(post("/api/v1/tts/synthesize-and-save")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody)
-                // .header("Authorization", "Bearer YOUR_TOKEN_HERE")
-                )
+        // .header("Authorization", "Bearer YOUR_TOKEN_HERE")
+        )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.format").value(2));
     }
@@ -86,8 +144,8 @@ class TTSControllerTest {
         mockMvc.perform(post("/api/v1/tts/synthesize-and-save")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody)
-                // .header("Authorization", "Bearer YOUR_TOKEN_HERE")
-                )
+        // .header("Authorization", "Bearer YOUR_TOKEN_HERE")
+        )
                 .andExpect(status().isBadRequest());
     }
 }

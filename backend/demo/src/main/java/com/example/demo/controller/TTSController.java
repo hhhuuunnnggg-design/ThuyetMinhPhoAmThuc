@@ -68,7 +68,7 @@ public class TTSController {
     }
 
     @PostMapping("/synthesize-and-save")
-    @ApiMessage("Chuyển đổi text thành speech và lưu lên S3")
+    @ApiMessage("Tạo và lưu audio thành công")
     public ResponseEntity<ResTTSAudioDTO> synthesizeAndSave(@Valid @RequestBody ReqTTSDTO request)
             throws IOException, IdInvalidException {
         // Tạo audio

@@ -2,12 +2,12 @@ name: Frontend CI/CD
 
 on:
   push:
-    branches: ["main", "master", "restFull"]
+    branches: ["main", "master", "text-to-speach"]
     paths:
       - "front_end/01-react-vite-starter/**"
       - ".github/workflows/ci-cd-frontend.yml"
   pull_request:
-    branches: ["main", "master", "restFull"]
+    branches: ["main", "master", "text-to-speach"]
     paths:
       - "front_end/01-react-vite-starter/**"
 

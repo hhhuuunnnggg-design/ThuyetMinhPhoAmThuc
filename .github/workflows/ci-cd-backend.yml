@@ -2,12 +2,12 @@ name: Backend CI/CD
 
 on:
   push:
-    branches: ["main", "master", "restFull"]
+    branches: ["main", "master", "text-to-speach"]
     paths:
       - "backend/demo/**"
       - ".github/workflows/ci-cd-backend.yml"
   pull_request:
-    branches: ["main", "master", "restFull"]
+    branches: ["main", "master", "text-to-speach"]
     paths:
       - "backend/demo/**"
 
