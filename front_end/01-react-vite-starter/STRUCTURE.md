@@ -24,7 +24,7 @@ src/
 │   │   └── Permission/    # Permission management components
 │   │
 │   ├── common/            # Shared/common components
-│   │   ├── ErrorPageRoute.tsx     # 404 Error page
+│   │   ├── Error404Route.tsx     # 404 Error page
 │   │   ├── protectedRoute.tsx     # Route protection (AdminRoute, ProtectedRoute)
 │   │   └── restricted.tsx         # Permission-based component visibility
 │   │

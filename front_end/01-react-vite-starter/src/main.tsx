@@ -2,7 +2,7 @@ import store from "@/redux/store";
 import { StrictMode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { Provider, useDispatch } from "react-redux";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { RouterProvider, createBrowserRouter } from "react-router-dom";
 
 import ClientLayout from "@/components/layout/ClientLayout";
 
@@ -24,14 +24,14 @@ import { ROUTES, STORAGE_KEYS } from "@/constants";
 import { fetchAccountThunk } from "@/redux/slice/auth.slice";
 import { logger } from "@/utils/logger";
 import UsersPage from "./components/admin/User/UserTable";
-import ErrorPage from "./components/common/ErrorPageRoute";
+import Error404 from "./components/common/Error404";
 import "./styles/global.scss";
 
 const router = createBrowserRouter([
   {
     path: ROUTES.HOME,
     element: <ClientLayout />,
-    errorElement: <ErrorPage />,
+    errorElement: <Error404 />,
     children: [
       {
         path: "/book",
@@ -50,7 +50,7 @@ const router = createBrowserRouter([
         <AdminLayout />
       </AdminRoute>
     ),
-    errorElement: <ErrorPage />,
+    errorElement: <Error404 />,
     children: [
       {
         path: "user",
@@ -73,16 +73,16 @@ const router = createBrowserRouter([
   {
     path: ROUTES.LOGIN,
     element: <LoginPage />,
-    errorElement: <ErrorPage />,
+    errorElement: <Error404 />,
   },
   {
     path: ROUTES.REGISTER,
     element: <RegisterPage />,
-    errorElement: <ErrorPage />,
+    errorElement: <Error404 />,
   },
   {
     path: "*",
-    element: <ErrorPage />,
+    element: <Error404 />,
   },
 ]);
 

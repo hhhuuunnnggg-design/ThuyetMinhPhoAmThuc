@@ -1,7 +1,7 @@
 import { Button, Result } from "antd";
 import { Link, useLocation, useRouteError } from "react-router-dom";
 
-const ErrorPage = () => {
+const Error404 = () => {
   const error = useRouteError();
   const location = useLocation();
 
@@ -33,4 +33,4 @@ const ErrorPage = () => {
   }
 };
 
-export default ErrorPage;
+export default Error404;
