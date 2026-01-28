@@ -8,24 +8,24 @@ import ClientLayout from "@/components/layout/ClientLayout";
 
 import LoginPage from "./pages/client/auth/login";
 import RegisterPage from "./pages/client/auth/register";
-import BookPage from "./pages/client/book";
+
 import TTSPage from "./pages/client/tts";
 
 import AdminLayout from "@/components/admin/Layout/AdminLayout";
 import { AppProvider } from "@/components/context/app.context";
 import { App, ConfigProvider } from "antd";
 import viVN from "antd/locale/vi_VN";
-import PermissionPage from "./components/admin/Permission/PermissionTable";
-import RolePage from "./components/admin/Role/RoleTable";
-import TTSAudioPage from "./components/admin/TTSAudio/TTSAudioTable";
 import { AdminRoute } from "./components/common/Error403";
+import PermissionPage from "./pages/admin/Permission/PermissionTable";
+import RolePage from "./pages/admin/Role/RoleTable";
+import TTSAudioPage from "./pages/admin/TTSAudio/TTSAudioTable";
 
 import { ROUTES, STORAGE_KEYS } from "@/constants";
 import { fetchAccountThunk } from "@/redux/slice/auth.slice";
 import { logger } from "@/utils/logger";
-import UsersPage from "./components/admin/User/UserTable";
 import Error404 from "./components/common/Error404";
 import Error500 from "./components/common/Error500";
+import UsersPage from "./pages/admin/User/UserTable";
 import "./styles/global.scss";
 
 const router = createBrowserRouter([
@@ -34,10 +34,7 @@ const router = createBrowserRouter([
     element: <ClientLayout />,
     errorElement: <Error500 />,
     children: [
-      {
-        path: "/book",
-        element: <BookPage />,
-      },
+      
       {
         path: ROUTES.TTS,
         element: <TTSPage />,
