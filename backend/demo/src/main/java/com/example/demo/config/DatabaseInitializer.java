@@ -62,6 +62,10 @@ public class DatabaseInitializer implements CommandLineRunner {
             arr.add(createPermission("Upload cover photo", "/api/v1/users/coverPhoto", "POST", "USERS"));
             arr.add(createPermission("Admin tạo người dùng", "/api/v1/users/admin/create", "POST", "USERS"));
             arr.add(createPermission("Admin cập nhật người dùng", "/api/v1/users/admin/{id}", "PUT", "USERS"));
+            // thêm người dùng
+            arr.add(createPermission("Thêm người dùng", "/api/v1/users/add-user", "POST", "USERS"));
+            // cập nhật người dùng
+            arr.add(createPermission("Cập nhật người dùng", "/api/v1/users/{id}", "PUT", "USERS"));
 
             // Permissions
             arr.add(createPermission("Tạo quyền mới", "/api/v1/permissions/create", "POST", "PERMISSIONS"));

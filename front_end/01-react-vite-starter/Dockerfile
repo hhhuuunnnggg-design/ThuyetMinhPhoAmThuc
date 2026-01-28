@@ -23,6 +23,9 @@ RUN npm run build
 # Stage 2: Production với Nginx
 FROM nginx:1.25-alpine
 
+# Cài wget cho healthcheck
+RUN apk add --no-cache wget
+
 # Copy custom nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 

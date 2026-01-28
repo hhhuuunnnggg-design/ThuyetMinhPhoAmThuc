@@ -43,7 +43,7 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      test: ["CMD", "curl", "-fsS", "http://localhost/"]
       interval: 30s
       timeout: 3s
       start_period: 10s
@@ -63,7 +63,7 @@ services:
       DB_URL: jdbc:mysql://mysql:3306/${DB_NAME:-authdb}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       DB_USERNAME: ${DB_USERNAME:-appuser}
       DB_PASSWORD: ${DB_PASSWORD:-apppassword}
-      SERVER_PORT: ${SERVER_PORT:-8080}
+      BACKEND_PORT_LOCAL: ${BACKEND_PORT_LOCAL:-8080}
       JWT_BASE64_SECRET: ${JWT_BASE64_SECRET}
       JWT_ACCESS_EXPIRE: ${JWT_ACCESS_EXPIRE:-86400}
       JWT_REFRESH_EXPIRE: ${JWT_REFRESH_EXPIRE:-604800}
@@ -82,11 +82,19 @@ services:
       # Frontend URL
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
     ports:
-      - "${BACKEND_PORT:-8080}:${SERVER_PORT:-8080}"
+      - "${BACKEND_PORT:-8080}:${BACKEND_PORT_DOCKER_LOCAL:-8080}"
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080/actuator/health",
+        ]
       interval: 30s
       timeout: 3s
       start_period: 40s
@@ -109,7 +117,15 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost/health",
+        ]
       interval: 30s
       timeout: 3s
       start_period: 5s
