@@ -6,8 +6,6 @@ const Error404 = () => {
   const location = useLocation();
 
   const segments = location.pathname.split("/").filter(Boolean);
-  console.log("segments", segments);
-  console.log("location ", location);
 
   let backPath = "/";
   if (segments.length > 0) {

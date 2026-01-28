@@ -4,12 +4,13 @@ import Restricted from "@/components/common/restricted";
 import { logger } from "@/utils/logger";
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import ProTable from "@ant-design/pro-table";
-import { Avatar, Button, Image, message, Popconfirm, Space, Tag } from "antd";
+import { Avatar, Button, Grid, Image, Popconfirm, Space, Tag, message } from "antd";
 import { useEffect, useRef, useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 import AddUserModal from "./AddUserModal";
 import EditUserModal from "./EditUserModal";
+import "./UserTable.scss";
 
 interface IUserData {
   id: number;
@@ -34,6 +35,7 @@ interface IUserData {
 }
 
 const UsersPage = () => {
+  const screens = Grid.useBreakpoint();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -73,6 +75,7 @@ const UsersPage = () => {
       dataIndex: "id",
       key: "id",
       hideInSearch: true,
+      responsive: ["lg"],
     },
     {
       title: "Avatar",
@@ -95,7 +98,7 @@ const UsersPage = () => {
                 cursor: "pointer",
               }}
               //preview={{}}
-              fallback="https://scontent.fsgn2-10.fna.fbcdn.net/v/t1.30497-1/453178253_471506465671661_2781666950760530985_n.png?stp=dst-png_s200x200&_nc_cat=1&ccb=1-7&_nc_sid=136b72&_nc_ohc=WLq8v2DSCOEQ7kNvwHipi3n&_nc_oc=AdloIX0CDglouCXoCu9uWwc5caUqYOtbzd-aciIc65jvDiVesXQClLSvBzAMVKPxsq4&_nc_zt=24&_nc_ht=scontent.fsgn2-10.fna&oh=00_Afaepxz7Gd_S7W4JLuPLkB4fYEUMuKJoEmZYbrNW00_hhQ&oe=68FBAF3A"
+              fallback="https://scontent.fsgn5-15.fna.fbcdn.net/v/t1.30497-1/453178253_471506465671661_2781666950760530985_n.png?stp=dst-png_s200x200&_nc_cat=1&ccb=1-7&_nc_sid=b224c7&_nc_ohc=SRM7Y4ywKQsQ7kNvwG55tLJ&_nc_oc=AdnYeS7uibHVo6DQ05-XRY4l8f9hJz2TaRGXjJ67C1R92drbSrci1-HSJeJMMOuIWYFSEf8mDW7ZXOroQo9wJS7X&_nc_zt=24&_nc_ht=scontent.fsgn5-15.fna&oh=00_AfqUI069Wbgz_Hz5_91DwXHcckeDXzmNgfjjdc_B8LY0Cg&oe=69A1CC3A"
             />
           );
         }
@@ -129,12 +132,14 @@ const UsersPage = () => {
       dataIndex: "fullname",
       key: "fullname",
       hideInSearch: true,
+      responsive: ["md"],
     },
     {
       title: "Giới tính",
       dataIndex: "gender",
       key: "gender",
       hideInSearch: true,
+      responsive: ["lg"],
     },
     {
       title: "Vai trò",
@@ -160,11 +165,14 @@ const UsersPage = () => {
       key: "createdAt",
       hideInSearch: true,
       render: (date: string) => new Date(date).toLocaleDateString("vi-VN"),
+      responsive: ["xl"],
     },
     {
       title: "Thao tác",
       key: "action",
       hideInSearch: true,
+      width: 140,
+      fixed: screens.xs ? "right" : undefined,
       render: (_: any, record: any) => (
         <Space>
           <Restricted permission="/api/v1/users/{id}" method="PUT">
@@ -258,10 +266,17 @@ const UsersPage = () => {
   };
 
   return (
-    <div style={{ padding: 24 }}>
+    <div
+      className="users-page"
+      style={{
+        padding: screens.xs ? 12 : screens.md ? 20 : 24,
+        maxWidth: "100%",
+      }}
+    >
       <ProTable<IUserData>
         actionRef={actionRef}
         columns={columns as any}
+        className="users-table"
         request={async (params) => {
           try {
             // Xây dựng mảng filter
@@ -319,18 +334,24 @@ const UsersPage = () => {
           }
         }}
         rowKey="id"
+        scroll={{ x: screens.xs ? 900 : undefined }}
         pagination={{
           showSizeChanger: true,
         }}
         search={{
-          labelWidth: 120,
+          labelWidth: screens.xs ? 90 : 120,
           defaultCollapsed: false,
           searchText: "Tìm kiếm",
           resetText: "Làm mới",
         }}
         toolBarRender={() => [
           <Restricted key="create" permission="/api/v1/users/add-user">
-            <Button type="primary" onClick={() => setIsModalOpen(true)}>
+            <Button
+              type="primary"
+              onClick={() => setIsModalOpen(true)}
+              size={screens.xs ? "middle" : "large"}
+              style={{ width: screens.xs ? "100%" : "auto" }}
+            >
               Thêm người dùng
             </Button>
           </Restricted>,

@@ -4,22 +4,19 @@ import { useCurrentApp } from "@/components/context/app.context";
 import { ROUTES, STORAGE_KEYS } from "@/constants";
 import { logout } from "@/redux/slice/auth.slice";
 import {
-  AccountBookTwoTone,
-  ApiTwoTone,
-  CloudTwoTone,
-  MessageTwoTone,
-  NotificationTwoTone,
-  VideoCameraTwoTone
+  EnvironmentTwoTone,
+  HeartTwoTone,
+  ShopTwoTone,
+  SoundTwoTone,
 } from "@ant-design/icons";
 import {
   Avatar,
-  Badge,
   Button,
   Divider,
   Drawer,
   Dropdown,
-  message,
   Space,
+  message,
 } from "antd";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
@@ -50,11 +47,11 @@ const AppHeader = () => {
 
   const menuItems = [
     {
-      label: <Link to="/account">Quản lý tài khoản</Link>,
+      label: <Link to="/account">Tài khoản</Link>,
       key: "account",
     },
     {
-      label: <Link to="/history">Lịch sử mua hàng</Link>,
+      label: <Link to="/history">Lịch sử nghe</Link>,
       key: "history",
     },
     {
@@ -78,56 +75,30 @@ const AppHeader = () => {
     });
   }
 
-  const navIcons = [
+  const navItems = [
     {
-      icon: (
-        <Badge count={2} size="small">
-          <MessageTwoTone />
-        </Badge>
-      ),
-      key: "messages",
-      onClick: () => {
-        // TODO: Implement messages feature
-      },
+      icon: <EnvironmentTwoTone />,
+      label: "Bản đồ",
+      key: "map",
+      onClick: () => navigate(`${ROUTES.TTS}#map`),
     },
     {
-      icon: (
-        <Badge count={5} size="small">
-          <NotificationTwoTone />
-        </Badge>
-      ),
-      key: "notifications",
-      onClick: () => {
-        // TODO: Implement notifications feature
-      },
-    },
-  ];
-  const navIcons1 = [
-    {
-      icon: <AccountBookTwoTone />,
-      key: "home",
-      onClick: () => navigate(ROUTES.HOME),
+      icon: <ShopTwoTone />,
+      label: "Điểm ăn",
+      key: "spots",
+      onClick: () => navigate(`${ROUTES.TTS}#spots`),
     },
     {
-      icon: <VideoCameraTwoTone />,
-      key: "video",
-      onClick: () => {
-        // TODO: Implement video feature
-      },
+      icon: <SoundTwoTone />,
+      label: "Thuyết minh",
+      key: "audio",
+      onClick: () => navigate(`${ROUTES.TTS}#audio`),
     },
     {
-      icon: <ApiTwoTone />,
-      key: "group",
-      onClick: () => {
-        // TODO: Implement group feature
-      },
-    },
-    {
-      icon: <CloudTwoTone />,
-      key: "feed",
-      onClick: () => {
-        // TODO: Implement feed feature
-      },
+      icon: <HeartTwoTone />,
+      label: "Yêu thích",
+      key: "favorites",
+      onClick: () => navigate(`${ROUTES.TTS}#favorites`),
     },
   ];
 
@@ -144,43 +115,38 @@ const AppHeader = () => {
             </div>
             <div className="page-header__logo">
               <Link to={ROUTES.HOME} className="logo">
-                <div style={{ display: "flex", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <img
                     style={{ width: "40px", height: "40px" }}
-                    src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Facebook_Logo_%282019%29.png/1024px-Facebook_Logo_%282019%29.png"
-                    alt=""
+                    src="https://static.vinwonders.com/production/pho-am-thuc-vinh-khanh-3.jpg"
+                    alt="Phố Ẩm Thực"
                   />
+                  <div className="app-title">
+                    <div className="app-title__main">Phố Ẩm Thực</div>
+                    <div className="app-title__sub">Thuyết minh & bản đồ món ngon</div>
+                  </div>
                 </div>
               </Link>
 
               <input
                 className="input-search"
                 type="text"
-                placeholder="Tìm kiếm trên Facebook"
+                placeholder="Tìm quán ăn, món ngon, địa điểm..."
               />
             </div>
             <div className="page-header__center">
-              {navIcons1.map((item, index) => (
+              {navItems.map((item, index) => (
                 <div
                   key={`${item.key}-${index}`}
                   className="nav-item"
                   onClick={item.onClick}
-                  style={{ margin: "40px" }}
+                  title={item.label}
                 >
                   {item.icon}
                 </div>
               ))}
             </div>
             <nav className="page-header__nav">
-              {navIcons.map((item, index) => (
-                <div
-                  key={`${item.key}-${index}`}
-                  className="nav-item"
-                  onClick={item.onClick}
-                >
-                  {item.icon}
-                </div>
-              ))}
               {!loading && isAuthenticated && user && (
                 <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
                   <Space className="nav-item">
@@ -192,7 +158,7 @@ const AppHeader = () => {
                       {user.fullname?.[0] || "U"}
                     </Avatar>
 
-                    <div style={{ color: "black" }}>{user?.fullname}</div>
+                    <div className="user-name">{user?.fullname}</div>
                   </Space>
                 </Dropdown>
               )}
@@ -207,6 +173,30 @@ const AppHeader = () => {
         onClose={() => setOpenDrawer(false)}
         open={openDrawer}
       >
+        <div className="drawer-shortcuts">
+          {navItems.map((item) => (
+            <div
+              key={item.key}
+              className="drawer-shortcuts__item"
+              onClick={() => {
+                item.onClick();
+                setOpenDrawer(false);
+              }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  item.onClick();
+                  setOpenDrawer(false);
+                }
+              }}
+            >
+              <span className="drawer-shortcuts__icon">{item.icon}</span>
+              <span className="drawer-shortcuts__label">{item.label}</span>
+            </div>
+          ))}
+        </div>
+        <Divider />
         {!isAuthenticated ? (
           <Button type="primary" onClick={() => navigate(ROUTES.LOGIN)}>
             Đăng nhập
@@ -214,11 +204,15 @@ const AppHeader = () => {
         ) : (
           <>
             <p>
-              <Link to="/account">Quản lý tài khoản</Link>
+              <Link to={ROUTES.TTS}>Thuyết minh Phố Ẩm Thực</Link>
             </p>
             <Divider />
             <p>
-              <Link to="/history">Lịch sử mua hàng</Link>
+              <Link to="/account">Tài khoản</Link>
+            </p>
+            <Divider />
+            <p>
+              <Link to="/history">Lịch sử nghe</Link>
             </p>
             <Divider />
             {user?.role !== null && (
@@ -238,7 +232,7 @@ const AppHeader = () => {
           </>
         )}
       </Drawer>
-      
+
     </>
   );
 };

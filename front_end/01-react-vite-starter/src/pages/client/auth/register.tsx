@@ -255,7 +255,7 @@ const RegisterPage = () => {
               <div>
                 <img
                   style={{ width: "30px", height: "30px" }}
-                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Facebook_Logo_%282019%29.png/1024px-Facebook_Logo_%282019%29.png"
+                  src="https://static.vinwonders.com/production/pho-am-thuc-vinh-khanh-3.jpg"
                   alt=""
                 />
               </div>

@@ -14,7 +14,7 @@ import {
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Avatar, Dropdown, Layout, Menu, Space, message } from "antd";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 
 type MenuItem = Required<MenuProps>["items"][number];
@@ -27,12 +27,6 @@ const AdminLayout = () => {
   const { user, setUser, setIsAuthenticated, isAuthenticated } =
     useCurrentApp();
   const navigate = useNavigate();
-
-  // Check if user has admin role
-  useEffect(() => {
-    // Không cần chặn user có role nữa vì đã được xử lý ở AdminRoute
-    // Chỉ hiển thị thông báo nếu cần
-  }, [isAuthenticated, user, navigate]);
 
   const handleLogout = async () => {
     try {
@@ -71,7 +65,6 @@ const AdminLayout = () => {
         },
       ],
     },
-    // Ẩn Manage Role nếu không có quyền xem role
     ...(hasPermission("/api/v1/roles/fetch-all", "GET")
       ? [
           {
@@ -81,7 +74,6 @@ const AdminLayout = () => {
           },
         ]
       : []),
-    // Ẩn Manage Permission nếu không có quyền xem permission
     ...(hasPermission("/api/v1/permissions/fetch-all", "GET")
       ? [
           {
@@ -91,7 +83,6 @@ const AdminLayout = () => {
           },
         ]
       : []),
-    // Ẩn Manage TTS Audio nếu không có quyền xem TTS audios
     ...(hasPermission("/api/v1/tts/audios", "GET")
       ? [
           {
@@ -126,72 +117,62 @@ const AdminLayout = () => {
     },
   ];
 
-  // If not authenticated, show loading or redirect
-  if (!isAuthenticated) {
-    return null;
-  }
+  if (!isAuthenticated) return null;
 
   return (
-    <>
-      <Layout style={{ minHeight: "100vh" }} className="layout-admin">
-        <Sider
-          theme="light"
-          collapsible
-          collapsed={collapsed}
-          onCollapse={(value) => setCollapsed(value)}
+    <Layout style={{ minHeight: "100vh" }} className="layout-admin">
+      <Sider
+        theme="light"
+        collapsible
+        collapsed={collapsed}
+        onCollapse={(value) => setCollapsed(value)}
+      >
+        <div style={{ height: 32, margin: 16, textAlign: "center" }}>Admin</div>
+        <Menu
+          defaultSelectedKeys={[activeMenu]}
+          mode="inline"
+          items={items}
+          onClick={(e) => setActiveMenu(e.key)}
+        />
+      </Sider>
+      <Layout>
+        <div
+          className="admin-header"
+          style={{
+            height: "50px",
+            borderBottom: "1px solid #ebebeb",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0 15px",
+          }}
         >
-          <div style={{ height: 32, margin: 16, textAlign: "center" }}>
-            Admin
-          </div>
-          <Menu
-            defaultSelectedKeys={[activeMenu]}
-            mode="inline"
-            items={items}
-            onClick={(e) => setActiveMenu(e.key)}
-          />
-        </Sider>
-        <Layout>
-          <div
-            className="admin-header"
-            style={{
-              height: "50px",
-              borderBottom: "1px solid #ebebeb",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "0 15px",
-            }}
-          >
-            <span>
-              {React.createElement(
-                collapsed ? MenuUnfoldOutlined : MenuFoldOutlined,
-                {
-                  className: "trigger",
-                  onClick: () => setCollapsed(!collapsed),
-                }
-              )}
-            </span>
-            <Dropdown menu={{ items: itemsDropdown }} trigger={["click"]}>
-              <Space style={{ cursor: "pointer" }}>
-                <Avatar
-                  src={user?.avatar || undefined}
-                  style={{ background: "#87d068" }}
-                >
-                  {user?.fullname?.[0] || "U"}
-                </Avatar>
-                {user?.fullname}
-              </Space>
-            </Dropdown>
-          </div>
-          <Content style={{ padding: "15px" }}>
-            <Outlet />
-          </Content>
-          <Footer style={{ padding: 0, textAlign: "center" }}>
-            facebook_clone <HeartTwoTone />
-          </Footer>
-        </Layout>
+          <span>
+            {React.createElement(collapsed ? MenuUnfoldOutlined : MenuFoldOutlined, {
+              className: "trigger",
+              onClick: () => setCollapsed(!collapsed),
+            })}
+          </span>
+          <Dropdown menu={{ items: itemsDropdown }} trigger={["click"]}>
+            <Space style={{ cursor: "pointer" }}>
+              <Avatar
+                src={user?.avatar || undefined}
+                style={{ background: "#87d068" }}
+              >
+                {user?.fullname?.[0] || "U"}
+              </Avatar>
+              {user?.fullname}
+            </Space>
+          </Dropdown>
+        </div>
+        <Content style={{ padding: "15px" }}>
+          <Outlet />
+        </Content>
+        <Footer style={{ padding: 0, textAlign: "center" }}>
+          facebook_clone <HeartTwoTone />
+        </Footer>
       </Layout>
-    </>
+    </Layout>
   );
 };
 

@@ -7,6 +7,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import "./login.scss";
+import tigerImg from "./tiger.jpg";
+
 
 interface FieldType {
   email: string;
@@ -194,8 +196,8 @@ const LoginPage = () => {
             <div className="heading" style={{ textAlign: "center" }}>
               <img
                 style={{ width: "150px", height: "150px" }}
-                src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTLKVxAZXs4BY3vho4tvQUv7o5GyTRBGXQ3Ig&s"
-                alt=""
+                src={tigerImg}
+                alt="Tiger"
               />
               <h2 className="text text-large">Đăng Nhập</h2>
               <Divider />

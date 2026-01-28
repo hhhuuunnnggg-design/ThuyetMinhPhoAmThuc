@@ -6,14 +6,15 @@
     -moz-user-select: none;
     -webkit-user-select: none;
     height: 55px;
-    //background-color: #717b96; // Facebook blue
-    background-color: #ffffff;
-    color: #fff;
+    background: rgba(10, 14, 24, 0.72);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: rgba(255, 255, 255, 0.92);
     width: 100%;
     max-width: 100%;
     line-height: 55px;
-    border-bottom: 1px solid #ddd;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 
     &__top {
       display: flex;
@@ -28,6 +29,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      min-width: 0;
     }
 
     &__nav {
@@ -36,6 +38,7 @@
       justify-content: flex-end;
       align-items: center;
       gap: 15px;
+      min-width: 0;
     }
     &__center {
       flex: 1;
@@ -43,26 +46,38 @@
       justify-content: center;
       align-items: center;
       gap: 15px;
+      min-width: 0;
     }
 
     &__toggle {
       display: none;
       font-size: 2em;
       margin-right: 15px;
-      color: #fff;
+      color: rgba(255, 255, 255, 0.92);
 
       cursor: pointer;
     }
 
     .logo {
-      color: #000;
+      color: rgba(255, 255, 255, 0.92);
       cursor: pointer;
       display: flex;
       align-items: center;
 
-      .icon-facebook {
-        font-size: 30px;
-        margin-right: 5px;
+      .app-title {
+        line-height: 1.1;
+
+        &__main {
+          font-weight: 700;
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.95);
+        }
+
+        &__sub {
+          font-weight: 500;
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.68);
+        }
       }
     }
 
@@ -71,11 +86,16 @@
       outline: none;
       padding: 5px 10px;
       border-radius: 15px;
-      border: 0px solid #ddd;
-      background-color: #f0f2f5;
-      color: #000;
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.92);
       flex: 1;
       max-width: 230px;
+      min-width: 140px;
+
+      &::placeholder {
+        color: rgba(255, 255, 255, 0.55);
+      }
     }
 
     .nav-item {
@@ -87,7 +107,7 @@
       transition: background-color 0.3s;
 
       &:hover {
-        background-color: rgba(255, 255, 255, 0.2);
+        background-color: rgba(255, 255, 255, 0.10);
       }
 
       .ant-avatar {
@@ -96,19 +116,49 @@
 
       svg {
         font-size: 20px;
-        color: #fff;
+        color: rgba(255, 255, 255, 0.92);
+      }
+    }
+
+    .user-name {
+      color: rgba(255, 255, 255, 0.92);
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  // Tablet: tighten spacing, hide subtitle, shrink search
+  @media (max-width: 992px) {
+    .page-header {
+      &__top {
+        padding: 0 12px;
+      }
+
+      .logo {
+        .app-title {
+          &__sub {
+            display: none;
+          }
+        }
+      }
+
+      .input-search {
+        max-width: 180px;
       }
     }
   }
 
+  // Mobile: show toggle + drawer, hide center shortcuts (they go into drawer)
   @media (max-width: 600px) {
     .page-header {
       flex-direction: column;
       height: auto;
 
       &__top {
-        flex-direction: column;
-        padding: 10px 16px;
+        flex-direction: row;
+        padding: 8px 12px;
       }
 
       &__toggle {
@@ -117,12 +167,16 @@
 
       &__logo {
         width: 100%;
-        justify-content: center;
-        margin-bottom: 10px;
+        justify-content: flex-start;
+        margin-bottom: 0;
 
         .input-search {
           display: none;
         }
+      }
+
+      &__center {
+        display: none;
       }
 
       &__nav {
@@ -133,6 +187,39 @@
 
     .navigation {
       display: none; // Hide navigation list on mobile, use drawer instead
+    }
+  }
+
+  // Drawer shortcuts (mobile-first friendly)
+  .drawer-shortcuts {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    &__item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      user-select: none;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      background: rgba(0, 0, 0, 0.02);
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+    }
+
+    &__icon {
+      display: inline-flex;
+      font-size: 18px;
+    }
+
+    &__label {
+      font-weight: 600;
+      color: rgba(0, 0, 0, 0.88);
     }
   }
 }

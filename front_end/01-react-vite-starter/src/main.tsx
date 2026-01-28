@@ -11,11 +11,11 @@ import RegisterPage from "./pages/client/auth/register";
 
 import TTSPage from "./pages/client/tts";
 
-import AdminLayout from "@/components/admin/Layout/AdminLayout";
 import { AppProvider } from "@/components/context/app.context";
+import AdminLayout from "@/pages/admin/layout/AdminLayout";
+import AdminRoute from "@/routes/guards/AdminRoute";
 import { App, ConfigProvider } from "antd";
 import viVN from "antd/locale/vi_VN";
-import { AdminRoute } from "./components/common/Error403";
 import PermissionPage from "./pages/admin/Permission/PermissionTable";
 import RolePage from "./pages/admin/Role/RoleTable";
 import TTSAudioPage from "./pages/admin/TTSAudio/TTSAudioTable";
