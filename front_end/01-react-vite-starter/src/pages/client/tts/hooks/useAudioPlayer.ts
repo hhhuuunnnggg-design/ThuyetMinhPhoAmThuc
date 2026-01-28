@@ -41,7 +41,6 @@ export const useAudioPlayer = ({ selected, position, autoPlayAudioId }: UseAudio
 
   const handlePlayPause = () => {
     if (!selected) return;
-    const src = `${config.api.baseURL}${API_ENDPOINTS.TTS.AUDIO_DOWNLOAD(selected.id)}`;
     if (!audioRef.current) return;
 
     if (!isPlaying) {

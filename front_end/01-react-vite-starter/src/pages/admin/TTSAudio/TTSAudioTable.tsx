@@ -5,7 +5,7 @@ import { API_ENDPOINTS } from "@/constants";
 import { logger } from "@/utils/logger";
 import { DeleteOutlined, EditOutlined, PlayCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import ProTable from "@ant-design/pro-table";
-import { Button, message, Popconfirm, Space, Tag, Tooltip } from "antd";
+import { Button, Image, message, Popconfirm, Space, Tag, Tooltip } from "antd";
 import { useRef, useState } from "react";
 import CreateTTSAudioModal from "./CreateTTSAudioModal";
 import EditTTSAudioModal from "./EditTTSAudioModal";
@@ -66,10 +66,14 @@ const TTSAudioTable = () => {
       render: (_: any, record: TTSAudio) => {
         const imageUrl = getImageUrl(record.imageUrl);
         return imageUrl ? (
-          <img
+          <Image
+            width={56}
+            height={56}
             src={imageUrl}
             alt={record.foodName || "Ảnh món"}
-            style={{ width: 56, height: 56, borderRadius: 8, objectFit: "cover" }}
+            style={{ borderRadius: 8, objectFit: "cover" }}
+            preview={{ mask: "Xem ảnh" }}
+            fallback="https://via.placeholder.com/56x56?text=No+Image"
           />
         ) : (
           <div

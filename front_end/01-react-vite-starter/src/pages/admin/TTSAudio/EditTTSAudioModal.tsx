@@ -8,7 +8,7 @@ import {
 } from "@/api/tts.api";
 import { logger } from "@/utils/logger";
 import { UploadOutlined } from "@ant-design/icons";
-import { Button, Form, Input, InputNumber, message, Modal, Select, Slider, Space, Upload } from "antd";
+import { Button, Form, Input, InputNumber, Modal, Select, Slider, Space, Upload, message } from "antd";
 import { useEffect, useState } from "react";
 
 const { TextArea } = Input;
@@ -46,7 +46,7 @@ const EditTTSAudioModal = ({ open, onCancel, onSuccess, audio }: EditTTSAudioMod
           longitude: audio.longitude,
           accuracy: audio.accuracy,
         });
-        setImagePreview(audio.imageUrl || null);
+        setImagePreview(audio.imageUrl ?? null);
       }
     }
   }, [open, audio, form]);
@@ -76,7 +76,7 @@ const EditTTSAudioModal = ({ open, onCancel, onSuccess, audio }: EditTTSAudioMod
       const response = await uploadFoodImageAPI(audio.id, file);
       if (response?.data) {
         form.setFieldsValue({ imageUrl: response.data.imageUrl });
-        setImagePreview(response.data.imageUrl);
+        setImagePreview(response.data.imageUrl ?? null);
         message.success("Upload ảnh thành công!");
         return false; // Prevent default upload
       }
@@ -207,15 +207,6 @@ const EditTTSAudioModal = ({ open, onCancel, onSuccess, audio }: EditTTSAudioMod
                 />
               </div>
             )}
-            <Input
-              placeholder="Hoặc nhập link ảnh trực tiếp (https://...)"
-              onChange={(e) => {
-                form.setFieldsValue({ imageUrl: e.target.value });
-                if (e.target.value) {
-                  setImagePreview(e.target.value);
-                }
-              }}
-            />
           </Space>
         </Form.Item>
 

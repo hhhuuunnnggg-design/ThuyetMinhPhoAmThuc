@@ -7,7 +7,7 @@ import {
 } from "@/api/tts.api";
 import { logger } from "@/utils/logger";
 import { UploadOutlined } from "@ant-design/icons";
-import { Button, Form, Input, InputNumber, message, Modal, Select, Slider, Space, Upload } from "antd";
+import { Button, Form, Input, InputNumber, Modal, Select, Slider, Space, Upload, message } from "antd";
 import { useEffect, useState } from "react";
 
 const { TextArea } = Input;
@@ -195,15 +195,6 @@ const CreateTTSAudioModal = ({ open, onCancel, onSuccess }: CreateTTSAudioModalP
                 />
               </div>
             )}
-            <Input
-              placeholder="Hoặc nhập link ảnh trực tiếp (https://...)"
-              onChange={(e) => {
-                form.setFieldsValue({ imageUrl: e.target.value });
-                if (e.target.value) {
-                  setImagePreview(e.target.value);
-                }
-              }}
-            />
           </Space>
         </Form.Item>
 

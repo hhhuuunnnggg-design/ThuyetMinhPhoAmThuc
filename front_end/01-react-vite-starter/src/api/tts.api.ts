@@ -1,6 +1,5 @@
 // api/tts.api.ts
 import axios from "@/api/axios";
-import { config } from "@/config";
 import { API_ENDPOINTS } from "@/constants";
 
 export interface Voice {
