@@ -67,6 +67,11 @@ services:
       JWT_BASE64_SECRET: ${JWT_BASE64_SECRET}
       JWT_ACCESS_EXPIRE: ${JWT_ACCESS_EXPIRE:-86400}
       JWT_REFRESH_EXPIRE: ${JWT_REFRESH_EXPIRE:-604800}
+      # AWS S3 Config (optional)
+      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY:-}
+      AWS_SECRET_KEY: ${AWS_SECRET_KEY:-}
+      AWS_REGION: ${AWS_REGION:-ap-southeast-1}
+      AWS_BUCKET_NAME: ${AWS_BUCKET_NAME:-trung-tam-anh-ngu}
       # Google OAuth Config
       GG_CLIENT_ID: ${GG_CLIENT_ID}
       GG_CLIENT_SECRET: ${GG_CLIENT_SECRET}
