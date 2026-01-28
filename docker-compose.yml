@@ -70,12 +70,12 @@ services:
       # Google OAuth Config
       GG_CLIENT_ID: ${GG_CLIENT_ID}
       GG_CLIENT_SECRET: ${GG_CLIENT_SECRET}
-      GG_REDIRECT_URI: ${GG_REDIRECT_URI:-http://localhost:8083/api/v1/auth/social/callback?login_type=google}
+      GG_REDIRECT_URI: ${GG_REDIRECT_URI:-http://localhost:8080/api/v1/auth/social/callback?login_type=google}
       GG_USER_INFO_URI: ${GG_USER_INFO_URI:-https://www.googleapis.com/oauth2/v3/userinfo}
       # Facebook OAuth Config
       FB_CLIENT_ID: ${FB_CLIENT_ID}
       FB_CLIENT_SECRET: ${FB_CLIENT_SECRET}
-      FB_REDIRECT_URI: ${FB_REDIRECT_URI:-http://localhost:8083/api/v1/auth/social/callback?login_type=facebook}
+      FB_REDIRECT_URI: ${FB_REDIRECT_URI:-http://localhost:8080/api/v1/auth/social/callback?login_type=facebook}
       FB_USER_INFO_URI: ${FB_USER_INFO_URI:-https://graph.facebook.com/me?fields=id,name,email,picture.type(large)}
       FB_TOKEN_URI: ${FB_TOKEN_URI:-https://graph.facebook.com/oauth/access_token}
       FB_AUTH_URI: ${FB_AUTH_URI:-https://www.facebook.com/v3.2/dialog/oauth}
