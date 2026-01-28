@@ -29,7 +29,7 @@ const AccessDenied = () => {
   );
 };
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+const Error404: React.FC<ProtectedRouteProps> = ({
   permission,
   children,
 }) => {
@@ -121,13 +121,19 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     return <div>Loading...</div>;
   }
 
-  if (!isAuthenticated || !user || !user.role) {
+  // Nếu chưa đăng nhập thì `useEffect` sẽ điều hướng về login; render null để tránh flash UI
+  if (!isAuthenticated || !user) {
     return null;
+  }
+
+  // Có đăng nhập nhưng không có role => hiển thị 403
+  if (!user.role) {
+    return <AccessDenied />;
   }
 
   return <>{children}</>;
 };
 
-export default ProtectedRoute;
+export default Error404;
 export { AdminRoute };
 

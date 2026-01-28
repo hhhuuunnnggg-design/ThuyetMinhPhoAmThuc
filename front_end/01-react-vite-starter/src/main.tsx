@@ -18,20 +18,21 @@ import viVN from "antd/locale/vi_VN";
 import PermissionPage from "./components/admin/Permission/PermissionTable";
 import RolePage from "./components/admin/Role/RoleTable";
 import TTSAudioPage from "./components/admin/TTSAudio/TTSAudioTable";
-import { AdminRoute } from "./components/common/protectedRoute";
+import { AdminRoute } from "./components/common/Error403";
 
 import { ROUTES, STORAGE_KEYS } from "@/constants";
 import { fetchAccountThunk } from "@/redux/slice/auth.slice";
 import { logger } from "@/utils/logger";
 import UsersPage from "./components/admin/User/UserTable";
 import Error404 from "./components/common/Error404";
+import Error500 from "./components/common/Error500";
 import "./styles/global.scss";
 
 const router = createBrowserRouter([
   {
     path: ROUTES.HOME,
     element: <ClientLayout />,
-    errorElement: <Error404 />,
+    errorElement: <Error500 />,
     children: [
       {
         path: "/book",
@@ -50,7 +51,7 @@ const router = createBrowserRouter([
         <AdminLayout />
       </AdminRoute>
     ),
-    errorElement: <Error404 />,
+    errorElement: <Error500 />,
     children: [
       {
         path: "user",
@@ -73,12 +74,12 @@ const router = createBrowserRouter([
   {
     path: ROUTES.LOGIN,
     element: <LoginPage />,
-    errorElement: <Error404 />,
+    errorElement: <Error500 />,
   },
   {
     path: ROUTES.REGISTER,
     element: <RegisterPage />,
-    errorElement: <Error404 />,
+    errorElement: <Error500 />,
   },
   {
     path: "*",
