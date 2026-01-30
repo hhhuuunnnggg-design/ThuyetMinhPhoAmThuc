@@ -8,6 +8,7 @@ import { useAudioPlayer } from "./hooks/useAudioPlayer";
 import { useGeolocation } from "./hooks/useGeolocation";
 import { useMapPosition } from "./hooks/useMapPosition";
 import { useNarrationEngine } from "./hooks/useNarrationEngine";
+import { useNarrationEngineWithBackend } from "./hooks/useNarrationEngineWithBackend";
 import { useTTSAudios } from "./hooks/useTTSAudios";
 import "./tts.scss";
 import { GeoPosition, ViewMode } from "./types";
@@ -20,6 +21,8 @@ const TTSPage = () => {
   const [mockGps, setMockGps] = useState(true);
   const mapRef = useRef<Map | null>(null);
   const hasManualPanRef = useRef(false);
+  // Narration Engine: Có thể chọn dùng backend API hoặc local engine
+  const useBackendNarration = true; // Set false nếu muốn quay lại local engine
 
   // Hooks
   const { audios, loading } = useTTSAudios();
@@ -57,28 +60,12 @@ const TTSPage = () => {
   // State cho auto-play từ Narration Engine
   const [autoPlayAudioId, setAutoPlayAudioId] = useState<number | null>(null);
 
-  const { isPlaying, setIsPlaying, audioRef, handlePlayPause } = useAudioPlayer({
-    selected,
-    position,
-    autoPlayAudioId,
-  });
-
-  // Sync position với mockLat/mockLng khi slider thay đổi
-  useEffect(() => {
-    if (!mockGps || mockLat == null || mockLng == null) return;
-    if (position?.lat !== mockLat || position?.lng !== mockLng) {
-      setPosition({ lat: mockLat, lng: mockLng });
-      lastPositionSourceRef.current = "slider";
-    }
-  }, [mockGps, mockLat, mockLng, position, setPosition]);
-
-  // Narration Engine: Quản lý việc phát audio tự động theo luồng hoạt động
-  useNarrationEngine({
+  const { deviceId } = useNarrationEngineWithBackend({
     audios,
     position,
     autoGuide,
-    isPlaying,
-    cooldownMinutes: 5, // Cooldown 5 phút
+    isPlaying: false, // sẽ được cập nhật sau khi init audio player
+    useBackend: useBackendNarration,
     onPOIDetected: (poiId) => {
       // Geofence Engine đã phát hiện POI -> cập nhật selected
       setSelectedId(poiId);
@@ -90,6 +77,37 @@ const TTSPage = () => {
       setTimeout(() => setAutoPlayAudioId(null), 100);
     },
   });
+
+  const { isPlaying, setIsPlaying, audioRef, handlePlayPause } = useAudioPlayer({
+    selected,
+    position,
+    autoPlayAudioId,
+    deviceId: useBackendNarration ? deviceId : undefined,
+    useBackendLogging: useBackendNarration,
+  });
+
+  // Debug: Log deviceId và useBackendNarration
+  useEffect(() => {
+    if (useBackendNarration) {
+      console.log("🔧 Narration Engine Config:", {
+        useBackendNarration,
+        deviceId,
+        hasSelected: !!selected,
+        selectedId: selected?.id,
+      });
+    }
+  }, [useBackendNarration, deviceId, selected]);
+
+  // Sync position với mockLat/mockLng khi slider thay đổi
+  useEffect(() => {
+    if (!mockGps || mockLat == null || mockLng == null) return;
+    if (position?.lat !== mockLat || position?.lng !== mockLng) {
+      setPosition({ lat: mockLat, lng: mockLng });
+      lastPositionSourceRef.current = "slider";
+    }
+  }, [mockGps, mockLat, mockLng, position, setPosition]);
+
+  // Log narration đã được xử lý trong useAudioPlayer hook
 
   // Set initial selectedId
   useEffect(() => {

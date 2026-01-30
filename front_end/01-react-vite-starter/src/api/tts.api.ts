@@ -30,6 +30,10 @@ export interface TTSRequest {
   latitude?: number;
   longitude?: number;
   accuracy?: number;
+  
+  // Thông tin POI (Geofence)
+  triggerRadiusMeters?: number; // Bán kính kích hoạt (mét)
+  priority?: number; // Độ ưu tiên (số càng cao = ưu tiên càng cao)
 }
 
 export interface TTSAudio {
@@ -57,6 +61,10 @@ export interface TTSAudio {
   latitude?: number | null;
   longitude?: number | null;
   accuracy?: number | null;
+
+  // Cấu hình geofence từ backend
+  triggerRadiusMeters?: number | null;
+  priority?: number | null;
 }
 
 // Lấy danh sách giọng đọc

@@ -173,7 +173,7 @@ const TTSAudioTable = () => {
       dataIndex: "latitude",
       key: "gps",
       hideInSearch: true,
-      width: 160,
+      width: 180,
       render: (_: any, record: TTSAudio) =>
         record.latitude != null && record.longitude != null ? (
           <div style={{ fontSize: 12 }}>
@@ -183,8 +183,18 @@ const TTSAudioTable = () => {
             <div>
               Lng: <b>{record.longitude.toFixed(5)}</b>
             </div>
+            {record.triggerRadiusMeters != null && (
+              <div style={{ color: "#1890ff", fontWeight: 500 }}>
+                Bán kính: {record.triggerRadiusMeters}m
+              </div>
+            )}
+            {record.priority != null && (
+              <div style={{ color: "#52c41a", fontWeight: 500 }}>
+                Ưu tiên: {record.priority}
+              </div>
+            )}
             {record.accuracy != null && (
-              <div style={{ color: "#999" }}>R: {record.accuracy}m</div>
+              <div style={{ color: "#999", fontSize: 11 }}>Accuracy: {record.accuracy}m</div>
             )}
           </div>
         ) : (

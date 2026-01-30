@@ -40,4 +40,8 @@ public class ResTTSAudioDTO {
     Double latitude;
     Double longitude;
     Float accuracy;
+
+    // Cấu hình geofence cho POI
+    Float triggerRadiusMeters;
+    Integer priority;
 }

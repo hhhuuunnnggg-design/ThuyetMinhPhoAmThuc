@@ -16,6 +16,7 @@ import AdminLayout from "@/pages/admin/layout/AdminLayout";
 import AdminRoute from "@/routes/guards/AdminRoute";
 import { App, ConfigProvider } from "antd";
 import viVN from "antd/locale/vi_VN";
+import NarrationLogPage from "./pages/admin/NarrationLog/NarrationLogTable";
 import PermissionPage from "./pages/admin/Permission/PermissionTable";
 import RolePage from "./pages/admin/Role/RoleTable";
 import TTSAudioPage from "./pages/admin/TTSAudio/TTSAudioTable";
@@ -65,6 +66,10 @@ const router = createBrowserRouter([
       {
         path: "tts-audio",
         element: <TTSAudioPage />,
+      },
+      {
+        path: "narration-logs",
+        element: <NarrationLogPage />,
       },
     ],
   },

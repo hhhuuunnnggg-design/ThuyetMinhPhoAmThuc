@@ -118,6 +118,9 @@ public class TTSAudioServiceImpl implements TTSAudioService {
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
                 .accuracy(request.getAccuracy())
+                // Cấu hình geofence
+                .triggerRadiusMeters(request.getTriggerRadiusMeters())
+                .priority(request.getPriority())
                 .build();
 
         return ttsAudioRepository.save(ttsAudio);
@@ -184,6 +187,9 @@ public class TTSAudioServiceImpl implements TTSAudioService {
         ttsAudio.setLatitude(request.getLatitude());
         ttsAudio.setLongitude(request.getLongitude());
         ttsAudio.setAccuracy(request.getAccuracy());
+        // Geofence
+        ttsAudio.setTriggerRadiusMeters(request.getTriggerRadiusMeters());
+        ttsAudio.setPriority(request.getPriority());
         ttsAudio.setUpdatedAt(Instant.now());
         
         return ttsAudioRepository.save(ttsAudio);
@@ -231,6 +237,9 @@ public class TTSAudioServiceImpl implements TTSAudioService {
         ttsAudio.setLatitude(request.getLatitude());
         ttsAudio.setLongitude(request.getLongitude());
         ttsAudio.setAccuracy(request.getAccuracy());
+        // Geofence
+        ttsAudio.setTriggerRadiusMeters(request.getTriggerRadiusMeters());
+        ttsAudio.setPriority(request.getPriority());
         ttsAudio.setUpdatedAt(Instant.now());
         
         return ttsAudioRepository.save(ttsAudio);
@@ -297,6 +306,8 @@ public class TTSAudioServiceImpl implements TTSAudioService {
                 .latitude(ttsAudio.getLatitude())
                 .longitude(ttsAudio.getLongitude())
                 .accuracy(ttsAudio.getAccuracy())
+                .triggerRadiusMeters(ttsAudio.getTriggerRadiusMeters())
+                .priority(ttsAudio.getPriority())
                 .build();
     }
 }

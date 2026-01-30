@@ -395,6 +395,8 @@ public class TTSController {
         updateRequest.setLatitude(ttsAudio.getLatitude());
         updateRequest.setLongitude(ttsAudio.getLongitude());
         updateRequest.setAccuracy(ttsAudio.getAccuracy());
+        updateRequest.setTriggerRadiusMeters(ttsAudio.getTriggerRadiusMeters());
+        updateRequest.setPriority(ttsAudio.getPriority());
 
         TTSAudio updatedAudio = ttsAudioService.updateTTSAudio(id, updateRequest);
         ResTTSAudioDTO dto = convertToDTO(updatedAudio);

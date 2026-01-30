@@ -87,4 +87,11 @@ public class TTSAudio {
 
     @Column
     Float accuracy; // Độ chính xác của vị trí (mét)
+
+    // Cấu hình geofence cho app client
+    @Column
+    Float triggerRadiusMeters; // Bán kính kích hoạt POI (mét)
+
+    @Column
+    Integer priority; // Mức ưu tiên khi có nhiều POI gần nhau (số càng lớn càng ưu tiên)
 }

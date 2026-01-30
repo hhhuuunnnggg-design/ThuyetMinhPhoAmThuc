@@ -13,11 +13,15 @@ export class GeofenceEngine {
    * - Nếu không → tính dựa trên createdAt (mới nhất = priority cao hơn)
    * - Hoặc có thể dùng ID (ID nhỏ hơn = priority cao hơn)
    */
-  static audioToPOI(audio: TTSAudio & { priority?: number }): POI | null {
+  static audioToPOI(audio: TTSAudio & { priority?: number | null }): POI | null {
     if (audio.latitude == null || audio.longitude == null) return null;
 
-    // Tính priority: nếu backend có thì dùng, không thì tính từ createdAt
-    let priority = (audio as any).priority;
+    // Tính priority: nếu backend có thì dùng, không thì tính từ createdAt / id
+    let priority = (audio as any).priority ?? (audio as any).priority;
+    if (priority == null && (audio as any).triggerRadiusMeters != null) {
+      // giữ chỗ, ưu tiên backend nếu có cấu hình riêng
+      priority = (audio as any).priority;
+    }
     if (priority == null) {
       // Tính priority từ createdAt (mới nhất = priority cao hơn)
       // Hoặc có thể dùng ID ngược lại (ID nhỏ = priority cao)
@@ -29,7 +33,8 @@ export class GeofenceEngine {
       id: audio.id,
       latitude: audio.latitude,
       longitude: audio.longitude,
-      radius: audio.accuracy ?? 50, // Default 50m
+      // Ưu tiên bán kính từ backend, fallback về accuracy
+      radius: (audio as any).triggerRadiusMeters ?? audio.accuracy ?? 50,
       priority,
       audioId: audio.id,
     };

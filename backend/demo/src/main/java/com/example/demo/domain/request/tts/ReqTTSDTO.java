@@ -35,4 +35,8 @@ public class ReqTTSDTO {
     Double latitude;       // Vĩ độ
     Double longitude;      // Kinh độ
     Float accuracy;        // Độ chính xác vị trí (mét)
+
+    // Cấu hình geofence cho POI
+    Float triggerRadiusMeters; // Bán kính kích hoạt (mét)
+    Integer priority;          // Ưu tiên khi có nhiều POI gần nhau
 }

@@ -45,6 +45,14 @@ export const API_ENDPOINTS = {
     AUDIO_IMAGE: (id: number) => `/api/v1/tts/audios/${id}/image`,
     IMAGE_UPLOAD: "/api/v1/tts/images/upload",
   },
+  APP: {
+    POIS: "/api/v1/app/pois",
+    NARRATION_CHECK: "/api/v1/app/narration/check",
+    NARRATION_LOG: "/api/v1/app/narration/log",
+  },
+  ADMIN: {
+    NARRATION_LOGS: "/api/v1/admin/narration-logs",
+  },
 } as const;
 
 export const STORAGE_KEYS = {
@@ -61,6 +69,7 @@ export const ROUTES = {
     ROLE: "/admin/role",
     PERMISSION: "/admin/permission",
     TTS_AUDIO: "/admin/tts-audio",
+    NARRATION_LOGS: "/admin/narration-logs",
   },
   TTS: "/tts",
 } as const;

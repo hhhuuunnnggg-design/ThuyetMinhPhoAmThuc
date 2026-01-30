@@ -97,6 +97,18 @@ public class DatabaseInitializer implements CommandLineRunner {
             arr.add(createPermission("Xóa TTS audio",
                     "/api/v1/tts/audios/{id}", "DELETE", "TTS"));
 
+            // App client permissions (POI + narration)
+            arr.add(createPermission("App client - lấy danh sách POI",
+                    "/api/v1/app/pois", "GET", "APP_CLIENT"));
+            arr.add(createPermission("App client - kiểm tra phát narration",
+                    "/api/v1/app/narration/check", "POST", "APP_CLIENT"));
+            arr.add(createPermission("App client - ghi log narration",
+                    "/api/v1/app/narration/log", "POST", "APP_CLIENT"));
+
+            // Narration logs permissions (admin)
+            arr.add(createPermission("Xem danh sách narration logs",
+                    "/api/v1/admin/narration-logs", "GET", "NARRATION_LOGS"));
+
             this.permissionRepository.saveAll(arr);
         }
 

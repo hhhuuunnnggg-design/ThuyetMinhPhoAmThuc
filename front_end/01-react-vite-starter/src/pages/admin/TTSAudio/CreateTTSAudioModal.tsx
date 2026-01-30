@@ -214,8 +214,24 @@ const CreateTTSAudioModal = ({ open, onCancel, onSuccess }: CreateTTSAudioModalP
           </Space.Compact>
         </Form.Item>
 
-        <Form.Item name="accuracy" label="Bán kính kích hoạt (mét)">
-          <InputNumber style={{ width: "100%" }} min={10} step={10} placeholder="Ví dụ: 30" />
+        <Form.Item name="accuracy" label="Accuracy (mét) - Độ chính xác GPS">
+          <InputNumber style={{ width: "100%" }} min={1} step={1} placeholder="Ví dụ: 10" />
+        </Form.Item>
+
+        <Form.Item
+          name="triggerRadiusMeters"
+          label="Bán kính kích hoạt Geofence (mét)"
+          tooltip="Khoảng cách tối đa để kích hoạt thuyết minh tự động"
+        >
+          <InputNumber style={{ width: "100%" }} min={10} step={10} placeholder="Ví dụ: 50" />
+        </Form.Item>
+
+        <Form.Item
+          name="priority"
+          label="Độ ưu tiên"
+          tooltip="Số càng cao = ưu tiên càng cao khi có nhiều POI trong cùng bán kính"
+        >
+          <InputNumber style={{ width: "100%" }} min={0} step={1} placeholder="Ví dụ: 10" />
         </Form.Item>
 
         <Form.Item>

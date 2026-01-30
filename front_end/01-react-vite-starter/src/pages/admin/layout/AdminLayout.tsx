@@ -11,6 +11,7 @@ import {
   SoundOutlined,
   TeamOutlined,
   UserOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Avatar, Dropdown, Layout, Menu, Space, message } from "antd";
@@ -89,6 +90,15 @@ const AdminLayout = () => {
             label: <Link to={ROUTES.ADMIN.TTS_AUDIO}>Manage TTS Audio</Link>,
             key: "tts-audio",
             icon: <SoundOutlined />,
+          },
+        ]
+      : []),
+    ...(hasPermission("/api/v1/admin/narration-logs", "GET")
+      ? [
+          {
+            label: <Link to={ROUTES.ADMIN.NARRATION_LOGS}>Narration Logs</Link>,
+            key: "narration-logs",
+            icon: <FileTextOutlined />,
           },
         ]
       : []),
