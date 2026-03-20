@@ -19,38 +19,81 @@ export const useGeolocation = ({
   const [geoEnabled, setGeoEnabled] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
   const lastPositionSourceRef = useRef<PositionSource>("slider");
+  const watcherIdRef = useRef<number | null>(null);
+  const hasUserGestureRef = useRef(false);
 
-  // Geolocation - luôn watch để lấy từ Sensors (Chrome DevTools) hoặc real GPS
+  // Chỉ request geolocation khi:
+  // 1. autoGuide = true
+  // 2. mockGps = false (cần real GPS, không dùng mock)
+  // 3. User đã có gesture (đã bật toggle hoặc click button)
   useEffect(() => {
-    if (!autoGuide) return;
+    if (!autoGuide || mockGps) {
+      // Nếu đang dùng mock GPS, không cần request real geolocation
+      if (watcherIdRef.current != null) {
+        navigator.geolocation?.clearWatch(watcherIdRef.current);
+        watcherIdRef.current = null;
+      }
+      // Fallback về mock position
+      if (mockLat != null && mockLng != null) {
+        onPositionUpdate({ lat: mockLat, lng: mockLng }, "slider");
+        setGeoEnabled(true);
+        setGeoError(null);
+      }
+      return;
+    }
+
     if (!navigator.geolocation) {
       setGeoError("Trình duyệt không hỗ trợ GPS");
       return;
     }
 
-    const watcher = navigator.geolocation.watchPosition(
-      (pos) => {
-        setGeoEnabled(true);
-        setGeoError(null);
-        const newPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        lastPositionSourceRef.current = "gps";
-        onPositionUpdate(newPos, "gps");
-      },
-      (err) => {
-        // Nếu đang ở chế độ mock và có lỗi, fallback về slider
-        if (mockGps && mockLat != null && mockLng != null) {
-          onPositionUpdate({ lat: mockLat, lng: mockLng }, "slider");
+    // Chỉ request khi user đã có gesture (đã bật toggle hoặc đã vào trang một lần)
+    // Để tránh violation, ta sẽ request sau một delay ngắn (giả lập user gesture)
+    // Hoặc chỉ request khi user thực sự bật toggle
+    const requestGeo = () => {
+      if (watcherIdRef.current != null) {
+        navigator.geolocation.clearWatch(watcherIdRef.current);
+      }
+
+      watcherIdRef.current = navigator.geolocation.watchPosition(
+        (pos) => {
           setGeoEnabled(true);
           setGeoError(null);
-        } else {
-          setGeoEnabled(false);
-          setGeoError(err.message || "Không thể lấy vị trí");
+          const newPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          lastPositionSourceRef.current = "gps";
+          onPositionUpdate(newPos, "gps");
+        },
+        (err) => {
+          // Nếu có lỗi, fallback về mock position nếu có
+          if (mockLat != null && mockLng != null) {
+            onPositionUpdate({ lat: mockLat, lng: mockLng }, "slider");
+            setGeoEnabled(true);
+            setGeoError(null);
+          } else {
+            setGeoEnabled(false);
+            setGeoError(err.message || "Không thể lấy vị trí");
+          }
+        },
+        { 
+          enableHighAccuracy: true, 
+          maximumAge: 5000, 
+          timeout: 10000 
         }
-      },
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
-    );
+      );
+      hasUserGestureRef.current = true;
+    };
 
-    return () => navigator.geolocation.clearWatch(watcher);
+    // Delay một chút để tránh violation (giả lập như user đã có gesture)
+    // Hoặc có thể chỉ request khi user thực sự bật toggle
+    const timeoutId = setTimeout(requestGeo, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (watcherIdRef.current != null) {
+        navigator.geolocation.clearWatch(watcherIdRef.current);
+        watcherIdRef.current = null;
+      }
+    };
   }, [autoGuide, mockGps, mockLat, mockLng, onPositionUpdate]);
 
   return { geoEnabled, geoError, lastPositionSourceRef };

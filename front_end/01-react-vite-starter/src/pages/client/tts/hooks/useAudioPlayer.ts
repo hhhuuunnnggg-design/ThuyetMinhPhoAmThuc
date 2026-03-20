@@ -1,5 +1,5 @@
-import type { TTSAudio } from "@/api/tts.api";
 import { logNarrationAPI } from "@/api/app.api";
+import type { TTSAudio } from "@/api/tts.api";
 import { config } from "@/config";
 import { API_ENDPOINTS } from "@/constants";
 import { message } from "antd";
@@ -66,7 +66,7 @@ export const useAudioPlayer = ({
         }
       })
       .catch((err) => {
-        console.error(err);
+        console.error( "Failed to play audio:", err);
         message.error("Không thể phát audio");
       });
   };

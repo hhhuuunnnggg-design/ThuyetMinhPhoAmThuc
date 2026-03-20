@@ -41,8 +41,12 @@ export const useNarrationEngineWithBackend = ({
     return newId;
   });
 
+  const lastCheckedPOIRef = useRef<number | null>(null);
+  const checkingRef = useRef(false);
+
   useEffect(() => {
     if (!autoGuide || !position || audios.length === 0) return;
+    if (checkingRef.current) return; // Tránh gọi đồng thời
 
     // Chuyển đổi audios thành POIs
     const pois = audios
@@ -56,6 +60,7 @@ export const useNarrationEngineWithBackend = ({
 
     if (!detectedPOI) {
       lastDetectedPOIRef.current = null;
+      lastCheckedPOIRef.current = null;
       return;
     }
 
@@ -68,6 +73,14 @@ export const useNarrationEngineWithBackend = ({
     // Nếu đang phát audio khác, không làm gì
     if (isPlaying) return;
 
+    // Tránh check lại cùng một POI liên tục
+    if (lastCheckedPOIRef.current === detectedPOI.audioId) {
+      return;
+    }
+
+    checkingRef.current = true;
+    lastCheckedPOIRef.current = detectedPOI.audioId;
+
     // Narration Engine (backend): Kiểm tra trạng thái và quyết định phát
     if (useBackend) {
       checkNarrationAPI({
@@ -76,6 +89,7 @@ export const useNarrationEngineWithBackend = ({
         clientTimestamp: Date.now(),
       })
         .then((response: any) => {
+          checkingRef.current = false;
           // Response có thể là IBackendRes<NarrationCheckResponse> hoặc đã được unwrap
           let result: NarrationCheckResponse;
           if (response?.data && typeof response.data === 'object' && 'shouldPlay' in response.data) {
@@ -96,11 +110,13 @@ export const useNarrationEngineWithBackend = ({
           }
         })
         .catch((err) => {
+          checkingRef.current = false;
           console.error("Failed to check narration:", err);
           // Fallback: vẫn phát nếu backend lỗi (hoặc có thể không phát)
           // message.error("Không thể kiểm tra trạng thái narration");
         });
     } else {
+      checkingRef.current = false;
       // Fallback: dùng logic local cũ nếu không dùng backend
       onShouldPlay(detectedPOI.audioId);
     }

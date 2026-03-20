@@ -1,13 +1,12 @@
 import { Map } from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapView } from "./components/MapView";
 import { TTSDetailView } from "./components/TTSDetailView";
 import { TTSSidebar } from "./components/TTSSidebar";
 import { useAudioPlayer } from "./hooks/useAudioPlayer";
 import { useGeolocation } from "./hooks/useGeolocation";
 import { useMapPosition } from "./hooks/useMapPosition";
-import { useNarrationEngine } from "./hooks/useNarrationEngine";
 import { useNarrationEngineWithBackend } from "./hooks/useNarrationEngineWithBackend";
 import { useTTSAudios } from "./hooks/useTTSAudios";
 import "./tts.scss";
@@ -59,6 +58,33 @@ const TTSPage = () => {
 
   // State cho auto-play từ Narration Engine
   const [autoPlayAudioId, setAutoPlayAudioId] = useState<number | null>(null);
+  const lastRequestedAudioIdRef = useRef<number | null>(null);
+
+  // Memoize callbacks để tránh vòng lặp vô hạn
+  const handlePOIDetected = useCallback((poiId: number) => {
+    // Geofence Engine đã phát hiện POI -> cập nhật selected
+    setSelectedId(poiId);
+  }, []);
+
+  const handleShouldPlay = useCallback((audioId: number) => {
+    // Tránh gọi lại nếu đã yêu cầu phát audio này
+    if (lastRequestedAudioIdRef.current === audioId) {
+      return;
+    }
+    lastRequestedAudioIdRef.current = audioId;
+    
+    // Narration Engine quyết định phát -> set auto-play
+    setAutoPlayAudioId(audioId);
+    
+    // Reset sau khi đã set để có thể trigger lại lần sau
+    setTimeout(() => {
+      setAutoPlayAudioId(null);
+      // Reset ref sau một khoảng thời gian để có thể phát lại
+      setTimeout(() => {
+        lastRequestedAudioIdRef.current = null;
+      }, 5000); // 5 giây cooldown
+    }, 100);
+  }, []);
 
   const { deviceId } = useNarrationEngineWithBackend({
     audios,
@@ -66,16 +92,8 @@ const TTSPage = () => {
     autoGuide,
     isPlaying: false, // sẽ được cập nhật sau khi init audio player
     useBackend: useBackendNarration,
-    onPOIDetected: (poiId) => {
-      // Geofence Engine đã phát hiện POI -> cập nhật selected
-      setSelectedId(poiId);
-    },
-    onShouldPlay: (audioId) => {
-      // Narration Engine quyết định phát -> set auto-play
-      setAutoPlayAudioId(audioId);
-      // Reset sau khi đã set để có thể trigger lại lần sau
-      setTimeout(() => setAutoPlayAudioId(null), 100);
-    },
+    onPOIDetected: handlePOIDetected,
+    onShouldPlay: handleShouldPlay,
   });
 
   const { isPlaying, setIsPlaying, audioRef, handlePlayPause } = useAudioPlayer({
