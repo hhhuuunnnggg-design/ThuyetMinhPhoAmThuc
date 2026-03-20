@@ -35,9 +35,8 @@ const router = createBrowserRouter([
     element: <ClientLayout />,
     errorElement: <Error500 />,
     children: [
-      
       {
-        path: ROUTES.TTS,
+        index: true,
         element: <TTSPage />,
       },
     ],
