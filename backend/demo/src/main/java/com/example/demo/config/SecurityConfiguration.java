@@ -45,6 +45,7 @@ public class SecurityConfiguration {
         String[] whiteList = {
                 "/",
                 "/storage/**",
+                "/uploads/**",
                 "/api/v1/email/**",
                 "/v3/api-docs/**",
                 "/swagger-ui/**",

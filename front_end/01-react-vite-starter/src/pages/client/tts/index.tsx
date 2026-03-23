@@ -104,6 +104,22 @@ const TTSPage = () => {
     useBackendLogging: useBackendNarration,
   });
 
+  // Wrapper for multilingual audio URL support
+  const handlePlayPauseWithUrl = useCallback((url?: string) => {
+    if (url) {
+      // Play specific URL (multilingual audio)
+      const audio = audioRef.current;
+      if (audio) {
+        audio.src = url;
+        audio.play().catch(() => {});
+        setIsPlaying(true);
+      }
+    } else {
+      // Normal play/pause with selected audio
+      handlePlayPause();
+    }
+  }, [audioRef, handlePlayPause, setIsPlaying]);
+
   // Debug: Log deviceId và useBackendNarration
   useEffect(() => {
     if (useBackendNarration) {
@@ -196,7 +212,7 @@ const TTSPage = () => {
             isPlaying={isPlaying}
             autoGuide={autoGuide}
             geoError={geoError}
-            onPlayPause={handlePlayPause}
+            onPlayPause={handlePlayPauseWithUrl}
           />
         )}
 

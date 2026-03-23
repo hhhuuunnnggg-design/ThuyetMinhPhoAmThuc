@@ -44,4 +44,8 @@ public class ResTTSAudioDTO {
     // Cấu hình geofence cho POI
     Float triggerRadiusMeters;
     Integer priority;
+
+    // Multi-language support
+    String languageCode;
+    String translatedText;
 }

@@ -384,6 +384,28 @@
   font-size: 12px;
 }
 
+.language-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.lang-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.lang-hint {
+  font-size: 11px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
 .gps-map-page {
   margin-top: 8px;
   background: #f6f8fc;

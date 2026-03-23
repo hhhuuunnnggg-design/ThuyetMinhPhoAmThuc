@@ -25,10 +25,12 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.demo.domain.TTSAudio;
 import com.example.demo.domain.dto.ResultPaginationDTO;
 import com.example.demo.domain.request.tts.ReqTTSDTO;
+import com.example.demo.domain.response.tts.ResMultilingualAudioDTO;
 import com.example.demo.domain.response.tts.ResTTSAudioDTO;
+import com.example.demo.domain.response.tts.ResTTSAudioGroupDTO;
 import com.example.demo.domain.response.tts.ResVoiceDTO;
 import com.example.demo.domain.response.tts.ResVoicesDTO;
-import com.example.demo.service.S3Service;
+import com.example.demo.service.LocalStorageService;
 import com.example.demo.service.TTSAudioService;
 import com.example.demo.service.TTSService;
 import com.example.demo.util.SecurityUtil;
@@ -44,12 +46,12 @@ public class TTSController {
 
     private final TTSService ttsService;
     private final TTSAudioService ttsAudioService;
-    private final S3Service s3Service;
+    private final LocalStorageService localStorageService;
 
-    public TTSController(TTSService ttsService, TTSAudioService ttsAudioService, S3Service s3Service) {
+    public TTSController(TTSService ttsService, TTSAudioService ttsAudioService, LocalStorageService localStorageService) {
         this.ttsService = ttsService;
         this.ttsAudioService = ttsAudioService;
-        this.s3Service = s3Service;
+        this.localStorageService = localStorageService;
     }
 
     @PostMapping("/synthesize")
@@ -75,7 +77,11 @@ public class TTSController {
     @ApiMessage("Tạo và lưu audio thành công")
     public ResponseEntity<ResTTSAudioDTO> synthesizeAndSave(@Valid @RequestBody ReqTTSDTO request)
             throws IOException, IdInvalidException {
-        // Tạo audio
+        // Lấy email của user hiện tại
+        String createdBy = SecurityUtil.getCurrentUserLogin().orElse("anonymous");
+        request.setCreatedBy(createdBy);
+
+        // Tạo audio tiếng Việt
         ResponseEntity<Resource> audioResponse = ttsService.synthesizeSpeech(request);
         Resource resource = audioResponse.getBody();
 
@@ -91,11 +97,19 @@ public class TTSController {
         // Tạo tên file
         String fileName = generateFileName(request);
 
-        // Lấy email của user hiện tại
-        String createdBy = SecurityUtil.getCurrentUserLogin().orElse("anonymous");
-
-        // Lưu lên S3 và database
+        // Lưu file và database
         TTSAudio ttsAudio = ttsAudioService.createTTSAudio(request, audioData, fileName, createdBy);
+
+        // Nếu có flag multilingual=true → tự động tạo thêm audio đa ngôn ngữ
+        if (Boolean.TRUE.equals(request.getMultilingual())) {
+            System.out.println("🌐 Multilingual flag = true → Tạo audio đa ngôn ngữ...");
+            try {
+                ResMultilingualAudioDTO multilingualResult = ttsAudioService.createMultilingualForExisting(ttsAudio, request);
+                System.out.println("✅ Đã tạo " + multilingualResult.getAudios().size() + " audio đa ngôn ngữ cho group: " + multilingualResult.getGroupId());
+            } catch (Exception e) {
+                System.err.println("⚠️  Không thể tạo audio đa ngôn ngữ: " + e.getMessage());
+            }
+        }
 
         ResTTSAudioDTO dto = convertToDTO(ttsAudio);
 
@@ -105,15 +119,13 @@ public class TTSController {
         System.out.println("🆔 ID: " + dto.getId());
         System.out.println("📄 File Name: " + dto.getFileName());
         if (dto.getS3Url() != null) {
-            System.out.println("🔗 S3 URL: " + dto.getS3Url());
+            System.out.println("🔗 URL: " + dto.getS3Url());
         } else {
-            System.out.println("⚠️  S3 URL: null (chưa upload lên S3)");
+            System.out.println("⚠️  URL: null (chưa lưu file)");
         }
         System.out.println("📊 File Size: " + dto.getFileSize() + " bytes");
         System.out.println("========================================");
 
-        // Trả về ResTTSAudioDTO trực tiếp, FormarRestResponse sẽ tự động wrap thành
-        // RestResponse
         return ResponseEntity.ok(dto);
     }
 
@@ -137,6 +149,85 @@ public class TTSController {
         response.setResult(result.getContent());
 
         return ResponseEntity.ok(response);
+    }
+
+    // ============ Multi-language ============
+    @PostMapping("/multilingual")
+    @ApiMessage("Tạo audio đa ngôn ngữ (EN, ZH, JA, KO, FR) từ text tiếng Việt")
+    public ResponseEntity<ResMultilingualAudioDTO> createMultilingualAudio(@Valid @RequestBody ReqTTSDTO request)
+            throws IOException, IdInvalidException {
+        String createdBy = SecurityUtil.getCurrentUserLogin().orElse("anonymous");
+        request.setCreatedBy(createdBy);
+
+        ResMultilingualAudioDTO result = ttsAudioService.createMultilingualAudio(request);
+
+        System.out.println("========================================");
+        System.out.println("✅ MULTILINGUAL AUDIO CREATED!");
+        System.out.println("📁 Group Key: " + result.getGroupId());
+        System.out.println("🌐 Languages: " + result.getAudios().size());
+        for (ResMultilingualAudioDTO.AudioEntry entry : result.getAudios()) {
+            System.out.println("   - " + entry.getLanguageName() + " (" + entry.getLanguageCode() + "): " + entry.getS3Url());
+        }
+        System.out.println("========================================");
+
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Generate multilingual audio cho một audio đã tồn tại.
+     * Dùng để tạo audio đa ngôn ngữ cho các audio cũ chưa có.
+     */
+    @PostMapping("/audios/{id}/generate-multilingual")
+    @ApiMessage("Tạo audio đa ngôn ngữ cho audio đã tồn tại")
+    public ResponseEntity<ResMultilingualAudioDTO> generateMultilingualForAudio(@PathVariable Long id)
+            throws IdInvalidException {
+        TTSAudio viAudio = ttsAudioService.getTTSAudioById(id);
+
+        // Build request từ audio hiện tại
+        ReqTTSDTO request = new ReqTTSDTO();
+        request.setText(viAudio.getText());
+        request.setVoice(viAudio.getVoice());
+        request.setSpeed(viAudio.getSpeed());
+        request.setTtsReturnOption(viAudio.getFormat());
+        request.setWithoutFilter(viAudio.getWithoutFilter());
+        request.setFoodName(viAudio.getFoodName());
+        request.setPrice(viAudio.getPrice());
+        request.setDescription(viAudio.getDescription());
+        request.setImageUrl(viAudio.getImageUrl());
+        request.setLatitude(viAudio.getLatitude());
+        request.setLongitude(viAudio.getLongitude());
+        request.setAccuracy(viAudio.getAccuracy());
+        request.setTriggerRadiusMeters(viAudio.getTriggerRadiusMeters());
+        request.setPriority(viAudio.getPriority());
+        request.setCreatedBy(viAudio.getCreatedBy());
+
+        ResMultilingualAudioDTO result = ttsAudioService.createMultilingualForExisting(viAudio, request);
+
+        System.out.println("========================================");
+        System.out.println("✅ MULTILINGUAL AUDIO GENERATED FOR EXISTING!");
+        System.out.println("📁 Audio ID: " + id);
+        System.out.println("📁 Group Key: " + result.getGroupId());
+        System.out.println("🌐 Languages: " + result.getAudios().size());
+        for (ResMultilingualAudioDTO.AudioEntry entry : result.getAudios()) {
+            System.out.println("   - " + entry.getLanguageName() + " (" + entry.getLanguageCode() + "): " + entry.getS3Url());
+        }
+        System.out.println("========================================");
+
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/groups/{id}")
+    @ApiMessage("Lấy group audio theo ID")
+    public ResponseEntity<ResTTSAudioGroupDTO> getGroupById(@PathVariable Long id) throws IdInvalidException {
+        ResTTSAudioGroupDTO group = ttsAudioService.getGroupById(id);
+        return ResponseEntity.ok(group);
+    }
+
+    @GetMapping("/groups/key/{groupKey}")
+    @ApiMessage("Lấy group audio theo groupKey")
+    public ResponseEntity<ResTTSAudioGroupDTO> getGroupByKey(@PathVariable String groupKey) throws IdInvalidException {
+        ResTTSAudioGroupDTO group = ttsAudioService.getGroupByKey(groupKey);
+        return ResponseEntity.ok(group);
     }
 
     @GetMapping("/audios/my")
@@ -169,10 +260,9 @@ public class TTSController {
             throws IOException, IdInvalidException {
         TTSAudio ttsAudio = ttsAudioService.getTTSAudioById(id);
 
-        // Nếu có S3 URL, serve file từ S3 thông qua backend (tránh Access Denied)
+        // Nếu có file URL, serve file từ local storage
         if (ttsAudio.getS3Url() != null && !ttsAudio.getS3Url().isEmpty()) {
             try {
-                // Lấy file từ S3 thông qua S3Service
                 Resource resource = ttsAudioService.getAudioResourceFromS3(ttsAudio.getFileName());
                 if (resource != null && resource.exists()) {
                     HttpHeaders headers = new HttpHeaders();
@@ -202,12 +292,11 @@ public class TTSController {
                             .body(resource);
                 }
             } catch (Exception e) {
-                // Nếu không lấy được từ S3, fallback về regenerate
-                System.err.println("WARNING: Không thể lấy file từ S3: " + e.getMessage());
+                System.err.println("WARNING: Không thể lấy file: " + e.getMessage());
             }
         }
 
-        // Nếu không có S3 URL, regenerate audio từ metadata
+        // Nếu không có file URL, regenerate audio từ metadata
         ReqTTSDTO request = new ReqTTSDTO();
         request.setText(ttsAudio.getText());
         request.setVoice(ttsAudio.getVoice());
@@ -272,7 +361,7 @@ public class TTSController {
                 !existingAudio.getFormat().equals(request.getTtsReturnOption()) ||
                 !existingAudio.getWithoutFilter().equals(request.getWithoutFilter());
 
-        // Nếu có thay đổi, regenerate audio mới và upload lên S3
+        // Nếu có thay đổi, regenerate audio mới và lưu vào local storage
         if (needsRegenerate) {
             // Tạo audio mới từ text mới
             ResponseEntity<Resource> audioResponse = ttsService.synthesizeSpeech(request);
@@ -290,17 +379,17 @@ public class TTSController {
             // Tạo tên file mới
             String fileName = generateFileName(request);
 
-            // Xóa file cũ trên S3 nếu có
+            // Xóa file cũ nếu có
             if (existingAudio.getS3Url() != null && existingAudio.getFileName() != null) {
                 try {
                     ttsAudioService.deleteTTSAudioFileFromS3(existingAudio.getFileName());
-                    System.out.println("✅ Đã xóa file cũ trên S3: " + existingAudio.getFileName());
+                    System.out.println("✅ Đã xóa file cũ: " + existingAudio.getFileName());
                 } catch (Exception e) {
-                    System.err.println("⚠️  Không thể xóa file cũ trên S3: " + e.getMessage());
+                    System.err.println("⚠️  Không thể xóa file cũ: " + e.getMessage());
                 }
             }
 
-            // Upload file mới lên S3 và cập nhật metadata
+            // Lưu file mới và cập nhật metadata
             TTSAudio updatedAudio = ttsAudioService.updateTTSAudioWithNewFile(id, request, audioData, fileName);
             ResTTSAudioDTO dto = convertToDTO(updatedAudio);
 
@@ -309,7 +398,7 @@ public class TTSController {
             System.out.println("🆔 ID: " + dto.getId());
             System.out.println("📄 File Name mới: " + dto.getFileName());
             if (dto.getS3Url() != null) {
-                System.out.println("🔗 S3 URL mới: " + dto.getS3Url());
+                System.out.println("🔗 URL mới: " + dto.getS3Url());
             }
             System.out.println("========================================");
 
@@ -335,7 +424,7 @@ public class TTSController {
     }
 
     @PostMapping("/audios/{id}/image")
-    @ApiMessage("Upload ảnh món ăn lên S3")
+    @ApiMessage("Upload ảnh món ăn")
     public ResponseEntity<ResTTSAudioDTO> uploadFoodImage(
             @PathVariable Long id,
             @RequestParam("image") MultipartFile imageFile)
@@ -355,30 +444,23 @@ public class TTSController {
         // Get audio
         TTSAudio ttsAudio = ttsAudioService.getTTSAudioById(id);
 
-        // Delete old image from S3 if exists
+        // Delete old image if exists
         if (ttsAudio.getImageUrl() != null && !ttsAudio.getImageUrl().isEmpty()) {
             try {
-                // Extract file name from URL (handle cả URL có region và không có region)
-                String oldFileName = ttsAudio.getImageUrl();
-                // Pattern: https://bucket.s3.region.amazonaws.com/food-images/file.jpg
-                // hoặc: https://bucket.s3.amazonaws.com/food-images/file.jpg
-                if (oldFileName.contains("food-images/")) {
-                    oldFileName = oldFileName.substring(oldFileName.indexOf("food-images/"));
-                    s3Service.deleteFile(oldFileName);
-                    System.out.println("✅ Đã xóa ảnh cũ trên S3: " + oldFileName);
-                }
+                localStorageService.deleteFile(ttsAudio.getImageUrl());
+                System.out.println("✅ Đã xóa ảnh cũ: " + ttsAudio.getImageUrl());
             } catch (Exception e) {
-                System.err.println("⚠️  Không thể xóa ảnh cũ trên S3: " + e.getMessage());
+                System.err.println("⚠️  Không thể xóa ảnh cũ: " + e.getMessage());
             }
         }
 
-        // Upload new image to S3
+        // Upload new image
         String imageUrl;
         try {
-            imageUrl = s3Service.uploadFile(imageFile, "food-images");
-            System.out.println("✅ Đã upload ảnh lên S3: " + imageUrl);
+            imageUrl = localStorageService.uploadFile(imageFile, "food-images");
+            System.out.println("✅ Đã lưu ảnh: " + imageUrl);
         } catch (Exception e) {
-            throw new IOException("Không thể upload ảnh lên S3: " + e.getMessage(), e);
+            throw new IOException("Không thể lưu ảnh: " + e.getMessage(), e);
         }
 
         // Update imageUrl in database
@@ -411,7 +493,7 @@ public class TTSController {
     }
 
     @PostMapping("/images/upload")
-    @ApiMessage("Upload ảnh món ăn lên S3 (không cần audio ID)")
+    @ApiMessage("Upload ảnh món ăn (không cần audio ID)")
     public ResponseEntity<java.util.Map<String, String>> uploadFoodImageOnly(
             @RequestParam("image") MultipartFile imageFile)
             throws IOException, IdInvalidException {
@@ -427,13 +509,13 @@ public class TTSController {
             throw new IdInvalidException("File phải là ảnh (image/*)");
         }
 
-        // Upload image to S3
+        // Upload image
         String imageUrl;
         try {
-            imageUrl = s3Service.uploadFile(imageFile, "food-images");
-            System.out.println("✅ Đã upload ảnh lên S3: " + imageUrl);
+            imageUrl = localStorageService.uploadFile(imageFile, "food-images");
+            System.out.println("✅ Đã lưu ảnh: " + imageUrl);
         } catch (Exception e) {
-            throw new IOException("Không thể upload ảnh lên S3: " + e.getMessage(), e);
+            throw new IOException("Không thể lưu ảnh: " + e.getMessage(), e);
         }
 
         java.util.Map<String, String> response = new java.util.HashMap<>();
@@ -444,47 +526,22 @@ public class TTSController {
     }
 
     @GetMapping("/images/{fileName:.+}")
-    @ApiMessage("Lấy ảnh từ S3")
+    @ApiMessage("Lấy ảnh từ local storage")
     public ResponseEntity<Resource> getFoodImage(@PathVariable String fileName)
             throws IOException {
 
         // Decode fileName nếu có encoding
         String decodedFileName = java.net.URLDecoder.decode(fileName, java.nio.charset.StandardCharsets.UTF_8);
 
-        // Try multiple paths để handle cả duplicate folder case
-        String[] possiblePaths = {
-                decodedFileName, // Path như user gửi
-                decodedFileName.startsWith("food-images/") ? decodedFileName : "food-images/" + decodedFileName, // Thêm
-                                                                                                                 // prefix
-                                                                                                                 // nếu
-                                                                                                                 // chưa
-                                                                                                                 // có
-                decodedFileName.startsWith("food-images/food-images/") ? decodedFileName
-                        : "food-images/food-images/" + decodedFileName.replaceFirst("^food-images/", ""), // Handle
-                                                                                                          // duplicate
-                                                                                                          // folder
-        };
-
-        Resource resource = null;
-        String foundPath = null;
-
-        for (String path : possiblePaths) {
-            try {
-                resource = ttsAudioService.getImageResourceFromS3(path);
-                if (resource != null && resource.exists()) {
-                    foundPath = path;
-                    break;
-                }
-            } catch (Exception e) {
-                // Try next path
-                continue;
+        try {
+            Resource resource = ttsAudioService.getImageResourceFromS3(decodedFileName);
+            if (resource == null || !resource.exists()) {
+                throw new IOException("Không tìm thấy ảnh: " + decodedFileName);
             }
-        }
 
-        if (resource != null && resource.exists() && foundPath != null) {
             // Determine content type from file extension
             String contentType = "image/jpeg";
-            String lowerPath = foundPath.toLowerCase();
+            String lowerPath = decodedFileName.toLowerCase();
             if (lowerPath.endsWith(".png")) {
                 contentType = "image/png";
             } else if (lowerPath.endsWith(".gif")) {
@@ -500,9 +557,9 @@ public class TTSController {
             return ResponseEntity.ok()
                     .headers(headers)
                     .body(resource);
+        } catch (Exception e) {
+            throw new IOException("Không tìm thấy ảnh: " + decodedFileName + " - " + e.getMessage());
         }
-
-        throw new IOException("Không tìm thấy ảnh. Đã thử các path: " + String.join(", ", possiblePaths));
     }
 
     // Helper methods
@@ -525,7 +582,6 @@ public class TTSController {
     }
 
     private ResTTSAudioDTO convertToDTO(TTSAudio ttsAudio) {
-        // Giữ nguyên S3 URL (bucket đã public)
         String imageUrl = ttsAudio.getImageUrl();
 
         return ResTTSAudioDTO.builder()

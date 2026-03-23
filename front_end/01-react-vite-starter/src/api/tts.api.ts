@@ -34,6 +34,9 @@ export interface TTSRequest {
   // Thông tin POI (Geofence)
   triggerRadiusMeters?: number; // Bán kính kích hoạt (mét)
   priority?: number; // Độ ưu tiên (số càng cao = ưu tiên càng cao)
+
+  // Multilingual
+  multilingual?: boolean; // Tự động tạo audio đa ngôn ngữ (EN, ZH, JA, KO, FR)
 }
 
 export interface TTSAudio {
@@ -150,4 +153,51 @@ export const getImageUrl = (imageUrl: string | null | undefined): string | null 
   if (!imageUrl) return null;
   // Giữ nguyên URL (S3 bucket đã public)
   return imageUrl;
+};
+
+// ============ Multi-language TTS ============
+
+export interface MultilingualAudioEntry {
+  id: number;
+  languageCode: string;
+  languageName: string;
+  s3Url: string | null;
+  fileSize: number;
+}
+
+export interface MultilingualAudioResponse {
+  groupId: string;
+  audios: MultilingualAudioEntry[];
+}
+
+export interface TTSAudioGroup {
+  id: number;
+  groupKey: string;
+  foodName: string | null;
+  originalText: string | null;
+  originalVoice: string | null;
+  createdAt: string;
+  audios: MultilingualAudioEntry[];
+}
+
+// Tạo audio đa ngôn ngữ
+export const createMultilingualTTSAPI = (request: TTSRequest) => {
+  return axios.post<IBackendRes<MultilingualAudioResponse>>(API_ENDPOINTS.TTS.MULTILINGUAL, request);
+};
+
+// Lấy group audio theo ID
+export const getAudioGroupByIdAPI = (id: number) => {
+  return axios.get<IBackendRes<TTSAudioGroup>>(API_ENDPOINTS.TTS.GROUP_BY_ID(id));
+};
+
+// Lấy group audio theo groupKey
+export const getAudioGroupByKeyAPI = (groupKey: string) => {
+  return axios.get<IBackendRes<TTSAudioGroup>>(API_ENDPOINTS.TTS.GROUP_BY_KEY(groupKey));
+};
+
+// Generate multilingual audio cho audio đã tồn tại
+export const generateMultilingualAPI = (audioId: number) => {
+  return axios.post<IBackendRes<MultilingualAudioResponse>>(
+    API_ENDPOINTS.TTS.AUDIO_GENERATE_MULTILINGUAL(audioId)
+  );
 };

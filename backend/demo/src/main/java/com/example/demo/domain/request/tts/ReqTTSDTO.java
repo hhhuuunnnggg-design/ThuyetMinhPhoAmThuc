@@ -39,4 +39,8 @@ public class ReqTTSDTO {
     // Cấu hình geofence cho POI
     Float triggerRadiusMeters; // Bán kính kích hoạt (mét)
     Integer priority;          // Ưu tiên khi có nhiều POI gần nhau
+
+    // For multilingual TTS
+    Boolean multilingual = false; // Tự động tạo audio đa ngôn ngữ (EN, ZH, JA, KO, FR)
+    String createdBy;
 }

@@ -1,8 +1,18 @@
-import { CompassOutlined, PauseCircleOutlined, PlayCircleOutlined } from "@ant-design/icons";
-import { Button, Tooltip } from "antd";
-import { getImageUrl } from "@/api/tts.api";
+import { CompassOutlined, GlobalOutlined, PauseCircleOutlined, PlayCircleOutlined } from "@ant-design/icons";
+import { Button, message, Select, Spin, Tooltip } from "antd";
+import { useEffect, useState } from "react";
+import { generateMultilingualAPI, getAudioGroupByIdAPI, getImageUrl, type MultilingualAudioEntry } from "@/api/tts.api";
 import type { TTSAudio } from "@/api/tts.api";
 import { formatDistance } from "../utils/format";
+
+const LANGUAGE_OPTIONS = [
+  { value: "vi", label: "Tiếng Việt" },
+  { value: "en", label: "English" },
+  { value: "zh", label: "中文" },
+  { value: "ja", label: "日本語" },
+  { value: "ko", label: "한국어" },
+  { value: "fr", label: "Français" },
+];
 
 interface TTSDetailViewProps {
   selected: TTSAudio;
@@ -10,7 +20,7 @@ interface TTSDetailViewProps {
   isPlaying: boolean;
   autoGuide: boolean;
   geoError: string | null;
-  onPlayPause: () => void;
+  onPlayPause: (url?: string) => void;
 }
 
 export const TTSDetailView = ({
@@ -21,6 +31,60 @@ export const TTSDetailView = ({
   geoError,
   onPlayPause,
 }: TTSDetailViewProps) => {
+  const [selectedLang, setSelectedLang] = useState<string>("vi");
+  const [multilingualAudios, setMultilingualAudios] = useState<MultilingualAudioEntry[]>([]);
+  const [loadingMultilingual, setLoadingMultilingual] = useState(false);
+  const [generatingMultilingual, setGeneratingMultilingual] = useState(false);
+
+  // Fetch multilingual audio group when selected changes
+  useEffect(() => {
+    if (!selected.id) return;
+    setLoadingMultilingual(true);
+    setMultilingualAudios([]);
+    setSelectedLang("vi");
+
+    getAudioGroupByIdAPI(selected.id)
+      .then((res) => {
+        if (res.data.data?.audios && res.data.data.audios.length > 0) {
+          setMultilingualAudios(res.data.data.audios);
+        }
+      })
+      .catch(() => {
+        // No multilingual data available
+      })
+      .finally(() => setLoadingMultilingual(false));
+  }, [selected.id]);
+
+  const handleGenerateMultilingual = async () => {
+    setGeneratingMultilingual(true);
+    try {
+      const res = await generateMultilingualAPI(selected.id);
+      if (res.data.data?.audios) {
+        setMultilingualAudios(res.data.data.audios);
+        message.success("Đã tạo audio đa ngôn ngữ!");
+      }
+    } catch {
+      message.error("Không thể tạo audio đa ngôn ngữ");
+    } finally {
+      setGeneratingMultilingual(false);
+    }
+  };
+
+  const handleLanguageChange = (lang: string) => {
+    setSelectedLang(lang);
+    if (lang === "vi") {
+      // Reset to original audio
+      onPlayPause();
+    } else {
+      // Find multilingual audio for this language
+      const entry = multilingualAudios.find((a) => a.languageCode === lang);
+      if (entry?.s3Url) {
+        onPlayPause(entry.s3Url);
+      }
+    }
+  };
+
+  const hasMultilingual = multilingualAudios.length > 0;
   return (
     <>
       <div className="hero">
@@ -75,7 +139,7 @@ export const TTSDetailView = ({
             size="large"
             shape="circle"
             icon={isPlaying ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
-            onClick={onPlayPause}
+            onClick={() => onPlayPause()}
           />
           <div className="audio-progress">
             <div className="bar" />
@@ -90,6 +154,34 @@ export const TTSDetailView = ({
               <span>{autoGuide ? "Auto-guide đang bật" : "Auto-guide đang tắt"}</span>
             </div>
           </Tooltip>
+        </div>
+
+        {/* Language Selector */}
+        <div className="language-selector">
+          <div className="lang-label">Ngôn ngữ thuyết minh:</div>
+          <Select
+            value={selectedLang}
+            onChange={handleLanguageChange}
+            style={{ width: 180 }}
+            options={LANGUAGE_OPTIONS}
+            suffixIcon={loadingMultilingual ? <Spin size="small" /> : undefined}
+          />
+          {hasMultilingual ? (
+            <span className="lang-hint">
+              ✓ Có {multilingualAudios.length} ngôn ngữ
+            </span>
+          ) : !loadingMultilingual ? (
+            <Tooltip title="Tạo audio đa ngôn ngữ cho món này">
+              <Button
+                icon={<GlobalOutlined />}
+                size="small"
+                loading={generatingMultilingual}
+                onClick={handleGenerateMultilingual}
+              >
+                Tạo đa ngôn ngữ
+              </Button>
+            </Tooltip>
+          ) : null}
         </div>
 
         {geoError && <div className="geo-error">{geoError}</div>}

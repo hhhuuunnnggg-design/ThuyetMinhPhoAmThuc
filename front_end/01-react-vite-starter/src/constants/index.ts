@@ -43,7 +43,11 @@ export const API_ENDPOINTS = {
     AUDIO_BY_ID: (id: number) => `/api/v1/tts/audios/${id}`,
     AUDIO_DOWNLOAD: (id: number) => `/api/v1/tts/audios/${id}/download`,
     AUDIO_IMAGE: (id: number) => `/api/v1/tts/audios/${id}/image`,
+    AUDIO_GENERATE_MULTILINGUAL: (id: number) => `/api/v1/tts/audios/${id}/generate-multilingual`,
     IMAGE_UPLOAD: "/api/v1/tts/images/upload",
+    MULTILINGUAL: "/api/v1/tts/multilingual",
+    GROUP_BY_ID: (id: number) => `/api/v1/tts/groups/${id}`,
+    GROUP_BY_KEY: (key: string) => `/api/v1/tts/groups/key/${key}`,
   },
   APP: {
     POIS: "/api/v1/app/pois",
