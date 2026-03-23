@@ -68,6 +68,12 @@ export interface TTSAudio {
   // Cấu hình geofence từ backend
   triggerRadiusMeters?: number | null;
   priority?: number | null;
+
+  // Thông tin User
+  userId?: number | null;
+  userEmail?: string | null;
+  userFullName?: string | null;
+  userAvatar?: string | null;
 }
 
 // Lấy danh sách giọng đọc

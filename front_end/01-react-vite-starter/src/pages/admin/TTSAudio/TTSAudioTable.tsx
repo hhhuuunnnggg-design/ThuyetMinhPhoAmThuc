@@ -202,10 +202,47 @@ const TTSAudioTable = () => {
         ),
     },
     {
-      title: "Created By",
-      dataIndex: "createdBy",
+      title: "Người tạo",
       key: "createdBy",
-      width: 150,
+      width: 180,
+      hideInSearch: true,
+      render: (_: any, record: TTSAudio) => {
+        if (record.userFullName) {
+          return (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {record.userAvatar ? (
+                <img
+                  src={record.userAvatar}
+                  alt={record.userFullName}
+                  style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    background: "#1890ff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#fff",
+                    fontSize: 12,
+                    fontWeight: 600,
+                  }}
+                >
+                  {record.userFullName.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <span style={{ fontWeight: 500, fontSize: 13 }}>{record.userFullName}</span>
+                <span style={{ fontSize: 11, color: "#888" }}>{record.userEmail}</span>
+              </div>
+            </div>
+          );
+        }
+        return <span style={{ color: "#999" }}>{record.createdBy || "—"}</span>;
+      },
     },
     {
       title: "Created At",

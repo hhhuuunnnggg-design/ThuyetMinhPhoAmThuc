@@ -64,9 +64,13 @@ public class TTSAudio {
     @Column
     Instant updatedAt;
 
-    // Thông tin user tạo (nếu cần)
+    // Thông tin user tạo
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    User user; // User sở hữu audio này
+
     @Column
-    String createdBy; // Email của user
+    String createdBy; // Email của user (backup)
 
     // Thông tin thuyết minh ẩm thực
     @Column

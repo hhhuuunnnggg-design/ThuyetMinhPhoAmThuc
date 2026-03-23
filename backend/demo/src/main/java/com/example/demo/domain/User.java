@@ -8,6 +8,7 @@ import lombok.experimental.FieldDefaults;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 
 @Entity
 @Data
@@ -47,6 +48,9 @@ public class User {
     @ManyToOne
     @JoinColumn(name = "role_id")
     private Role role;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<TTSAudio> ttsAudios;
 
     // Phương thức tiện ích để kiểm tra trạng thái tài khoản
     @Transient

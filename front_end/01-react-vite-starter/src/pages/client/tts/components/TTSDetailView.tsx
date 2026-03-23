@@ -59,8 +59,8 @@ export const TTSDetailView = ({
     setGeneratingMultilingual(true);
     try {
       const res = await generateMultilingualAPI(selected.id);
-      if (res.data.data?.audios) {
-        setMultilingualAudios(res.data.data.audios);
+      if (res.data?.audios) {
+        setMultilingualAudios(res.data.audios);
         message.success("Đã tạo audio đa ngôn ngữ!");
       }
     } catch {

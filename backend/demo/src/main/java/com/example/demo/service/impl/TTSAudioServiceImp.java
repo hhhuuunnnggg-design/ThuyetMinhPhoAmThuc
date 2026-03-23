@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.domain.TTSAudio;
+import com.example.demo.domain.User;
 import com.example.demo.domain.TTSAudioGroup;
 import com.example.demo.domain.dto.SupportedLanguage;
 import com.example.demo.domain.request.tts.ReqTTSDTO;
@@ -29,6 +30,7 @@ import com.example.demo.domain.response.tts.ResTTSAudioDTO;
 import com.example.demo.domain.response.tts.ResTTSAudioGroupDTO;
 import com.example.demo.repository.TTSAudioGroupRepository;
 import com.example.demo.repository.TTSAudioRepository;
+import com.example.demo.repository.UserServiceRepository;
 import com.example.demo.service.GoogleCloudTTSService;
 import com.example.demo.service.LocalStorageService;
 import com.example.demo.service.TTSAudioService;
@@ -43,6 +45,9 @@ public class TTSAudioServiceImp implements TTSAudioService {
 
     @Autowired
     private TTSAudioGroupRepository ttsAudioGroupRepository;
+
+    @Autowired
+    private UserServiceRepository userServiceRepository;
 
     @Autowired
     private LocalStorageService localStorageService;
@@ -83,6 +88,9 @@ public class TTSAudioServiceImp implements TTSAudioService {
             System.err.println("========================================");
         }
 
+        // Tìm User từ email
+        User user = userServiceRepository.findByEmail(createdBy);
+
         // Tạo entity
         TTSAudio ttsAudio = TTSAudio.builder()
                 .text(request.getText())
@@ -96,6 +104,7 @@ public class TTSAudioServiceImp implements TTSAudioService {
                 .mimeType(contentType)
                 .createdAt(Instant.now())
                 .createdBy(createdBy)
+                .user(user) // Liên kết với User
                 // Thông tin thuyết minh ẩm thực
                 .foodName(request.getFoodName())
                 .price(request.getPrice())
@@ -286,6 +295,13 @@ public class TTSAudioServiceImp implements TTSAudioService {
                 .priority(ttsAudio.getPriority())
                 .languageCode(ttsAudio.getLanguageCode())
                 .translatedText(ttsAudio.getTranslatedText())
+                // User info
+                .userId(ttsAudio.getUser() != null ? ttsAudio.getUser().getId() : null)
+                .userEmail(ttsAudio.getUser() != null ? ttsAudio.getUser().getEmail() : ttsAudio.getCreatedBy())
+                .userFullName(ttsAudio.getUser() != null
+                        ? (ttsAudio.getUser().getFirstName() + " " + ttsAudio.getUser().getLastName()).trim()
+                        : null)
+                .userAvatar(ttsAudio.getUser() != null ? ttsAudio.getUser().getAvatar() : null)
                 .build();
     }
 

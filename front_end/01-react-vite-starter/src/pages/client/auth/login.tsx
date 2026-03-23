@@ -1,4 +1,4 @@
-import { fetchAccountAPI, loginAPI, socialLoginAPI, socialLoginCallbackAPI } from "@/api";
+import { fetchAccountAPI, loginAPI, socialLoginCallbackAPI } from "@/api";
 import { ROUTES, STORAGE_KEYS } from "@/constants";
 import { setAuth } from "@/redux/slice/auth.slice";
 import { logger } from "@/utils/logger";
@@ -17,7 +17,6 @@ interface FieldType {
 
 const LoginPage = () => {
   const [isSubmit, setIsSubmit] = useState(false);
-  const [isSocialLoading, setIsSocialLoading] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -58,7 +57,6 @@ const LoginPage = () => {
   const handleSocialCallback = useCallback(
     async (loginType: "google" | "facebook", code: string) => {
       try {
-        setIsSocialLoading(true);
         const res = await socialLoginCallbackAPI(loginType, code);
         
         // Handle success
@@ -95,7 +93,6 @@ const LoginPage = () => {
         message.error(errorMessage);
         navigate(ROUTES.LOGIN, { replace: true });
       } finally {
-        setIsSocialLoading(false);
       }
     },
     [navigate, dispatch]
@@ -156,18 +153,6 @@ const LoginPage = () => {
       handleSocialCallback(loginType as "google" | "facebook", code);
     }
   }, [searchParams, navigate, handleSocialCallback, dispatch]);
-
-  /**
-   * Handle social login button click
-   */
-  const handleSocialLogin = (loginType: "google" | "facebook") => {
-    try {
-      socialLoginAPI(loginType);
-    } catch (error) {
-      logger.error(`Social login (${loginType}) error:`, error);
-      message.error("Không thể chuyển hướng đến trang đăng nhập!");
-    }
-  };
 
   /**
    * Handle form submit

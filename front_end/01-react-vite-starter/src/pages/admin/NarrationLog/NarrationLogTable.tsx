@@ -116,7 +116,7 @@ const NarrationLogTable = () => {
           search={{
             labelWidth: "auto",
           }}
-          request={async (params, sort) => {
+          request={async (params, _sort) => {
             try {
               const response: any = await getNarrationLogsAPI(params.current || 1, params.pageSize || 10);
 

@@ -48,4 +48,10 @@ public class ResTTSAudioDTO {
     // Multi-language support
     String languageCode;
     String translatedText;
+
+    // Thông tin User
+    Long userId;
+    String userEmail;
+    String userFullName;
+    String userAvatar;
 }
