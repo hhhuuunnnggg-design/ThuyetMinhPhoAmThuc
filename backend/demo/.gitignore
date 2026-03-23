@@ -36,3 +36,6 @@ build/
 .env
 .env.local
 .env.*.local
+
+# Ignore api
+backend/demo/src/main/resources/stable-splicer-475206-h7-26118df5e874.json
