@@ -78,7 +78,7 @@ export const createFoodIcon = (isSelected: boolean, label: string) => {
         ">${label}</div>
       </div>
     `,
-    iconSize: [60, 40],
-    iconAnchor: [30, 20],
+    iconSize: [120, 40],
+    iconAnchor: [60, 20],
   });
 };

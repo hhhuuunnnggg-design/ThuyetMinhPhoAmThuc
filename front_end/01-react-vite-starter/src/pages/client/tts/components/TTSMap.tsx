@@ -78,10 +78,7 @@ export const TTSMap = ({
           .filter((a) => a.latitude != null && a.longitude != null)
           .map((audio) => {
             const isSelected = audio.id === selected?.id;
-            const radius = audio.accuracy ?? 30;
-            const label = audio.foodName
-              ? audio.foodName.split(" ")[0].substring(0, 4)
-              : "Food";
+            const radius = audio.triggerRadiusMeters ?? audio.accuracy ?? 30;
 
             return (
               <React.Fragment key={audio.id}>
@@ -98,10 +95,13 @@ export const TTSMap = ({
                 />
                 <Marker
                   position={[audio.latitude!, audio.longitude!]}
-                  icon={createFoodIcon(isSelected, label)}
+                  icon={createFoodIcon(isSelected, audio.foodName || "Food")}
                   eventHandlers={{
                     click: () => {
                       onMarkerClick(audio.id);
+                    },
+                    mouseover: (e) => {
+                      e.target.getElement()?.setAttribute("title", audio.foodName || "Food");
                     },
                   }}
                 />

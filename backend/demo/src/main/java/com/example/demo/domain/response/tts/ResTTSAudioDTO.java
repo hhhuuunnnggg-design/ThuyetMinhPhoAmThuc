@@ -17,39 +17,52 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ResTTSAudioDTO {
     Long id;
+
+    // ===== GROUP INFO =====
+    Long groupId;
+    String groupKey;
+
+    // ===== NGÔN NGỮ =====
+    String languageCode; // vi, en, zh, ja, ko, fr
+
+    // ===== NỘI DUNG =====
     String text;
     String voice;
     Float speed;
     Integer format;
     Boolean withoutFilter;
+
+    // ===== FILE INFO =====
     String fileName;
     String s3Url;
     Long fileSize;
     String mimeType;
+
+    // ===== THỜI GIAN =====
     Instant createdAt;
     Instant updatedAt;
     String createdBy;
 
-    // Thông tin thuyết minh ẩm thực
+    // ===== THÔNG TIN ẨM THỰC (từ Group) =====
     String foodName;
     BigDecimal price;
     String description;
     String imageUrl;
 
-    // Thông tin vị trí (GPS)
+    // ===== VỊ TRÍ GPS (từ Group) =====
     Double latitude;
     Double longitude;
     Float accuracy;
 
-    // Cấu hình geofence cho POI
+    // ===== GEOFENCE (từ Group) =====
     Float triggerRadiusMeters;
     Integer priority;
 
-    // Multi-language support
-    String languageCode;
-    String translatedText;
+    // ===== TEXT GỐC (từ Group) =====
+    String originalText;  // Text tiếng Việt gốc
+    String originalVoice; // Voice tiếng Việt gốc
 
-    // Thông tin User
+    // ===== USER INFO (từ Group) =====
     Long userId;
     String userEmail;
     String userFullName;

@@ -1,4 +1,3 @@
-import { CompassOutlined } from "@ant-design/icons";
 import { Button, Switch } from "antd";
 import type { TTSAudio } from "@/api/tts.api";
 import { ViewMode } from "../types";
@@ -17,6 +16,7 @@ interface TTSSidebarProps {
   audios: TTSAudio[];
   selectedId: number | null;
   loading: boolean;
+  position: { lat: number; lng: number } | null;
   onAutoGuideChange: (value: boolean) => void;
   onViewModeChange: (mode: ViewMode) => void;
   onMockGpsChange: (value: boolean) => void;
@@ -37,6 +37,7 @@ export const TTSSidebar = ({
   audios,
   selectedId,
   loading,
+  position,
   onAutoGuideChange,
   onViewModeChange,
   onMockGpsChange,
@@ -80,19 +81,16 @@ export const TTSSidebar = ({
         audios={audios}
         selectedId={selectedId}
         loading={loading}
+        position={position}
         onSelect={onSelect}
       />
 
       <div className="gps-food-sidebar-footer">
-        <div className="footer-top">
-          <Button size="small">Ngôn ngữ: VI</Button>
-          <Button
-            size="small"
-            icon={<CompassOutlined />}
-            type={geoEnabled ? "primary" : "default"}
-          >
-            GPS: {geoEnabled ? "BẬT" : "TẮT"}
-          </Button>
+        <div className="footer-gps-status">
+          <span className={`gps-dot ${geoEnabled ? "on" : "off"}`} />
+          <span className="gps-label">
+            {geoEnabled ? "GPS thực" : "GPS giả lập"}
+          </span>
         </div>
         <div className="footer-tabs">
           <Button

@@ -10,6 +10,7 @@ import org.springframework.data.jpa.domain.Specification;
 
 import com.example.demo.domain.TTSAudio;
 import com.example.demo.domain.request.tts.ReqTTSDTO;
+import com.example.demo.domain.request.tts.ReqUpdateTTSAudioGroupDTO;
 import com.example.demo.domain.response.tts.ResMultilingualAudioDTO;
 import com.example.demo.domain.response.tts.ResTTSAudioDTO;
 import com.example.demo.domain.response.tts.ResTTSAudioGroupDTO;
@@ -51,4 +52,13 @@ public interface TTSAudioService {
         ResTTSAudioGroupDTO getGroupById(Long id) throws IdInvalidException;
 
         ResTTSAudioGroupDTO getGroupByKey(String groupKey) throws IdInvalidException;
+
+        // ============ Group CRUD ============
+        Page<ResTTSAudioGroupDTO> getAllGroups(Pageable pageable);
+
+        void deleteGroup(Long id) throws IOException, IdInvalidException;
+
+        ResMultilingualAudioDTO generateMultilingualForGroup(Long groupId) throws IOException, IdInvalidException;
+
+        ResTTSAudioGroupDTO updateGroup(Long id, ReqUpdateTTSAudioGroupDTO request) throws IdInvalidException;
 }

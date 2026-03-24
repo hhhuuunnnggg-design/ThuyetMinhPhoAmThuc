@@ -1,16 +1,15 @@
 import type { TTSAudio } from "@/api/tts.api";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { GeoPosition } from "../types";
 import { haversineDistance } from "../utils/geo";
 
 export const useMapPosition = (audios: TTSAudio[]) => {
-  const [mockLat, setMockLat] = useState<number | null>(null);
-  const [mockLng, setMockLng] = useState<number | null>(null);
+  const [position, setPosition] = useState<GeoPosition | null>(null);
   const [latRange, setLatRange] = useState<{ min: number; max: number } | null>(null);
   const [lngRange, setLngRange] = useState<{ min: number; max: number } | null>(null);
-  const [position, setPosition] = useState<GeoPosition | null>(null);
 
-  // Tính range cho slider giả lập từ danh sách quán có toạ độ
+  const initializedRef = useRef(false);
+
   useEffect(() => {
     const withCoords = audios.filter(
       (a) => a.latitude != null && a.longitude != null
@@ -20,7 +19,7 @@ export const useMapPosition = (audios: TTSAudio[]) => {
     const lats = withCoords.map((a) => a.latitude!) as number[];
     const lngs = withCoords.map((a) => a.longitude!) as number[];
 
-    const padding = 0.0005; // ~55m
+    const padding = 0.0005;
     setLatRange({
       min: Math.min(...lats) - padding,
       max: Math.max(...lats) + padding,
@@ -30,16 +29,14 @@ export const useMapPosition = (audios: TTSAudio[]) => {
       max: Math.max(...lngs) + padding,
     });
 
-    // Khởi tạo vị trí giả lập ở quán đầu tiên
-    if (mockLat == null || mockLng == null) {
-      setMockLat(withCoords[0].latitude!);
-      setMockLng(withCoords[0].longitude!);
+    if (!initializedRef.current) {
+      initializedRef.current = true;
       setPosition({
         lat: withCoords[0].latitude!,
         lng: withCoords[0].longitude!,
       });
     }
-  }, [audios, mockLat, mockLng]);
+  }, [audios]);
 
   const sortedAudios = useMemo(() => {
     if (audios.length === 0) return [];
@@ -59,14 +56,10 @@ export const useMapPosition = (audios: TTSAudio[]) => {
   }, [audios, position]);
 
   return {
-    mockLat,
-    setMockLat,
-    mockLng,
-    setMockLng,
-    latRange,
-    lngRange,
     position,
     setPosition,
+    latRange,
+    lngRange,
     sortedAudios,
   };
 };

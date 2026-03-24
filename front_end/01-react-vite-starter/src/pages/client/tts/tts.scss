@@ -178,6 +178,59 @@
   color: #ff6b35;
 }
 
+.stall-item .stall-item-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.stall-item .distance {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.stall-item .distance.near {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.stall-item .distance.medium {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.stall-item .distance.far {
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.list-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 13px;
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #ff6b35;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .empty-state {
   text-align: center;
   padding: 40px 20px;
@@ -188,17 +241,6 @@
 .gps-food-sidebar-footer {
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   padding-top: 12px;
-}
-
-.footer-top {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.footer-tabs {
-  display: flex;
-  gap: 8px;
 }
 
 .gps-food-main {
@@ -349,11 +391,19 @@
   flex: 1;
 }
 
-.audio-progress .bar {
+.bar-wrap {
   height: 4px;
   background: #e5e7eb;
   border-radius: 999px;
   margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: #ff6b35;
+  border-radius: 999px;
+  transition: width 0.25s linear;
 }
 
 .time-row {
@@ -368,11 +418,21 @@
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  background: #f3f4f6;
   border-radius: 999px;
   font-size: 11px;
-  color: #4b5563;
+  color: #6b7280;
   font-weight: 600;
+  transition: all 0.2s;
+}
+
+.auto-guide-pill.on {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+}
+
+.auto-guide-pill.off {
+  background: #f3f4f6;
+  color: #9ca3af;
 }
 
 .geo-error {
@@ -404,6 +464,93 @@
   font-size: 11px;
   color: #9ca3af;
   font-style: italic;
+}
+
+.lang-avail {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.lang-chip {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+}
+
+.lang-chip.active {
+  background: #ff6b35;
+  color: white;
+  border-color: #ff6b35;
+}
+
+.gps-food-sidebar-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 12px;
+}
+
+.footer-gps-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 8px;
+}
+
+.gps-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.gps-dot.on {
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.8);
+}
+
+.gps-dot.off {
+  background: #9ca3af;
+}
+
+.footer-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .gps-food-page {
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  .gps-food-sidebar {
+    width: 100%;
+    max-height: 50vh;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .gps-food-sidebar-list {
+    max-height: 30vh;
+  }
+
+  .gps-food-main {
+    flex: 1;
+  }
+
+  .hero {
+    height: 240px;
+  }
+
+  .hero-content h1 {
+    font-size: 22px;
+  }
 }
 
 .gps-map-page {

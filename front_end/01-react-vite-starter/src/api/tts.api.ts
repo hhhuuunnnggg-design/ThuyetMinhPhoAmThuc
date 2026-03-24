@@ -41,35 +41,52 @@ export interface TTSRequest {
 
 export interface TTSAudio {
   id: number;
+
+  // ===== GROUP INFO =====
+  groupId?: number | null;
+  groupKey?: string | null;
+
+  // ===== NGÔN NGỮ =====
+  languageCode?: string | null; // vi, en, zh, ja, ko, fr
+
+  // ===== NỘI DUNG =====
   text: string;
   voice: string;
   speed: number;
   format: number;
   withoutFilter: boolean;
+
+  // ===== FILE INFO =====
   fileName: string;
-  s3Url: string | null; // Có thể null nếu S3 không được cấu hình
+  s3Url: string | null;
   fileSize: number;
   mimeType: string;
+
+  // ===== THỜI GIAN =====
   createdAt: string;
   updatedAt: string | null;
-  createdBy: string;
+  createdBy: string | null;
 
-  // Thông tin thuyết minh ẩm thực
+  // ===== THÔNG TIN ẨM THỰC (từ Group) =====
   foodName?: string | null;
   price?: number | null;
   description?: string | null;
   imageUrl?: string | null;
 
-  // Thông tin vị trí (GPS)
+  // ===== VỊ TRÍ GPS (từ Group) =====
   latitude?: number | null;
   longitude?: number | null;
   accuracy?: number | null;
 
-  // Cấu hình geofence từ backend
+  // ===== GEOFENCE (từ Group) =====
   triggerRadiusMeters?: number | null;
   priority?: number | null;
 
-  // Thông tin User
+  // ===== TEXT GỐC (từ Group) =====
+  originalText?: string | null;
+  originalVoice?: string | null;
+
+  // ===== USER INFO (từ Group) =====
   userId?: number | null;
   userEmail?: string | null;
   userFullName?: string | null;
@@ -180,10 +197,41 @@ export interface TTSAudioGroup {
   id: number;
   groupKey: string;
   foodName: string | null;
+  price?: number | null;
+  description?: string | null;
+  imageUrl?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  accuracy?: number | null;
+  triggerRadiusMeters?: number | null;
+  priority?: number | null;
   originalText: string | null;
   originalVoice: string | null;
+  originalSpeed?: number | null;
+  originalFormat?: number | null;
+  originalWithoutFilter?: boolean | null;
   createdAt: string;
+  updatedAt?: string | null;
+  createdBy?: string | null;
   audios: MultilingualAudioEntry[];
+}
+
+/** Body cho PUT /tts/groups/{id} — khớp ReqUpdateTTSAudioGroupDTO */
+export interface UpdateTTSAudioGroupRequest {
+  foodName?: string | null;
+  price?: number | null;
+  description?: string | null;
+  imageUrl?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  accuracy?: number | null;
+  triggerRadiusMeters?: number | null;
+  priority?: number | null;
+  originalText: string;
+  originalVoice: string;
+  originalSpeed: number;
+  originalFormat: number;
+  originalWithoutFilter?: boolean;
 }
 
 // Tạo audio đa ngôn ngữ
@@ -205,5 +253,32 @@ export const getAudioGroupByKeyAPI = (groupKey: string) => {
 export const generateMultilingualAPI = (audioId: number) => {
   return axios.post<IBackendRes<MultilingualAudioResponse>>(
     API_ENDPOINTS.TTS.AUDIO_GENERATE_MULTILINGUAL(audioId)
+  );
+};
+
+// ============ Group CRUD ============
+
+export const getTTSGroupsAPI = (page: number = 1, size: number = 10) => {
+  return axios.get<IBackendRes<IModelPaginate<TTSAudioGroup>>>(
+    API_ENDPOINTS.TTS.GROUPS,
+    { params: { page, size } }
+  );
+};
+
+export const getTTSGroupByIdAPI = (id: number) => {
+  return axios.get<IBackendRes<TTSAudioGroup>>(API_ENDPOINTS.TTS.GROUP_BY_ID(id));
+};
+
+export const deleteTTSGroupAPI = (id: number) => {
+  return axios.delete<IBackendRes<void>>(API_ENDPOINTS.TTS.GROUP_BY_ID(id));
+};
+
+export const updateTTSGroupAPI = (id: number, body: UpdateTTSAudioGroupRequest) => {
+  return axios.put<IBackendRes<TTSAudioGroup>>(API_ENDPOINTS.TTS.GROUP_BY_ID(id), body);
+};
+
+export const generateMultilingualForGroupAPI = (groupId: number) => {
+  return axios.post<IBackendRes<MultilingualAudioResponse>>(
+    API_ENDPOINTS.TTS.GROUP_GENERATE_MULTILINGUAL(groupId)
   );
 };

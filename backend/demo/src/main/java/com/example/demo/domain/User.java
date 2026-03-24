@@ -49,9 +49,6 @@ public class User {
     @JoinColumn(name = "role_id")
     private Role role;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<TTSAudio> ttsAudios;
-
     // Phương thức tiện ích để kiểm tra trạng thái tài khoản
     @Transient
     public boolean isBlocked() {

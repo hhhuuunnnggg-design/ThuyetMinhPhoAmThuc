@@ -23,7 +23,8 @@ export const useAudioPlayer = ({
   useBackendLogging = false,
 }: UseAudioPlayerProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [userPaused, setUserPaused] = useState(false); // Track nếu user đã pause thủ công
+  const [userPaused, setUserPaused] = useState(false);
+  const [audioDuration, setAudioDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentPlayingAudioIdRef = useRef<number | null>(null);
   const playStartTimeRef = useRef<number | null>(null);
@@ -42,31 +43,22 @@ export const useAudioPlayer = ({
       .play()
       .then(() => {
         setIsPlaying(true);
-        setUserPaused(false); // Reset khi phát thành công
+        setUserPaused(false);
         currentPlayingAudioIdRef.current = audioId;
         playStartTimeRef.current = Date.now();
-        
+        setAudioDuration(0);
+
         // Ghi log khi bắt đầu phát (nếu dùng backend logging)
         if (useBackendLogging && deviceId) {
-          console.log("📝 Logging narration start:", { deviceId, audioId, playedAt: playStartTimeRef.current });
           logNarrationAPI({
             deviceId,
             ttsAudioId: audioId,
             playedAt: playStartTimeRef.current,
             status: "PLAYING",
-          })
-            .then(() => {
-              console.log("✅ Logged narration start successfully");
-            })
-            .catch((err) => {
-              console.error("❌ Failed to log narration start:", err);
-            });
-        } else {
-          console.warn("⚠️ Not logging narration:", { useBackendLogging, deviceId });
+          }).catch(() => {});
         }
       })
-      .catch((err) => {
-        console.error( "Failed to play audio:", err);
+      .catch(() => {
         message.error("Không thể phát audio");
       });
   };
@@ -94,9 +86,7 @@ export const useAudioPlayer = ({
           playedAt: playStartTimeRef.current,
           durationSeconds: duration,
           status: "SKIPPED",
-        }).catch((err) => {
-          console.warn("Failed to log narration pause:", err);
-        });
+        }).catch(() => {});
         currentPlayingAudioIdRef.current = null;
         playStartTimeRef.current = null;
       }
@@ -137,9 +127,7 @@ export const useAudioPlayer = ({
           playedAt: playStartTimeRef.current || Date.now(),
           durationSeconds: duration,
           status: "SKIPPED",
-        }).catch((err) => {
-          console.warn("Failed to log narration skip:", err);
-        });
+        }).catch(() => {});
         currentPlayingAudioIdRef.current = null;
         playStartTimeRef.current = null;
       }
@@ -154,30 +142,19 @@ export const useAudioPlayer = ({
 
     const handleEnded = () => {
       if (currentPlayingAudioIdRef.current && playStartTimeRef.current) {
-        const duration = audioElement.duration 
+        const duration = audioElement.duration
           ? Math.round(audioElement.duration)
-          : playStartTimeRef.current 
+          : playStartTimeRef.current
             ? Math.round((Date.now() - playStartTimeRef.current) / 1000)
             : undefined;
 
-        console.log("📝 Logging narration complete:", { 
-          deviceId, 
-          audioId: currentPlayingAudioIdRef.current, 
-          duration 
-        });
         logNarrationAPI({
           deviceId,
           ttsAudioId: currentPlayingAudioIdRef.current,
           playedAt: playStartTimeRef.current,
           durationSeconds: duration,
           status: "COMPLETED",
-        })
-          .then(() => {
-            console.log("✅ Logged narration complete successfully");
-          })
-          .catch((err) => {
-            console.error("❌ Failed to log narration complete:", err);
-          });
+        }).catch(() => {});
 
         currentPlayingAudioIdRef.current = null;
         playStartTimeRef.current = null;
@@ -190,5 +167,16 @@ export const useAudioPlayer = ({
     };
   }, [useBackendLogging, deviceId]);
 
-  return { isPlaying, setIsPlaying, audioRef, handlePlayPause };
+  // Track audio duration when metadata loads
+  useEffect(() => {
+    if (!audioRef.current) return;
+    const audio = audioRef.current;
+    const handleLoadedMetadata = () => {
+      setAudioDuration(audio.duration || 0);
+    };
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+    return () => audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+  }, []);
+
+  return { isPlaying, setIsPlaying, audioRef, handlePlayPause, audioDuration };
 };

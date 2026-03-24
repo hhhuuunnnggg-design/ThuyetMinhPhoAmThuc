@@ -24,6 +24,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.example.demo.domain.TTSAudio;
+import com.example.demo.domain.TTSAudioGroup;
 import com.example.demo.domain.request.tts.ReqTTSDTO;
 import com.example.demo.service.TTSAudioService;
 import com.example.demo.service.TTSService;
@@ -63,9 +64,20 @@ class TTSControllerTest {
                     String fileName = invocation.getArgument(2);
                     String createdBy = invocation.getArgument(3);
 
+                    TTSAudioGroup group = TTSAudioGroup.builder()
+                            .id(1L)
+                            .groupKey("test-group-key")
+                            .originalText(req.getText())
+                            .originalVoice(req.getVoice())
+                            .createdBy(createdBy)
+                            .createdAt(Instant.now())
+                            .build();
+
                     boolean isWav = req.getTtsReturnOption() != null && req.getTtsReturnOption() == 2;
                     return TTSAudio.builder()
                             .id(1L)
+                            .group(group)
+                            .languageCode("vi")
                             .text(req.getText())
                             .voice(req.getVoice())
                             .speed(req.getSpeed())
@@ -76,7 +88,6 @@ class TTSControllerTest {
                             .fileSize((long) audio.length)
                             .mimeType(isWav ? "audio/wav" : "audio/mpeg")
                             .createdAt(Instant.now())
-                            .createdBy(createdBy)
                             .build();
                 });
     }

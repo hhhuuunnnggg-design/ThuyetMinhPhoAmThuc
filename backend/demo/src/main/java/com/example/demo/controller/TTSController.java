@@ -25,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.demo.domain.TTSAudio;
 import com.example.demo.domain.dto.ResultPaginationDTO;
 import com.example.demo.domain.request.tts.ReqTTSDTO;
+import com.example.demo.domain.request.tts.ReqUpdateTTSAudioGroupDTO;
 import com.example.demo.domain.response.tts.ResMultilingualAudioDTO;
 import com.example.demo.domain.response.tts.ResTTSAudioDTO;
 import com.example.demo.domain.response.tts.ResTTSAudioGroupDTO;
@@ -182,24 +183,25 @@ public class TTSController {
     public ResponseEntity<ResMultilingualAudioDTO> generateMultilingualForAudio(@PathVariable Long id)
             throws IdInvalidException {
         TTSAudio viAudio = ttsAudioService.getTTSAudioById(id);
+        var group = viAudio.getGroup();
 
-        // Build request từ audio hiện tại
+        // Build request từ audio hiện tại + group
         ReqTTSDTO request = new ReqTTSDTO();
-        request.setText(viAudio.getText());
-        request.setVoice(viAudio.getVoice());
-        request.setSpeed(viAudio.getSpeed());
-        request.setTtsReturnOption(viAudio.getFormat());
-        request.setWithoutFilter(viAudio.getWithoutFilter());
-        request.setFoodName(viAudio.getFoodName());
-        request.setPrice(viAudio.getPrice());
-        request.setDescription(viAudio.getDescription());
-        request.setImageUrl(viAudio.getImageUrl());
-        request.setLatitude(viAudio.getLatitude());
-        request.setLongitude(viAudio.getLongitude());
-        request.setAccuracy(viAudio.getAccuracy());
-        request.setTriggerRadiusMeters(viAudio.getTriggerRadiusMeters());
-        request.setPriority(viAudio.getPriority());
-        request.setCreatedBy(viAudio.getCreatedBy());
+        request.setText(group != null ? group.getOriginalText() : viAudio.getText());
+        request.setVoice(group != null ? group.getOriginalVoice() : viAudio.getVoice());
+        request.setSpeed(group != null ? group.getOriginalSpeed() : viAudio.getSpeed());
+        request.setTtsReturnOption(group != null ? group.getOriginalFormat() : viAudio.getFormat());
+        request.setWithoutFilter(group != null ? group.getOriginalWithoutFilter() : viAudio.getWithoutFilter());
+        request.setFoodName(group != null ? group.getFoodName() : null);
+        request.setPrice(group != null ? group.getPrice() : null);
+        request.setDescription(group != null ? group.getDescription() : null);
+        request.setImageUrl(group != null ? group.getImageUrl() : null);
+        request.setLatitude(group != null ? group.getLatitude() : null);
+        request.setLongitude(group != null ? group.getLongitude() : null);
+        request.setAccuracy(group != null ? group.getAccuracy() : null);
+        request.setTriggerRadiusMeters(group != null ? group.getTriggerRadiusMeters() : null);
+        request.setPriority(group != null ? group.getPriority() : null);
+        request.setCreatedBy(group != null ? group.getCreatedBy() : null);
 
         ResMultilingualAudioDTO result = ttsAudioService.createMultilingualForExisting(viAudio, request);
 
@@ -228,6 +230,62 @@ public class TTSController {
     public ResponseEntity<ResTTSAudioGroupDTO> getGroupByKey(@PathVariable String groupKey) throws IdInvalidException {
         ResTTSAudioGroupDTO group = ttsAudioService.getGroupByKey(groupKey);
         return ResponseEntity.ok(group);
+    }
+
+    // ============ Group CRUD ============
+    @GetMapping("/groups")
+    @ApiMessage("Lấy danh sách tất cả groups (phân trang)")
+    public ResponseEntity<ResultPaginationDTO> getAllGroups(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Pageable pageable = PageRequest.of(page - 1, size);
+        Page<ResTTSAudioGroupDTO> result = ttsAudioService.getAllGroups(pageable);
+
+        ResultPaginationDTO response = new ResultPaginationDTO();
+        ResultPaginationDTO.Meta meta = new ResultPaginationDTO.Meta();
+        meta.setPage(result.getNumber() + 1);
+        meta.setPageSize(result.getSize());
+        meta.setPages(result.getTotalPages());
+        meta.setTotal(result.getTotalElements());
+        response.setMeta(meta);
+        response.setResult(result.getContent());
+
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/groups/{id}")
+    @ApiMessage("Xóa group audio và tất cả audio trong group")
+    public ResponseEntity<Void> deleteGroup(@PathVariable Long id) throws IOException, IdInvalidException {
+        ttsAudioService.deleteGroup(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/groups/{id}")
+    @ApiMessage("Cập nhật metadata nhóm audio TTS (món ăn, GPS, text/voice gốc)")
+    public ResponseEntity<ResTTSAudioGroupDTO> updateGroup(
+            @PathVariable Long id,
+            @Valid @RequestBody ReqUpdateTTSAudioGroupDTO request) throws IdInvalidException {
+        ResTTSAudioGroupDTO updated = ttsAudioService.updateGroup(id, request);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PostMapping("/groups/{id}/generate-multilingual")
+    @ApiMessage("Tạo audio đa ngôn ngữ cho group")
+    public ResponseEntity<ResMultilingualAudioDTO> generateMultilingualForGroup(@PathVariable Long id)
+            throws IOException, IdInvalidException {
+        ResMultilingualAudioDTO result = ttsAudioService.generateMultilingualForGroup(id);
+
+        System.out.println("========================================");
+        System.out.println("✅ MULTILINGUAL GENERATED FOR GROUP #" + id);
+        System.out.println("📁 Group Key: " + result.getGroupId());
+        System.out.println("🌐 Languages: " + result.getAudios().size());
+        for (ResMultilingualAudioDTO.AudioEntry entry : result.getAudios()) {
+            System.out.println("   - " + entry.getLanguageName() + " (" + entry.getLanguageCode() + "): " + entry.getS3Url());
+        }
+        System.out.println("========================================");
+
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/audios/my")
@@ -443,12 +501,13 @@ public class TTSController {
 
         // Get audio
         TTSAudio ttsAudio = ttsAudioService.getTTSAudioById(id);
+        var group = ttsAudio.getGroup();
 
         // Delete old image if exists
-        if (ttsAudio.getImageUrl() != null && !ttsAudio.getImageUrl().isEmpty()) {
+        if (group != null && group.getImageUrl() != null && !group.getImageUrl().isEmpty()) {
             try {
-                localStorageService.deleteFile(ttsAudio.getImageUrl());
-                System.out.println("✅ Đã xóa ảnh cũ: " + ttsAudio.getImageUrl());
+                localStorageService.deleteFile(group.getImageUrl());
+                System.out.println("✅ Đã xóa ảnh cũ: " + group.getImageUrl());
             } catch (Exception e) {
                 System.err.println("⚠️  Không thể xóa ảnh cũ: " + e.getMessage());
             }
@@ -463,22 +522,22 @@ public class TTSController {
             throw new IOException("Không thể lưu ảnh: " + e.getMessage(), e);
         }
 
-        // Update imageUrl in database
+        // Update imageUrl in database (via group)
         ReqTTSDTO updateRequest = new ReqTTSDTO();
-        updateRequest.setText(ttsAudio.getText());
-        updateRequest.setVoice(ttsAudio.getVoice());
-        updateRequest.setSpeed(ttsAudio.getSpeed());
-        updateRequest.setTtsReturnOption(ttsAudio.getFormat());
-        updateRequest.setWithoutFilter(ttsAudio.getWithoutFilter());
-        updateRequest.setFoodName(ttsAudio.getFoodName());
-        updateRequest.setPrice(ttsAudio.getPrice());
-        updateRequest.setDescription(ttsAudio.getDescription());
+        updateRequest.setText(group != null ? group.getOriginalText() : ttsAudio.getText());
+        updateRequest.setVoice(group != null ? group.getOriginalVoice() : ttsAudio.getVoice());
+        updateRequest.setSpeed(group != null ? group.getOriginalSpeed() : ttsAudio.getSpeed());
+        updateRequest.setTtsReturnOption(group != null ? group.getOriginalFormat() : ttsAudio.getFormat());
+        updateRequest.setWithoutFilter(group != null ? group.getOriginalWithoutFilter() : ttsAudio.getWithoutFilter());
+        updateRequest.setFoodName(group != null ? group.getFoodName() : null);
+        updateRequest.setPrice(group != null ? group.getPrice() : null);
+        updateRequest.setDescription(group != null ? group.getDescription() : null);
         updateRequest.setImageUrl(imageUrl);
-        updateRequest.setLatitude(ttsAudio.getLatitude());
-        updateRequest.setLongitude(ttsAudio.getLongitude());
-        updateRequest.setAccuracy(ttsAudio.getAccuracy());
-        updateRequest.setTriggerRadiusMeters(ttsAudio.getTriggerRadiusMeters());
-        updateRequest.setPriority(ttsAudio.getPriority());
+        updateRequest.setLatitude(group != null ? group.getLatitude() : null);
+        updateRequest.setLongitude(group != null ? group.getLongitude() : null);
+        updateRequest.setAccuracy(group != null ? group.getAccuracy() : null);
+        updateRequest.setTriggerRadiusMeters(group != null ? group.getTriggerRadiusMeters() : null);
+        updateRequest.setPriority(group != null ? group.getPriority() : null);
 
         TTSAudio updatedAudio = ttsAudioService.updateTTSAudio(id, updateRequest);
         ResTTSAudioDTO dto = convertToDTO(updatedAudio);
@@ -582,10 +641,13 @@ public class TTSController {
     }
 
     private ResTTSAudioDTO convertToDTO(TTSAudio ttsAudio) {
-        String imageUrl = ttsAudio.getImageUrl();
+        var group = ttsAudio.getGroup();
 
         return ResTTSAudioDTO.builder()
                 .id(ttsAudio.getId())
+                .groupId(group != null ? group.getId() : null)
+                .groupKey(group != null ? group.getGroupKey() : null)
+                .languageCode(ttsAudio.getLanguageCode())
                 .text(ttsAudio.getText())
                 .voice(ttsAudio.getVoice())
                 .speed(ttsAudio.getSpeed())
@@ -597,14 +659,24 @@ public class TTSController {
                 .mimeType(ttsAudio.getMimeType())
                 .createdAt(ttsAudio.getCreatedAt())
                 .updatedAt(ttsAudio.getUpdatedAt())
-                .createdBy(ttsAudio.getCreatedBy())
-                .foodName(ttsAudio.getFoodName())
-                .price(ttsAudio.getPrice())
-                .description(ttsAudio.getDescription())
-                .imageUrl(imageUrl)
-                .latitude(ttsAudio.getLatitude())
-                .longitude(ttsAudio.getLongitude())
-                .accuracy(ttsAudio.getAccuracy())
+                .createdBy(group != null ? group.getCreatedBy() : null)
+                .foodName(group != null ? group.getFoodName() : null)
+                .price(group != null ? group.getPrice() : null)
+                .description(group != null ? group.getDescription() : null)
+                .imageUrl(group != null ? group.getImageUrl() : null)
+                .latitude(group != null ? group.getLatitude() : null)
+                .longitude(group != null ? group.getLongitude() : null)
+                .accuracy(group != null ? group.getAccuracy() : null)
+                .triggerRadiusMeters(group != null ? group.getTriggerRadiusMeters() : null)
+                .priority(group != null ? group.getPriority() : null)
+                .originalText(group != null ? group.getOriginalText() : null)
+                .originalVoice(group != null ? group.getOriginalVoice() : null)
+                .userId(group != null && group.getUser() != null ? group.getUser().getId() : null)
+                .userEmail(group != null && group.getUser() != null ? group.getUser().getEmail() : null)
+                .userFullName(group != null && group.getUser() != null
+                        ? (group.getUser().getFirstName() + " " + group.getUser().getLastName()).trim()
+                        : null)
+                .userAvatar(group != null && group.getUser() != null ? group.getUser().getAvatar() : null)
                 .build();
     }
 }

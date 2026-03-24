@@ -20,6 +20,7 @@ import NarrationLogPage from "./pages/admin/NarrationLog/NarrationLogTable";
 import PermissionPage from "./pages/admin/Permission/PermissionTable";
 import RolePage from "./pages/admin/Role/RoleTable";
 import TTSAudioPage from "./pages/admin/TTSAudio/TTSAudioTable";
+import TTSAudioGroupsPage from "./pages/admin/TTSAudioGroup/TTSAudioGroupsPage";
 
 import { ROUTES, STORAGE_KEYS } from "@/constants";
 import { fetchAccountThunk } from "@/redux/slice/auth.slice";
@@ -65,6 +66,10 @@ const router = createBrowserRouter([
       {
         path: "tts-audio",
         element: <TTSAudioPage />,
+      },
+      {
+        path: "tts-groups",
+        element: <TTSAudioGroupsPage />,
       },
       {
         path: "narration-logs",

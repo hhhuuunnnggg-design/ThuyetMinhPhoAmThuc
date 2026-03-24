@@ -96,6 +96,30 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "/api/v1/tts/audios/{id}", "PUT", "TTS"));
             arr.add(createPermission("Xóa TTS audio",
                     "/api/v1/tts/audios/{id}", "DELETE", "TTS"));
+            arr.add(createPermission("Tải xuống TTS audio",
+                    "/api/v1/tts/audios/{id}/download", "GET", "TTS"));
+            arr.add(createPermission("Upload ảnh món ăn lên TTS audio",
+                    "/api/v1/tts/audios/{id}/image", "POST", "TTS"));
+            arr.add(createPermission("Upload ảnh món ăn (không cần audio ID)",
+                    "/api/v1/tts/images/upload", "POST", "TTS"));
+            arr.add(createPermission("Tạo audio đa ngôn ngữ (batch)",
+                    "/api/v1/tts/multilingual", "POST", "TTS"));
+            arr.add(createPermission("Tạo đa ngôn ngữ cho audio đã tồn tại",
+                    "/api/v1/tts/audios/{id}/generate-multilingual", "POST", "TTS"));
+
+            // TTS Groups permissions
+            arr.add(createPermission("Xem danh sách tất cả groups",
+                    "/api/v1/tts/groups", "GET", "TTS_GROUPS"));
+            arr.add(createPermission("Xem group theo ID",
+                    "/api/v1/tts/groups/{id}", "GET", "TTS_GROUPS"));
+            arr.add(createPermission("Xem group theo groupKey",
+                    "/api/v1/tts/groups/key/{groupKey}", "GET", "TTS_GROUPS"));
+            arr.add(createPermission("Xóa group và tất cả audio trong group",
+                    "/api/v1/tts/groups/{id}", "DELETE", "TTS_GROUPS"));
+            arr.add(createPermission("Cập nhật metadata group TTS",
+                    "/api/v1/tts/groups/{id}", "PUT", "TTS_GROUPS"));
+            arr.add(createPermission("Tạo audio đa ngôn ngữ cho group",
+                    "/api/v1/tts/groups/{id}/generate-multilingual", "POST", "TTS_GROUPS"));
 
             // App client permissions (POI + narration)
             arr.add(createPermission("App client - lấy danh sách POI",

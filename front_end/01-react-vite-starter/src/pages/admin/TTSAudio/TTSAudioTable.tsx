@@ -33,10 +33,9 @@ const TTSAudioTable = () => {
   };
 
   const handlePlayAudio = (record: TTSAudio) => {
-    // Luôn sử dụng endpoint backend để tránh Access Denied từ S3
-    // Backend sẽ lấy file từ S3 và serve trực tiếp (không cần public access)
     const downloadUrl = `${config.api.baseURL}${API_ENDPOINTS.TTS.AUDIO_DOWNLOAD(record.id)}`;
-    window.open(downloadUrl, "_blank");
+    const audio = new Audio(downloadUrl);
+    audio.play().catch(() => message.error("Không thể phát audio"));
   };
 
   const formatFileSize = (bytes: number) => {
@@ -98,32 +97,25 @@ const TTSAudioTable = () => {
       title: "Món ăn / Gian hàng",
       dataIndex: "foodName",
       key: "foodName",
-      width: 220,
+      width: 260,
       render: (_: any, record: TTSAudio) => (
         <div style={{ display: "flex", flexDirection: "column" }}>
           <span style={{ fontWeight: 600 }}>{record.foodName || "—"}</span>
-          <span style={{ fontSize: 12, color: "#888" }}>
+          <span style={{ fontSize: 12, color: "#888", lineHeight: 1.4 }}>
             {record.description
-              ? record.description.length > 40
-                ? record.description.substring(0, 40) + "..."
+              ? record.description.length > 60
+                ? record.description.substring(0, 60) + "..."
                 : record.description
-              : record.text.length > 40
-                ? record.text.substring(0, 40) + "..."
+              : record.text.length > 60
+                ? record.text.substring(0, 60) + "..."
                 : record.text}
           </span>
+          {record.price != null && (
+            <span style={{ fontSize: 12, color: "#ff6b35", fontWeight: 600, marginTop: 2 }}>
+              {Number(record.price).toLocaleString("vi-VN")} ₫
+            </span>
+          )}
         </div>
-      ),
-    },
-    {
-      title: "Text",
-      dataIndex: "text",
-      key: "text",
-      ellipsis: true,
-      width: 300,
-      render: (_: any, record: TTSAudio) => (
-        <Tooltip title={record.text}>
-          <span>{record.text.length > 50 ? record.text.substring(0, 50) + "..." : record.text}</span>
-        </Tooltip>
       ),
     },
     {
@@ -148,7 +140,7 @@ const TTSAudioTable = () => {
       key: "speed",
       hideInSearch: true,
       width: 100,
-      render: (_: any, record: TTSAudio) => record.speed.toFixed(1),
+      render: (_: any, record: TTSAudio) => `x${record.speed.toFixed(1)}`,
     },
     {
       title: "Format",

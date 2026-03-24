@@ -48,6 +48,8 @@ export const API_ENDPOINTS = {
     MULTILINGUAL: "/api/v1/tts/multilingual",
     GROUP_BY_ID: (id: number) => `/api/v1/tts/groups/${id}`,
     GROUP_BY_KEY: (key: string) => `/api/v1/tts/groups/key/${key}`,
+    GROUP_GENERATE_MULTILINGUAL: (id: number) => `/api/v1/tts/groups/${id}/generate-multilingual`,
+    GROUPS: "/api/v1/tts/groups",
   },
   APP: {
     POIS: "/api/v1/app/pois",
@@ -73,6 +75,7 @@ export const ROUTES = {
     ROLE: "/admin/role",
     PERMISSION: "/admin/permission",
     TTS_AUDIO: "/admin/tts-audio",
+    TTS_GROUPS: "/admin/tts-groups",
     NARRATION_LOGS: "/admin/narration-logs",
   },
   TTS: "/tts",

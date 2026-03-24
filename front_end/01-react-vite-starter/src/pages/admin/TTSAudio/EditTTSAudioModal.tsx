@@ -8,11 +8,10 @@ import {
 } from "@/api/tts.api";
 import { logger } from "@/utils/logger";
 import { UploadOutlined } from "@ant-design/icons";
-import { Button, Form, Input, InputNumber, Modal, Select, Slider, Space, Upload, message } from "antd";
+import { Button, Form, Input, InputNumber, Modal, Select, Slider, Space, Switch, Upload, message } from "antd";
 import { useEffect, useState } from "react";
 
 const { TextArea } = Input;
-const { Option } = Select;
 
 interface EditTTSAudioModalProps {
   open: boolean;
@@ -20,6 +19,18 @@ interface EditTTSAudioModalProps {
   onSuccess: () => void;
   audio: TTSAudio;
 }
+
+const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+  <div style={{
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#374151",
+    borderBottom: "1px solid #e5e7eb",
+    paddingBottom: 6,
+    marginBottom: 12,
+    marginTop: 8,
+  }}>{children}</div>
+);
 
 const EditTTSAudioModal = ({ open, onCancel, onSuccess, audio }: EditTTSAudioModalProps) => {
   const [form] = Form.useForm();
@@ -29,27 +40,25 @@ const EditTTSAudioModal = ({ open, onCancel, onSuccess, audio }: EditTTSAudioMod
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open) {
+    if (open && audio) {
       fetchVoices();
-      if (audio) {
-        form.setFieldsValue({
-          text: audio.text,
-          voice: audio.voice,
-          speed: audio.speed,
-          ttsReturnOption: audio.format,
-          withoutFilter: audio.withoutFilter,
-          foodName: audio.foodName,
-          price: audio.price,
-          description: audio.description,
-          imageUrl: audio.imageUrl,
-          latitude: audio.latitude,
-          longitude: audio.longitude,
-          accuracy: audio.accuracy,
-          triggerRadiusMeters: audio.triggerRadiusMeters,
-          priority: audio.priority,
-        });
-        setImagePreview(audio.imageUrl ?? null);
-      }
+      form.setFieldsValue({
+        text: audio.text,
+        voice: audio.voice,
+        speed: audio.speed,
+        ttsReturnOption: audio.format,
+        withoutFilter: audio.withoutFilter,
+        foodName: audio.foodName,
+        price: audio.price,
+        description: audio.description,
+        imageUrl: audio.imageUrl,
+        latitude: audio.latitude,
+        longitude: audio.longitude,
+        accuracy: audio.accuracy,
+        triggerRadiusMeters: audio.triggerRadiusMeters,
+        priority: audio.priority,
+      });
+      setImagePreview(audio.imageUrl ?? null);
     }
   }, [open, audio, form]);
 
@@ -57,16 +66,14 @@ const EditTTSAudioModal = ({ open, onCancel, onSuccess, audio }: EditTTSAudioMod
     try {
       setLoadingVoices(true);
       const response = await getVoicesAPI();
-      // Response format: { statusCode, error, message, data: { voices: Voice[] } }
       if (response?.data?.voices) {
         setVoices(response.data.voices);
       } else {
-        logger.warn("Invalid voices response format:", response);
         message.warning("Không thể tải danh sách giọng đọc từ API");
       }
     } catch (error: any) {
+      message.error("Không thể tải danh sách giọng đọc");
       logger.error("Fetch voices error:", error);
-      message.error("Không thể tải danh sách giọng đọc: " + (error?.message || "Lỗi không xác định"));
     } finally {
       setLoadingVoices(false);
     }
@@ -76,14 +83,13 @@ const EditTTSAudioModal = ({ open, onCancel, onSuccess, audio }: EditTTSAudioMod
     try {
       setUploadingImage(true);
       const response = await uploadFoodImageAPI(audio.id, file);
-      if (response?.data) {
+      if (response?.data?.imageUrl) {
         form.setFieldsValue({ imageUrl: response.data.imageUrl });
         setImagePreview(response.data.imageUrl ?? null);
         message.success("Upload ảnh thành công!");
-        return false; // Prevent default upload
       }
     } catch (error: any) {
-      message.error("Upload ảnh thất bại: " + (error?.message || "Lỗi không xác định"));
+      message.error("Upload ảnh thất bại");
       logger.error("Upload image error:", error);
     } finally {
       setUploadingImage(false);
@@ -108,18 +114,17 @@ const EditTTSAudioModal = ({ open, onCancel, onSuccess, audio }: EditTTSAudioMod
       open={open}
       onCancel={onCancel}
       footer={null}
-      width={600}
+      width={620}
+      destroyOnClose
     >
       <Form
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
-        initialValues={{
-          speed: 1.0,
-          ttsReturnOption: 3,
-          withoutFilter: false,
-        }}
+        initialValues={{ speed: 1.0, ttsReturnOption: 3, withoutFilter: false }}
       >
+        <SectionLabel>Cài đặt TTS</SectionLabel>
+
         <Form.Item
           name="text"
           label="Nội dung text"
@@ -133,17 +138,16 @@ const EditTTSAudioModal = ({ open, onCancel, onSuccess, audio }: EditTTSAudioMod
           label="Giọng đọc"
           rules={[{ required: true, message: "Vui lòng chọn giọng đọc" }]}
         >
-          <Select placeholder="Chọn giọng đọc" loading={loadingVoices} disabled={loadingVoices || voices.length === 0}>
+          <Select
+            placeholder="Chọn giọng đọc"
+            loading={loadingVoices}
+            disabled={loadingVoices || voices.length === 0}
+          >
             {voices.map((voice) => (
-              <Option key={voice.code} value={voice.code}>
+              <Select.Option key={voice.code} value={voice.code}>
                 {voice.name} - {voice.description} ({voice.location})
-              </Option>
+              </Select.Option>
             ))}
-            {!loadingVoices && voices.length === 0 && (
-              <Option value="" disabled>
-                Không có giọng đọc nào
-              </Option>
-            )}
           </Select>
         </Form.Item>
 
@@ -153,16 +157,21 @@ const EditTTSAudioModal = ({ open, onCancel, onSuccess, audio }: EditTTSAudioMod
 
         <Form.Item name="ttsReturnOption" label="Định dạng">
           <Select>
-            <Option value={2}>WAV</Option>
-            <Option value={3}>MP3</Option>
+            <Select.Option value={2}>WAV</Select.Option>
+            <Select.Option value={3}>MP3</Select.Option>
           </Select>
         </Form.Item>
 
-        {/* Thông tin ẩm thực & GPS dùng cho Phố Ẩm Thực GPS */}
         <Form.Item
-          label="Thông tin món ăn"
-          style={{ marginBottom: 0, fontWeight: 500 }}
-        />
+          name="withoutFilter"
+          label="Bộ lọc giọng nói"
+          valuePropName="checked"
+          tooltip="Bật để giọng đọc tự nhiên hơn, tắt để giữ nguyên tín hiệu gốc"
+        >
+          <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
+        </Form.Item>
+
+        <SectionLabel>Thông tin món ăn</SectionLabel>
 
         <Form.Item
           name="foodName"
@@ -173,13 +182,7 @@ const EditTTSAudioModal = ({ open, onCancel, onSuccess, audio }: EditTTSAudioMod
         </Form.Item>
 
         <Form.Item name="price" label="Giá tham khảo (VNĐ)">
-          <InputNumber
-            style={{ width: "100%" }}
-            min={0}
-            step={1000}
-            formatter={(value) => (value ? `${Number(value).toLocaleString("vi-VN")} ₫` : "")}
-            parser={(value) => (value ? value.replace(/[^\d]/g, "") : "") as any}
-          />
+          <InputNumber style={{ width: "100%" }} min={0} step={1000} />
         </Form.Item>
 
         <Form.Item name="description" label="Mô tả món ăn / nội dung thuyết minh">
@@ -189,10 +192,7 @@ const EditTTSAudioModal = ({ open, onCancel, onSuccess, audio }: EditTTSAudioMod
         <Form.Item name="imageUrl" label="Ảnh minh họa">
           <Space direction="vertical" style={{ width: "100%" }}>
             <Upload
-              beforeUpload={(file) => {
-                handleImageUpload(file);
-                return false; // Prevent default upload
-              }}
+              beforeUpload={handleImageUpload}
               showUploadList={false}
               accept="image/*"
             >
@@ -201,43 +201,38 @@ const EditTTSAudioModal = ({ open, onCancel, onSuccess, audio }: EditTTSAudioMod
               </Button>
             </Upload>
             {imagePreview && (
-              <div style={{ marginTop: 8 }}>
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  style={{ maxWidth: "100%", maxHeight: 200, borderRadius: 8, objectFit: "cover" }}
-                />
-              </div>
+              <img
+                src={imagePreview}
+                alt="Preview"
+                style={{ maxWidth: "100%", maxHeight: 200, borderRadius: 8, objectFit: "cover" }}
+              />
             )}
           </Space>
         </Form.Item>
 
-        <Form.Item
-          label="Vị trí GPS (tùy chọn, dùng cho auto-guide)"
-          style={{ marginBottom: 0, fontWeight: 500 }}
-        />
+        <SectionLabel>Vị trí GPS (tùy chọn, dùng cho auto-guide)</SectionLabel>
 
         <Form.Item label="Tọa độ" style={{ marginBottom: 0 }}>
           <Space.Compact style={{ width: "100%" }}>
             <Form.Item name="latitude" noStyle>
-              <InputNumber style={{ width: "50%" }} placeholder="Latitude" />
+              <InputNumber style={{ width: "50%" }} placeholder="Latitude" min={-90} max={90} />
             </Form.Item>
             <Form.Item name="longitude" noStyle>
-              <InputNumber style={{ width: "50%" }} placeholder="Longitude" />
+              <InputNumber style={{ width: "50%" }} placeholder="Longitude" min={-180} max={180} />
             </Form.Item>
           </Space.Compact>
         </Form.Item>
 
-        <Form.Item name="accuracy" label="Accuracy (mét) - Độ chính xác GPS">
-          <InputNumber style={{ width: "100%" }} min={1} step={1} placeholder="Ví dụ: 10" />
-        </Form.Item>
-
         <Form.Item
           name="triggerRadiusMeters"
-          label="Bán kính kích hoạt Geofence (mét)"
+          label="Bán kính kích hoạt (m)"
           tooltip="Khoảng cách tối đa để kích hoạt thuyết minh tự động"
         >
           <InputNumber style={{ width: "100%" }} min={10} step={10} placeholder="Ví dụ: 50" />
+        </Form.Item>
+
+        <Form.Item name="accuracy" label="Accuracy GPS (m)">
+          <InputNumber style={{ width: "100%" }} min={1} step={1} placeholder="Ví dụ: 10" />
         </Form.Item>
 
         <Form.Item
@@ -248,7 +243,7 @@ const EditTTSAudioModal = ({ open, onCancel, onSuccess, audio }: EditTTSAudioMod
           <InputNumber style={{ width: "100%" }} min={0} step={1} placeholder="Ví dụ: 10" />
         </Form.Item>
 
-        <Form.Item>
+        <Form.Item style={{ marginTop: 16 }}>
           <Space>
             <Button type="primary" htmlType="submit">
               Cập nhật

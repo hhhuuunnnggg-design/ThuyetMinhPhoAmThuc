@@ -5,6 +5,7 @@ import {
   AppstoreOutlined,
   DollarCircleOutlined,
   ExceptionOutlined,
+  GlobalOutlined,
   HeartTwoTone,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -87,9 +88,21 @@ const AdminLayout = () => {
     ...(hasPermission("/api/v1/tts/audios", "GET")
       ? [
           {
-            label: <Link to={ROUTES.ADMIN.TTS_AUDIO}>Manage TTS Audio</Link>,
-            key: "tts-audio",
+            label: <span>TTS Audio</span>,
+            key: "tts",
             icon: <SoundOutlined />,
+            children: [
+              {
+                label: <Link to={ROUTES.ADMIN.TTS_AUDIO}>Quản lý Audios</Link>,
+                key: "tts-audio",
+                icon: <SoundOutlined />,
+              },
+              {
+                label: <Link to={ROUTES.ADMIN.TTS_GROUPS}>Quản lý Nhóm</Link>,
+                key: "tts-groups",
+                icon: <GlobalOutlined />,
+              },
+            ],
           },
         ]
       : []),

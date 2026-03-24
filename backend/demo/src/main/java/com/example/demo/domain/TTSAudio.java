@@ -1,6 +1,5 @@
 package com.example.demo.domain;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 
 import jakarta.persistence.Column;
@@ -27,15 +26,23 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Table(name = "tts_audios")
 public class TTSAudio {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
-    String text; // Nội dung text đã chuyển đổi
+    // ===== NGÔN NGỮ & NỘI DUNG (riêng cho mỗi ngôn ngữ) =====
+    @Column(nullable = false, length = 10)
+    String languageCode; // Mã ngôn ngữ: vi, en, zh, ja, ko, fr
+
+    @Column(columnDefinition = "TEXT", nullable = false)
+    String text; // Nội dung text đã chuyển đổi (đã dịch)
+
+    @Column(columnDefinition = "TEXT")
+    String translatedText; // Text đã dịch (null cho tiếng Việt)
 
     @Column(nullable = false)
-    String voice; // Mã giọng đọc (vd: hcm-diemmy)
+    String voice; // Mã giọng đọc
 
     @Column(nullable = false)
     Float speed; // Tốc độ giọng nói
@@ -46,11 +53,12 @@ public class TTSAudio {
     @Column(nullable = false)
     Boolean withoutFilter; // Có sử dụng filter hay không
 
+    // ===== FILE INFO (riêng cho mỗi ngôn ngữ) =====
     @Column(nullable = false)
-    String fileName; // Tên file trên S3
+    String fileName; // Tên file trên storage
 
-    @Column(nullable = true) // Cho phép null khi S3 không được cấu hình
-    String s3Url; // URL file trên S3 (có thể null nếu S3 không khả dụng)
+    @Column
+    String s3Url; // URL file (có thể null nếu storage không khả dụng)
 
     @Column(nullable = false)
     Long fileSize; // Kích thước file (bytes)
@@ -58,58 +66,15 @@ public class TTSAudio {
     @Column(nullable = false)
     String mimeType; // audio/mpeg hoặc audio/wav
 
+    // ===== THỜI GIAN =====
     @Column(nullable = false)
     Instant createdAt;
 
     @Column
     Instant updatedAt;
 
-    // Thông tin user tạo
+    // ===== LIÊN KẾT GROUP (bắt buộc, không nullable) =====
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    User user; // User sở hữu audio này
-
-    @Column
-    String createdBy; // Email của user (backup)
-
-    // Thông tin thuyết minh ẩm thực
-    @Column
-    String foodName; // Tên món ăn
-
-    @Column
-    BigDecimal price; // Giá món ăn
-
-    @Column(columnDefinition = "TEXT")
-    String description; // Mô tả chi tiết món ăn
-
-    @Column
-    String imageUrl; // Link ảnh món ăn
-
-    // Thông tin vị trí (GPS)
-    @Column
-    Double latitude; // Vĩ độ
-
-    @Column
-    Double longitude; // Kinh độ
-
-    @Column
-    Float accuracy; // Độ chính xác của vị trí (mét)
-
-    // Cấu hình geofence cho app client
-    @Column
-    Float triggerRadiusMeters; // Bán kính kích hoạt POI (mét)
-
-    @Column
-    Integer priority; // Mức ưu tiên khi có nhiều POI gần nhau (số càng lớn càng ưu tiên)
-
-    // Multi-language support
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "group_id")
+    @JoinColumn(name = "group_id", nullable = false)
     TTSAudioGroup group; // Nhóm audio (cùng món ăn, khác ngôn ngữ)
-
-    @Column(length = 10)
-    String languageCode; // Mã ngôn ngữ: vi, en, zh, ja, ko, fr (null = tiếng Việt legacy)
-
-    @Column(columnDefinition = "TEXT")
-    String translatedText; // Text đã dịch (null cho tiếng Việt)
 }

@@ -43,14 +43,16 @@ public class NarrationServiceImpl implements NarrationService {
     @Override
     public Page<ResNarrationLogDTO> getAllLogs(Pageable pageable) {
         return narrationLogRepository.findAll(pageable).map(log -> {
-            String audioName = log.getTtsAudio().getFoodName();
+            var audio = log.getTtsAudio();
+            var group = audio.getGroup();
+            String audioName = group != null ? group.getFoodName() : null;
             if (audioName == null || audioName.isEmpty()) {
-                audioName = log.getTtsAudio().getText();
+                audioName = audio.getText();
                 if (audioName.length() > 50) {
                     audioName = audioName.substring(0, 50) + "...";
                 }
             }
-            
+
             return ResNarrationLogDTO.builder()
                     .id(log.getId())
                     .deviceId(log.getDeviceId())
