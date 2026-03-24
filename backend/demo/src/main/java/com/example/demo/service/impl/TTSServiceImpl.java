@@ -51,7 +51,36 @@ public class TTSServiceImpl implements TTSService {
 
     @Override
     public ResponseEntity<Resource> synthesizeSpeech(ReqTTSDTO request) throws IOException {
-        // Tạo request body
+        ResponseEntity<byte[]> response = exchangeViettelTts(request);
+        byte[] body = response.getBody();
+        InputStream inputStream = new ByteArrayInputStream(body);
+        InputStreamResource resource = new InputStreamResource(inputStream);
+
+        String contentType = request.getTtsReturnOption() == 2
+                ? "audio/wav"
+                : "audio/mpeg";
+
+        String requestId = response.getHeaders().getFirst("request_id");
+
+        HttpHeaders responseHeaders = new HttpHeaders();
+        responseHeaders.setContentType(MediaType.parseMediaType(contentType));
+        responseHeaders.setContentLength(body.length);
+        if (requestId != null) {
+            responseHeaders.set("request_id", requestId);
+        }
+
+        return ResponseEntity.ok()
+                .headers(responseHeaders)
+                .body(resource);
+    }
+
+    @Override
+    public byte[] synthesizeViettelSpeechBytes(ReqTTSDTO request) throws IOException {
+        ResponseEntity<byte[]> response = exchangeViettelTts(request);
+        return response.getBody();
+    }
+
+    private ResponseEntity<byte[]> exchangeViettelTts(ReqTTSDTO request) throws IOException {
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("text", request.getText());
         requestBody.put("voice", request.getVoice());
@@ -60,47 +89,24 @@ public class TTSServiceImpl implements TTSService {
         requestBody.put("token", ttsToken);
         requestBody.put("without_filter", request.getWithoutFilter());
 
-        // Tạo headers
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
         try {
-            // Gọi API ViettelAI
             ResponseEntity<byte[]> response = restTemplate.exchange(
                     ttsApiUrl,
                     HttpMethod.POST,
                     entity,
                     byte[].class);
 
-            // Kiểm tra response
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                // Tạo InputStreamResource từ byte array
-                InputStream inputStream = new ByteArrayInputStream(response.getBody());
-                InputStreamResource resource = new InputStreamResource(inputStream);
-
-                // Xác định content type dựa trên tts_return_option
-                String contentType = request.getTtsReturnOption() == 2
-                        ? "audio/wav"
-                        : "audio/mpeg";
-
-                // Lấy request_id từ header nếu có
-                String requestId = response.getHeaders().getFirst("request_id");
-
-                HttpHeaders responseHeaders = new HttpHeaders();
-                responseHeaders.setContentType(MediaType.parseMediaType(contentType));
-                responseHeaders.setContentLength(response.getBody().length);
-                if (requestId != null) {
-                    responseHeaders.set("request_id", requestId);
-                }
-
-                return ResponseEntity.ok()
-                        .headers(responseHeaders)
-                        .body(resource);
-            } else {
-                throw new IOException("Không thể tạo audio từ API ViettelAI");
+                return response;
             }
+            throw new IOException("Không thể tạo audio từ API ViettelAI");
+        } catch (IOException e) {
+            throw e;
         } catch (Exception e) {
             throw new IOException("Lỗi khi gọi API ViettelAI: " + e.getMessage(), e);
         }

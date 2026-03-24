@@ -31,7 +31,6 @@ public class TTSAudio {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
-    // ===== NGÔN NGỮ & NỘI DUNG (riêng cho mỗi ngôn ngữ) =====
     @Column(nullable = false, length = 10)
     String languageCode; // Mã ngôn ngữ: vi, en, zh, ja, ko, fr
 
@@ -53,28 +52,25 @@ public class TTSAudio {
     @Column(nullable = false)
     Boolean withoutFilter; // Có sử dụng filter hay không
 
-    // ===== FILE INFO (riêng cho mỗi ngôn ngữ) =====
-    @Column(nullable = false)
+    @Column
     String fileName; // Tên file trên storage
 
     @Column
-    String s3Url; // URL file (có thể null nếu storage không khả dụng)
+    String s3Url; // URL file (local path)
 
-    @Column(nullable = false)
+    @Column
     Long fileSize; // Kích thước file (bytes)
 
-    @Column(nullable = false)
+    @Column
     String mimeType; // audio/mpeg hoặc audio/wav
 
-    // ===== THỜI GIAN =====
-    @Column(nullable = false)
+    @Column
     Instant createdAt;
 
     @Column
     Instant updatedAt;
 
-    // ===== LIÊN KẾT GROUP (bắt buộc, không nullable) =====
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "group_id", nullable = false)
-    TTSAudioGroup group; // Nhóm audio (cùng món ăn, khác ngôn ngữ)
+    @JoinColumn(name = "group_id")
+    TTSAudioGroup group;
 }

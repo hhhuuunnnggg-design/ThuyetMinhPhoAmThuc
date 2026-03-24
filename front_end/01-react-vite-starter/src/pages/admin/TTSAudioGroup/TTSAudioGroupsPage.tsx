@@ -1,11 +1,14 @@
 import {
   deleteTTSGroupAPI,
   generateMultilingualForGroupAPI,
+  getGroupAudioAPI,
   getTTSGroupsAPI,
+  type AudioData,
   type TTSAudioGroup,
 } from "@/api/tts.api";
 import { config } from "@/config";
-import { API_ENDPOINTS, ROUTES } from "@/constants";
+import { API_ENDPOINTS } from "@/constants";
+import CreateTTSAudioModal from "@/pages/admin/TTSAudio/CreateTTSAudioModal";
 import EditTTSAudioGroupModal from "@/pages/admin/TTSAudioGroup/EditTTSAudioGroupModal";
 import { logger } from "@/utils/logger";
 import {
@@ -17,9 +20,8 @@ import {
   ReloadOutlined,
 } from "@ant-design/icons";
 import ProTable from "@ant-design/pro-table";
-import { Button, message, Popconfirm, Space, Tag, Tooltip } from "antd";
+import { Button, Image, message, Popconfirm, Space, Tag, Tooltip } from "antd";
 import { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 const LANGUAGE_COLORS: Record<string, string> = {
   vi: "#ff6b35",
@@ -40,9 +42,9 @@ const LANGUAGE_LABELS: Record<string, string> = {
 };
 
 const TTSAudioGroupsPage = () => {
-  const navigate = useNavigate();
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [generatingGroupId, setGeneratingGroupId] = useState<number | null>(null);
-  const [playingAudioId, setPlayingAudioId] = useState<number | null>(null);
+  const [playingAudioKey, setPlayingAudioKey] = useState<string | null>(null);
   const [editGroupId, setEditGroupId] = useState<number | null>(null);
   const actionRef = useRef<any>();
 
@@ -71,13 +73,21 @@ const TTSAudioGroupsPage = () => {
     }
   };
 
-  const handlePlayAudio = (audioId: number) => {
-    const url = `${config.api.baseURL}${API_ENDPOINTS.TTS.AUDIO_DOWNLOAD(audioId)}`;
+  const handlePlayAudio = (groupKey: string, lang: string) => {
+    const url = `${config.api.baseURL}${API_ENDPOINTS.TTS.GROUP_AUDIO(groupKey, lang)}`;
     const audio = new Audio(url);
     audio.play().catch(() => message.error("Không thể phát audio"));
-    setPlayingAudioId(audioId);
-    audio.onended = () => setPlayingAudioId(null);
+    setPlayingAudioKey(`${groupKey}:${lang}`);
+    audio.onended = () => setPlayingAudioKey(null);
   };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  };
+
+  const formatDate = (dateString: string) => new Date(dateString).toLocaleString("vi-VN");
 
   const columns = [
     {
@@ -107,13 +117,36 @@ const TTSAudioGroupsPage = () => {
       ),
     },
     {
+      title: "Ảnh",
+      dataIndex: "imageUrl",
+      key: "imageUrl",
+      hideInSearch: true,
+      width: 80,
+      render: (url: string | null | undefined) =>
+        url ? (
+          <Image
+            width={56}
+            height={56}
+            src={url}
+            alt="food"
+            style={{ borderRadius: 8, objectFit: "cover" }}
+            preview={{ mask: "Xem" }}
+            fallback="https://via.placeholder.com/56x56?text=No+Img"
+          />
+        ) : (
+          <div style={{ width: 56, height: 56, borderRadius: 8, background: "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#999" }}>
+            No img
+          </div>
+        ),
+    },
+    {
       title: "Ngôn ngữ",
-      dataIndex: "audios",
+      dataIndex: "audioMap",
       key: "languages",
       hideInSearch: true,
       width: 200,
       render: (_: any, record: TTSAudioGroup) => {
-        const langs = record.audios.map((a) => a.languageCode);
+        const langs = Object.keys(record.audioMap || {});
         return (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
             {langs.length === 0 ? (
@@ -125,7 +158,7 @@ const TTSAudioGroupsPage = () => {
                   color={LANGUAGE_COLORS[lang] || "default"}
                   style={{ fontWeight: 600, fontSize: 11 }}
                 >
-                  {lang?.toUpperCase()}
+                  {(lang || "").toUpperCase()}
                 </Tag>
               ))
             )}
@@ -142,16 +175,23 @@ const TTSAudioGroupsPage = () => {
       render: (v: string) => (v ? <Tag color="blue">{v}</Tag> : <span style={{ color: "#999" }}>—</span>),
     },
     {
-      title: "Audio",
-      dataIndex: "audios",
-      key: "audioCount",
+      title: "GPS",
+      dataIndex: "latitude",
+      key: "gps",
       hideInSearch: true,
-      width: 90,
-      render: (_: any, record: TTSAudioGroup) => (
-        <Tag color={record.audios.length > 0 ? "green" : "default"}>
-          {record.audios.length} audio{record.audios.length !== 1 ? "s" : ""}
-        </Tag>
-      ),
+      width: 160,
+      render: (_: any, record: TTSAudioGroup) =>
+        record.latitude != null && record.longitude != null ? (
+          <div style={{ fontSize: 11 }}>
+            <div>Lat: <b>{record.latitude.toFixed(5)}</b></div>
+            <div>Lng: <b>{record.longitude.toFixed(5)}</b></div>
+            {record.triggerRadiusMeters != null && (
+              <div style={{ color: "#1890ff" }}>R: {record.triggerRadiusMeters}m</div>
+            )}
+          </div>
+        ) : (
+          <span style={{ color: "#999" }}>—</span>
+        ),
     },
     {
       title: "Ngày tạo",
@@ -159,7 +199,7 @@ const TTSAudioGroupsPage = () => {
       key: "createdAt",
       hideInSearch: true,
       width: 160,
-      render: (v: string) => new Date(v).toLocaleString("vi-VN"),
+      render: (v: string) => formatDate(v),
     },
     {
       title: "Thao tác",
@@ -169,13 +209,14 @@ const TTSAudioGroupsPage = () => {
       fixed: "right" as const,
       render: (_: any, record: TTSAudioGroup) => (
         <Space size={4} wrap>
-          {record.audios.map((audio) => (
-            <Tooltip key={audio.id} title={`Phát ${LANGUAGE_LABELS[audio.languageCode] || audio.languageCode}`}>
+          {/* Nút phát cho từng ngôn ngữ trong audioMap */}
+          {Object.entries(record.audioMap || {}).map(([lang, audio]) => (
+            <Tooltip key={lang} title={`Phát ${LANGUAGE_LABELS[lang] || lang}`}>
               <Button
-                type={playingAudioId === audio.id ? "primary" : "default"}
+                type={playingAudioKey === `${record.groupKey}:${lang}` ? "primary" : "default"}
                 size="small"
                 icon={<PlayCircleOutlined />}
-                onClick={() => handlePlayAudio(audio.id)}
+                onClick={() => handlePlayAudio(record.groupKey, lang)}
                 style={{ padding: "0 6px", minWidth: 28 }}
               />
             </Tooltip>
@@ -215,6 +256,14 @@ const TTSAudioGroupsPage = () => {
 
   return (
     <div style={{ padding: 24 }}>
+      <CreateTTSAudioModal
+        open={createModalOpen}
+        onCancel={() => setCreateModalOpen(false)}
+        onSuccess={() => {
+          setCreateModalOpen(false);
+          actionRef.current?.reload();
+        }}
+      />
       <EditTTSAudioGroupModal
         open={editGroupId != null}
         groupId={editGroupId}
@@ -231,21 +280,19 @@ const TTSAudioGroupsPage = () => {
         search={{ labelWidth: "auto" }}
         request={async (params) => {
           try {
-            const response = await getTTSGroupsAPI(params.current || 1, params.pageSize || 10);
-            // Unwrap: backend wraps in { data: { meta, result } }
-            const data = response as any;
-            if (data?.data?.meta && data?.data?.result) {
+            const response: any = await getTTSGroupsAPI(params.current || 1, params.pageSize || 10);
+            if (response?.data?.meta && response?.data?.result) {
               return {
-                data: data.data.result || [],
+                data: response.data.result || [],
                 success: true,
-                total: data.data.meta.total || 0,
+                total: response.data.meta.total || 0,
               };
             }
-            if (data?.meta && data?.result) {
+            if (response?.meta && response?.result) {
               return {
-                data: data.result || [],
+                data: response.result || [],
                 success: true,
-                total: data.meta.total || 0,
+                total: response.meta.total || 0,
               };
             }
             return { data: [], success: false, total: 0 };
@@ -262,15 +309,15 @@ const TTSAudioGroupsPage = () => {
               <div style={{ marginBottom: 12, fontWeight: 600, color: "#374151" }}>
                 Chi tiết audio trong nhóm
               </div>
-              {record.audios.length === 0 ? (
+              {Object.keys(record.audioMap || {}).length === 0 ? (
                 <div style={{ color: "#999", fontSize: 13, fontStyle: "italic" }}>
                   Chưa có audio nào. Nhấn nút <GlobalOutlined /> để tạo audio đa ngôn ngữ.
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 12 }}>
-                  {record.audios.map((audio) => (
+                  {Object.entries(record.audioMap).map(([lang, audio]: [string, AudioData]) => (
                     <div
-                      key={audio.id}
+                      key={lang}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -282,19 +329,19 @@ const TTSAudioGroupsPage = () => {
                       }}
                     >
                       <Tag
-                        color={LANGUAGE_COLORS[audio.languageCode] || "default"}
+                        color={LANGUAGE_COLORS[lang] || "default"}
                         style={{ fontWeight: 700, fontSize: 12, minWidth: 36, textAlign: "center" }}
                       >
-                        {(audio.languageCode || "").toUpperCase()}
+                        {(lang || "").toUpperCase()}
                       </Tag>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 500, fontSize: 13 }}>
-                          {LANGUAGE_LABELS[audio.languageCode] || audio.languageCode}
+                          {LANGUAGE_LABELS[lang] || lang}
                         </div>
                         <div style={{ fontSize: 11, color: "#888" }}>
-                          {audio.fileSize > 0 ? `${(audio.fileSize / 1024).toFixed(1)} KB` : "—"}
+                          {audio.fileSize > 0 ? `${formatFileSize(audio.fileSize)}` : "—"}
                           {audio.s3Url && (
-                            <span style={{ color: "#22c55e", marginLeft: 6 }}>✓ Đã lưu S3</span>
+                            <span style={{ color: "#22c55e", marginLeft: 6 }}>✓ Đã lưu</span>
                           )}
                           {!audio.s3Url && (
                             <span style={{ color: "#f59e0b", marginLeft: 6 }}>⚠ Chưa lưu</span>
@@ -305,10 +352,10 @@ const TTSAudioGroupsPage = () => {
                         {audio.s3Url && (
                           <Tooltip title="Phát">
                             <Button
-                              type={playingAudioId === audio.id ? "primary" : "default"}
+                              type={playingAudioKey === `${record.groupKey}:${lang}` ? "primary" : "default"}
                               icon={<PlayCircleOutlined />}
                               size="small"
-                              onClick={() => handlePlayAudio(audio.id)}
+                              onClick={() => handlePlayAudio(record.groupKey, lang)}
                             />
                           </Tooltip>
                         )}
@@ -326,7 +373,7 @@ const TTSAudioGroupsPage = () => {
             key="create"
             type="primary"
             icon={<PlusOutlined />}
-            onClick={() => navigate(ROUTES.ADMIN.TTS_AUDIO)}
+            onClick={() => setCreateModalOpen(true)}
           >
             Tạo nhóm mới
           </Button>,

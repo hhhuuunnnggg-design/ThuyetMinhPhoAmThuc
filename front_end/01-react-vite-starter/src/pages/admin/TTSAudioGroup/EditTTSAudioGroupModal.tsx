@@ -1,5 +1,5 @@
 import {
-  getTTSGroupByIdAPI,
+  getAudioGroupByIdAPI,
   getVoicesAPI,
   updateTTSGroupAPI,
   uploadFoodImageOnlyAPI,
@@ -68,7 +68,7 @@ const EditTTSAudioGroupModal = ({ open, groupId, onCancel, onSuccess }: EditTTSA
     const load = async () => {
       try {
         setLoadingGroup(true);
-        const res = await getTTSGroupByIdAPI(groupId);
+        const res = await getAudioGroupByIdAPI(groupId);
         const group = unwrapGroupPayload(res);
         if (!group) {
           message.error("Không đọc được dữ liệu nhóm từ server");

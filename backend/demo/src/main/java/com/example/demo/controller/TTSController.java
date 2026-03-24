@@ -1,15 +1,19 @@
 package com.example.demo.controller;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,11 +26,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.example.demo.domain.TTSAudio;
 import com.example.demo.domain.dto.ResultPaginationDTO;
 import com.example.demo.domain.request.tts.ReqTTSDTO;
 import com.example.demo.domain.request.tts.ReqUpdateTTSAudioGroupDTO;
-import com.example.demo.domain.response.tts.ResMultilingualAudioDTO;
+import com.example.demo.domain.response.tts.ResAudioDataDTO;
 import com.example.demo.domain.response.tts.ResTTSAudioDTO;
 import com.example.demo.domain.response.tts.ResTTSAudioGroupDTO;
 import com.example.demo.domain.response.tts.ResVoiceDTO;
@@ -37,7 +40,6 @@ import com.example.demo.service.TTSService;
 import com.example.demo.util.SecurityUtil;
 import com.example.demo.util.annotation.ApiMessage;
 import com.example.demo.util.error.IdInvalidException;
-import com.turkraft.springfilter.boot.Filter;
 
 import jakarta.validation.Valid;
 
@@ -49,11 +51,14 @@ public class TTSController {
     private final TTSAudioService ttsAudioService;
     private final LocalStorageService localStorageService;
 
-    public TTSController(TTSService ttsService, TTSAudioService ttsAudioService, LocalStorageService localStorageService) {
+    public TTSController(TTSService ttsService, TTSAudioService ttsAudioService,
+            LocalStorageService localStorageService) {
         this.ttsService = ttsService;
         this.ttsAudioService = ttsAudioService;
         this.localStorageService = localStorageService;
     }
+
+    // ============ TTS cơ bản ============
 
     @PostMapping("/synthesize")
     @ApiMessage("Chuyển đổi text thành speech")
@@ -66,79 +71,51 @@ public class TTSController {
     public ResponseEntity<ResVoicesDTO> getAvailableVoices() throws IOException {
         ResVoiceDTO[] voicesArray = ttsService.getAvailableVoices();
         List<ResVoiceDTO> voicesList = Arrays.asList(voicesArray);
-
         ResVoicesDTO voicesData = new ResVoicesDTO(voicesList);
-
-        // Trả về ResVoicesDTO trực tiếp, FormarRestResponse sẽ tự động wrap thành
-        // RestResponse
         return ResponseEntity.ok(voicesData);
     }
 
-    @PostMapping("/synthesize-and-save")
-    @ApiMessage("Tạo và lưu audio thành công")
-    public ResponseEntity<ResTTSAudioDTO> synthesizeAndSave(@Valid @RequestBody ReqTTSDTO request)
-            throws IOException, IdInvalidException {
-        // Lấy email của user hiện tại
-        String createdBy = SecurityUtil.getCurrentUserLogin().orElse("anonymous");
-        request.setCreatedBy(createdBy);
+    // ============ TTSAudio — chỉ READ ============
 
-        // Tạo audio tiếng Việt
-        ResponseEntity<Resource> audioResponse = ttsService.synthesizeSpeech(request);
-        Resource resource = audioResponse.getBody();
-
-        if (resource == null) {
-            throw new IdInvalidException("Không thể tạo audio");
-        }
-
-        byte[] audioData;
-        try (var inputStream = resource.getInputStream()) {
-            audioData = inputStream.readAllBytes();
-        }
-
-        // Tạo tên file
-        String fileName = generateFileName(request);
-
-        // Lưu file và database
-        TTSAudio ttsAudio = ttsAudioService.createTTSAudio(request, audioData, fileName, createdBy);
-
-        // Nếu có flag multilingual=true → tự động tạo thêm audio đa ngôn ngữ
-        if (Boolean.TRUE.equals(request.getMultilingual())) {
-            System.out.println("🌐 Multilingual flag = true → Tạo audio đa ngôn ngữ...");
-            try {
-                ResMultilingualAudioDTO multilingualResult = ttsAudioService.createMultilingualForExisting(ttsAudio, request);
-                System.out.println("✅ Đã tạo " + multilingualResult.getAudios().size() + " audio đa ngôn ngữ cho group: " + multilingualResult.getGroupId());
-            } catch (Exception e) {
-                System.err.println("⚠️  Không thể tạo audio đa ngôn ngữ: " + e.getMessage());
-            }
-        }
-
-        ResTTSAudioDTO dto = convertToDTO(ttsAudio);
-
-        // Log thông tin file đã tạo
-        System.out.println("========================================");
-        System.out.println("📝 TTS AUDIO ĐÃ ĐƯỢC TẠO!");
-        System.out.println("🆔 ID: " + dto.getId());
-        System.out.println("📄 File Name: " + dto.getFileName());
-        if (dto.getS3Url() != null) {
-            System.out.println("🔗 URL: " + dto.getS3Url());
-        } else {
-            System.out.println("⚠️  URL: null (chưa lưu file)");
-        }
-        System.out.println("📊 File Size: " + dto.getFileSize() + " bytes");
-        System.out.println("========================================");
-
+    @GetMapping("/audios/{id}")
+    @ApiMessage("Lấy TTS audio theo ID")
+    public ResponseEntity<ResTTSAudioDTO> getTTSAudioById(@PathVariable Long id) throws IdInvalidException {
+        ResTTSAudioDTO dto = ttsAudioService.getTTSAudioById(id);
         return ResponseEntity.ok(dto);
     }
 
+    @GetMapping("/audios/{id}/download")
+    @ApiMessage("Tải xuống hoặc phát TTS audio theo ID")
+    public ResponseEntity<Resource> downloadTTSAudio(@PathVariable Long id) throws IdInvalidException {
+        ResTTSAudioDTO dto = ttsAudioService.getTTSAudioById(id);
+        if (dto.getGroupKey() == null) {
+            throw new IdInvalidException("Audio này không thuộc group nào");
+        }
+        String langCode = dto.getLanguageCode() != null ? dto.getLanguageCode() : "vi";
+        Resource resource = ttsAudioService.getAudioResource(dto.getGroupKey(), langCode);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("audio/mpeg"));
+        String fileName = langCode + ".mp3";
+        try {
+            String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20");
+            String asciiFileName = fileName.replaceAll("[^a-zA-Z0-9._-]", "_");
+            String contentDisposition = String.format("inline; filename=\"%s\"; filename*=UTF-8''%s",
+                    asciiFileName, encodedFileName);
+            headers.set("Content-Disposition", contentDisposition);
+        } catch (Exception e) {
+            headers.setContentDispositionFormData("inline", fileName.replaceAll("[^a-zA-Z0-9._-]", "_"));
+        }
+        return ResponseEntity.ok().headers(headers).body(resource);
+    }
+
     @GetMapping("/audios")
-    @ApiMessage("Lấy danh sách TTS audios")
+    @ApiMessage("Lấy danh sách TTS audios (phân trang)")
     public ResponseEntity<ResultPaginationDTO> getAllTTSAudios(
-            @Filter Specification<TTSAudio> spec,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
-
         Pageable pageable = PageRequest.of(page - 1, size);
-        Page<ResTTSAudioDTO> result = ttsAudioService.getAllTTSAudios(spec, pageable);
+        Page<ResTTSAudioDTO> result = ttsAudioService.getAllTTSAudios(pageable);
 
         ResultPaginationDTO response = new ResultPaginationDTO();
         ResultPaginationDTO.Meta meta = new ResultPaginationDTO.Meta();
@@ -152,93 +129,54 @@ public class TTSController {
         return ResponseEntity.ok(response);
     }
 
-    // ============ Multi-language ============
-    @PostMapping("/multilingual")
-    @ApiMessage("Tạo audio đa ngôn ngữ (EN, ZH, JA, KO, FR) từ text tiếng Việt")
-    public ResponseEntity<ResMultilingualAudioDTO> createMultilingualAudio(@Valid @RequestBody ReqTTSDTO request)
+    @GetMapping("/audios/{id}/stream")
+    @ApiMessage("Phát audio theo audio ID + ngôn ngữ")
+    public ResponseEntity<Resource> streamAudio(
+            @PathVariable Long id,
+            @RequestParam String languageCode) throws IdInvalidException {
+        ResTTSAudioDTO dto = ttsAudioService.getTTSAudioById(id);
+        if (dto.getGroupKey() == null) {
+            throw new IdInvalidException("Audio này không thuộc group nào");
+        }
+        Resource resource = ttsAudioService.getAudioResource(dto.getGroupKey(), languageCode);
+        return ResponseEntity.ok(resource);
+    }
+
+    // ============ Group CRUD ============
+
+    /**
+     * Tạo mới nhóm audio TTS: lưu metadata (tọa độ, ảnh, món ăn) + tạo audio đa
+     * ngôn ngữ.
+     */
+    @PostMapping("/groups")
+    @ApiMessage("Tạo mới nhóm audio TTS (kèm tạo audio đa ngôn ngữ)")
+    public ResponseEntity<ResTTSAudioGroupDTO> createGroup(@Valid @RequestBody ReqTTSDTO request)
             throws IOException, IdInvalidException {
         String createdBy = SecurityUtil.getCurrentUserLogin().orElse("anonymous");
         request.setCreatedBy(createdBy);
-
-        ResMultilingualAudioDTO result = ttsAudioService.createMultilingualAudio(request);
-
-        System.out.println("========================================");
-        System.out.println("✅ MULTILINGUAL AUDIO CREATED!");
-        System.out.println("📁 Group Key: " + result.getGroupId());
-        System.out.println("🌐 Languages: " + result.getAudios().size());
-        for (ResMultilingualAudioDTO.AudioEntry entry : result.getAudios()) {
-            System.out.println("   - " + entry.getLanguageName() + " (" + entry.getLanguageCode() + "): " + entry.getS3Url());
-        }
-        System.out.println("========================================");
-
-        return ResponseEntity.ok(result);
-    }
-
-    /**
-     * Generate multilingual audio cho một audio đã tồn tại.
-     * Dùng để tạo audio đa ngôn ngữ cho các audio cũ chưa có.
-     */
-    @PostMapping("/audios/{id}/generate-multilingual")
-    @ApiMessage("Tạo audio đa ngôn ngữ cho audio đã tồn tại")
-    public ResponseEntity<ResMultilingualAudioDTO> generateMultilingualForAudio(@PathVariable Long id)
-            throws IdInvalidException {
-        TTSAudio viAudio = ttsAudioService.getTTSAudioById(id);
-        var group = viAudio.getGroup();
-
-        // Build request từ audio hiện tại + group
-        ReqTTSDTO request = new ReqTTSDTO();
-        request.setText(group != null ? group.getOriginalText() : viAudio.getText());
-        request.setVoice(group != null ? group.getOriginalVoice() : viAudio.getVoice());
-        request.setSpeed(group != null ? group.getOriginalSpeed() : viAudio.getSpeed());
-        request.setTtsReturnOption(group != null ? group.getOriginalFormat() : viAudio.getFormat());
-        request.setWithoutFilter(group != null ? group.getOriginalWithoutFilter() : viAudio.getWithoutFilter());
-        request.setFoodName(group != null ? group.getFoodName() : null);
-        request.setPrice(group != null ? group.getPrice() : null);
-        request.setDescription(group != null ? group.getDescription() : null);
-        request.setImageUrl(group != null ? group.getImageUrl() : null);
-        request.setLatitude(group != null ? group.getLatitude() : null);
-        request.setLongitude(group != null ? group.getLongitude() : null);
-        request.setAccuracy(group != null ? group.getAccuracy() : null);
-        request.setTriggerRadiusMeters(group != null ? group.getTriggerRadiusMeters() : null);
-        request.setPriority(group != null ? group.getPriority() : null);
-        request.setCreatedBy(group != null ? group.getCreatedBy() : null);
-
-        ResMultilingualAudioDTO result = ttsAudioService.createMultilingualForExisting(viAudio, request);
-
-        System.out.println("========================================");
-        System.out.println("✅ MULTILINGUAL AUDIO GENERATED FOR EXISTING!");
-        System.out.println("📁 Audio ID: " + id);
-        System.out.println("📁 Group Key: " + result.getGroupId());
-        System.out.println("🌐 Languages: " + result.getAudios().size());
-        for (ResMultilingualAudioDTO.AudioEntry entry : result.getAudios()) {
-            System.out.println("   - " + entry.getLanguageName() + " (" + entry.getLanguageCode() + "): " + entry.getS3Url());
-        }
-        System.out.println("========================================");
-
-        return ResponseEntity.ok(result);
+        ResTTSAudioGroupDTO created = ttsAudioService.createGroup(request);
+        return ResponseEntity.ok(created);
     }
 
     @GetMapping("/groups/{id}")
     @ApiMessage("Lấy group audio theo ID")
     public ResponseEntity<ResTTSAudioGroupDTO> getGroupById(@PathVariable Long id) throws IdInvalidException {
-        ResTTSAudioGroupDTO group = ttsAudioService.getGroupById(id);
-        return ResponseEntity.ok(group);
+        ResTTSAudioGroupDTO dto = ttsAudioService.getGroupById(id);
+        return ResponseEntity.ok(dto);
     }
 
     @GetMapping("/groups/key/{groupKey}")
     @ApiMessage("Lấy group audio theo groupKey")
     public ResponseEntity<ResTTSAudioGroupDTO> getGroupByKey(@PathVariable String groupKey) throws IdInvalidException {
-        ResTTSAudioGroupDTO group = ttsAudioService.getGroupByKey(groupKey);
-        return ResponseEntity.ok(group);
+        ResTTSAudioGroupDTO dto = ttsAudioService.getGroupByKey(groupKey);
+        return ResponseEntity.ok(dto);
     }
 
-    // ============ Group CRUD ============
     @GetMapping("/groups")
     @ApiMessage("Lấy danh sách tất cả groups (phân trang)")
     public ResponseEntity<ResultPaginationDTO> getAllGroups(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
-
         Pageable pageable = PageRequest.of(page - 1, size);
         Page<ResTTSAudioGroupDTO> result = ttsAudioService.getAllGroups(pageable);
 
@@ -254,13 +192,6 @@ public class TTSController {
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/groups/{id}")
-    @ApiMessage("Xóa group audio và tất cả audio trong group")
-    public ResponseEntity<Void> deleteGroup(@PathVariable Long id) throws IOException, IdInvalidException {
-        ttsAudioService.deleteGroup(id);
-        return ResponseEntity.ok().build();
-    }
-
     @PutMapping("/groups/{id}")
     @ApiMessage("Cập nhật metadata nhóm audio TTS (món ăn, GPS, text/voice gốc)")
     public ResponseEntity<ResTTSAudioGroupDTO> updateGroup(
@@ -270,132 +201,40 @@ public class TTSController {
         return ResponseEntity.ok(updated);
     }
 
-    @PostMapping("/groups/{id}/generate-multilingual")
-    @ApiMessage("Tạo audio đa ngôn ngữ cho group")
-    public ResponseEntity<ResMultilingualAudioDTO> generateMultilingualForGroup(@PathVariable Long id)
-            throws IOException, IdInvalidException {
-        ResMultilingualAudioDTO result = ttsAudioService.generateMultilingualForGroup(id);
-
-        System.out.println("========================================");
-        System.out.println("✅ MULTILINGUAL GENERATED FOR GROUP #" + id);
-        System.out.println("📁 Group Key: " + result.getGroupId());
-        System.out.println("🌐 Languages: " + result.getAudios().size());
-        for (ResMultilingualAudioDTO.AudioEntry entry : result.getAudios()) {
-            System.out.println("   - " + entry.getLanguageName() + " (" + entry.getLanguageCode() + "): " + entry.getS3Url());
-        }
-        System.out.println("========================================");
-
-        return ResponseEntity.ok(result);
+    @DeleteMapping("/groups/{id}")
+    @ApiMessage("Xóa group audio và tất cả audio trong group")
+    public ResponseEntity<Void> deleteGroup(@PathVariable Long id) throws IOException, IdInvalidException {
+        ttsAudioService.deleteGroup(id);
+        return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/audios/my")
-    @ApiMessage("Lấy danh sách TTS audios của user hiện tại")
-    public ResponseEntity<List<ResTTSAudioDTO>> getMyTTSAudios() throws IdInvalidException {
-        String createdBy = SecurityUtil.getCurrentUserLogin()
-                .orElseThrow(() -> new IdInvalidException("Người dùng chưa đăng nhập"));
+    // ============ Audio file — phát / download ============
 
-        List<ResTTSAudioDTO> audios = ttsAudioService.getTTSAudiosByUser(createdBy);
+    /**
+     * Phát hoặc download audio theo groupKey + ngôn ngữ.
+     */
+    @GetMapping("/groups/{groupKey}/audio/{languageCode}")
+    @ApiMessage("Phát/download audio theo groupKey và ngôn ngữ")
+    public ResponseEntity<Resource> getAudio(
+            @PathVariable String groupKey,
+            @PathVariable String languageCode,
+            @RequestParam(defaultValue = "inline") String disposition) throws IdInvalidException {
 
-        // Trả về List trực tiếp, FormarRestResponse sẽ tự động wrap thành RestResponse
-        return ResponseEntity.ok(audios);
-    }
+        Resource resource = ttsAudioService.getAudioResource(groupKey, languageCode);
 
-    @GetMapping("/audios/{id}")
-    @ApiMessage("Lấy TTS audio theo ID")
-    public ResponseEntity<ResTTSAudioDTO> getTTSAudioById(@PathVariable Long id)
-            throws IdInvalidException {
-        TTSAudio ttsAudio = ttsAudioService.getTTSAudioById(id);
-        ResTTSAudioDTO dto = convertToDTO(ttsAudio);
-
-        // Trả về ResTTSAudioDTO trực tiếp, FormarRestResponse sẽ tự động wrap thành
-        // RestResponse
-        return ResponseEntity.ok(dto);
-    }
-
-    @GetMapping("/audios/{id}/download")
-    @ApiMessage("Tải xuống hoặc phát TTS audio")
-    public ResponseEntity<Resource> downloadTTSAudio(@PathVariable Long id)
-            throws IOException, IdInvalidException {
-        TTSAudio ttsAudio = ttsAudioService.getTTSAudioById(id);
-
-        // Nếu có file URL, serve file từ local storage
-        if (ttsAudio.getS3Url() != null && !ttsAudio.getS3Url().isEmpty()) {
-            try {
-                Resource resource = ttsAudioService.getAudioResourceFromS3(ttsAudio.getFileName());
-                if (resource != null && resource.exists()) {
-                    HttpHeaders headers = new HttpHeaders();
-                    headers.setContentType(org.springframework.http.MediaType.parseMediaType(ttsAudio.getMimeType()));
-                    headers.setContentLength(ttsAudio.getFileSize());
-
-                    // Encode filename
-                    String fileName = ttsAudio.getFileName();
-                    String actualFileName = fileName.contains("/")
-                            ? fileName.substring(fileName.lastIndexOf("/") + 1)
-                            : fileName;
-                    try {
-                        String encodedFileName = java.net.URLEncoder
-                                .encode(actualFileName, java.nio.charset.StandardCharsets.UTF_8)
-                                .replace("+", "%20");
-                        String asciiFileName = actualFileName.replaceAll("[^a-zA-Z0-9._-]", "_");
-                        String contentDisposition = String.format("inline; filename=\"%s\"; filename*=UTF-8''%s",
-                                asciiFileName, encodedFileName);
-                        headers.set("Content-Disposition", contentDisposition);
-                    } catch (Exception e) {
-                        String safeFileName = actualFileName.replaceAll("[^a-zA-Z0-9._-]", "_");
-                        headers.setContentDispositionFormData("inline", safeFileName);
-                    }
-
-                    return ResponseEntity.ok()
-                            .headers(headers)
-                            .body(resource);
-                }
-            } catch (Exception e) {
-                System.err.println("WARNING: Không thể lấy file: " + e.getMessage());
-            }
-        }
-
-        // Nếu không có file URL, regenerate audio từ metadata
-        ReqTTSDTO request = new ReqTTSDTO();
-        request.setText(ttsAudio.getText());
-        request.setVoice(ttsAudio.getVoice());
-        request.setSpeed(ttsAudio.getSpeed());
-        request.setTtsReturnOption(ttsAudio.getFormat());
-        request.setWithoutFilter(ttsAudio.getWithoutFilter());
-
-        // Tạo lại audio
-        ResponseEntity<Resource> audioResponse = ttsService.synthesizeSpeech(request);
-        Resource resource = audioResponse.getBody();
-
-        if (resource == null) {
-            throw new IdInvalidException("Không thể tạo lại audio");
-        }
-
-        // Set headers
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(org.springframework.http.MediaType.parseMediaType(ttsAudio.getMimeType()));
-        headers.setContentLength(ttsAudio.getFileSize());
+        headers.setContentType(MediaType.parseMediaType("audio/mpeg"));
 
-        // Encode filename để tránh lỗi Unicode trong Content-Disposition header
-        String fileName = ttsAudio.getFileName();
-        // Lấy tên file từ path (nếu có folder prefix)
-        String actualFileName = fileName.contains("/")
-                ? fileName.substring(fileName.lastIndexOf("/") + 1)
-                : fileName;
-
-        // Encode filename theo RFC 5987 để hỗ trợ Unicode
-        // Sử dụng filename* với UTF-8 encoding
+        String fileName = languageCode + ".mp3";
+        String encodedFileName;
         try {
-            String encodedFileName = java.net.URLEncoder.encode(actualFileName, java.nio.charset.StandardCharsets.UTF_8)
-                    .replace("+", "%20");
-            // Tạo ASCII-safe filename cho fallback
-            String asciiFileName = actualFileName.replaceAll("[^a-zA-Z0-9._-]", "_");
-            String contentDisposition = String.format("attachment; filename=\"%s\"; filename*=UTF-8''%s",
-                    asciiFileName, encodedFileName);
+            encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20");
+            String asciiFileName = fileName.replaceAll("[^a-zA-Z0-9._-]", "_");
+            String contentDisposition = String.format("%s; filename=\"%s\"; filename*=UTF-8''%s",
+                    disposition, asciiFileName, encodedFileName);
             headers.set("Content-Disposition", contentDisposition);
         } catch (Exception e) {
-            // Fallback: chỉ dùng ASCII filename nếu encode thất bại
-            String safeFileName = actualFileName.replaceAll("[^a-zA-Z0-9._-]", "_");
-            headers.setContentDispositionFormData("attachment", safeFileName);
+            headers.setContentDispositionFormData("inline", fileName.replaceAll("[^a-zA-Z0-9._-]", "_"));
         }
 
         return ResponseEntity.ok()
@@ -403,280 +242,44 @@ public class TTSController {
                 .body(resource);
     }
 
-    @PutMapping("/audios/{id}")
-    @ApiMessage("Cập nhật TTS audio")
-    public ResponseEntity<ResTTSAudioDTO> updateTTSAudio(
-            @PathVariable Long id,
-            @Valid @RequestBody ReqTTSDTO request) throws IOException, IdInvalidException {
-
-        // Lấy audio hiện tại để kiểm tra có thay đổi không
-        TTSAudio existingAudio = ttsAudioService.getTTSAudioById(id);
-
-        // Kiểm tra xem có thay đổi gì không (text, voice, speed, format, withoutFilter)
-        boolean needsRegenerate = !existingAudio.getText().equals(request.getText()) ||
-                !existingAudio.getVoice().equals(request.getVoice()) ||
-                !existingAudio.getSpeed().equals(request.getSpeed()) ||
-                !existingAudio.getFormat().equals(request.getTtsReturnOption()) ||
-                !existingAudio.getWithoutFilter().equals(request.getWithoutFilter());
-
-        // Nếu có thay đổi, regenerate audio mới và lưu vào local storage
-        if (needsRegenerate) {
-            // Tạo audio mới từ text mới
-            ResponseEntity<Resource> audioResponse = ttsService.synthesizeSpeech(request);
-            Resource resource = audioResponse.getBody();
-
-            if (resource == null) {
-                throw new IdInvalidException("Không thể tạo audio mới");
-            }
-
-            byte[] audioData;
-            try (var inputStream = resource.getInputStream()) {
-                audioData = inputStream.readAllBytes();
-            }
-
-            // Tạo tên file mới
-            String fileName = generateFileName(request);
-
-            // Xóa file cũ nếu có
-            if (existingAudio.getS3Url() != null && existingAudio.getFileName() != null) {
-                try {
-                    ttsAudioService.deleteTTSAudioFileFromS3(existingAudio.getFileName());
-                    System.out.println("✅ Đã xóa file cũ: " + existingAudio.getFileName());
-                } catch (Exception e) {
-                    System.err.println("⚠️  Không thể xóa file cũ: " + e.getMessage());
-                }
-            }
-
-            // Lưu file mới và cập nhật metadata
-            TTSAudio updatedAudio = ttsAudioService.updateTTSAudioWithNewFile(id, request, audioData, fileName);
-            ResTTSAudioDTO dto = convertToDTO(updatedAudio);
-
-            System.out.println("========================================");
-            System.out.println("✅ TTS AUDIO ĐÃ ĐƯỢC CẬP NHẬT!");
-            System.out.println("🆔 ID: " + dto.getId());
-            System.out.println("📄 File Name mới: " + dto.getFileName());
-            if (dto.getS3Url() != null) {
-                System.out.println("🔗 URL mới: " + dto.getS3Url());
-            }
-            System.out.println("========================================");
-
-            return ResponseEntity.ok(dto);
-        } else {
-            // Không có thay đổi, chỉ cập nhật metadata
-            TTSAudio ttsAudio = ttsAudioService.updateTTSAudio(id, request);
-            ResTTSAudioDTO dto = convertToDTO(ttsAudio);
-            return ResponseEntity.ok(dto);
-        }
-    }
-
-    @DeleteMapping("/audios/{id}")
-    @ApiMessage("Xóa TTS audio")
-    public ResponseEntity<Void> deleteTTSAudio(@PathVariable Long id)
+    /**
+     * Tạo audio đa ngôn ngữ cho group (bổ sung ngôn ngữ chưa có).
+     */
+    @PostMapping("/groups/{id}/generate-multilingual")
+    @ApiMessage("Tạo audio đa ngôn ngữ cho group (bổ sung ngôn ngữ chưa có)")
+    public ResponseEntity<Map<String, ResAudioDataDTO>> generateMultilingualForGroup(@PathVariable Long id)
             throws IOException, IdInvalidException {
-        ttsAudioService.deleteTTSAudio(id);
-
-        // Trả về Void (204 No Content) hoặc có thể trả về message
-        // FormarRestResponse sẽ tự động wrap thành RestResponse với message từ
-        // @ApiMessage
-        return ResponseEntity.ok().build();
+        Map<String, ResAudioDataDTO> result = ttsAudioService.generateMultilingualAudio(id);
+        return ResponseEntity.ok(result);
     }
 
-    @PostMapping("/audios/{id}/image")
-    @ApiMessage("Upload ảnh món ăn")
-    public ResponseEntity<ResTTSAudioDTO> uploadFoodImage(
-            @PathVariable Long id,
-            @RequestParam("image") MultipartFile imageFile)
-            throws IOException, IdInvalidException {
-
-        // Validate file
-        if (imageFile.isEmpty()) {
-            throw new IdInvalidException("File ảnh không được để trống");
-        }
-
-        // Validate file type
-        String contentType = imageFile.getContentType();
-        if (contentType == null || !contentType.startsWith("image/")) {
-            throw new IdInvalidException("File phải là ảnh (image/*)");
-        }
-
-        // Get audio
-        TTSAudio ttsAudio = ttsAudioService.getTTSAudioById(id);
-        var group = ttsAudio.getGroup();
-
-        // Delete old image if exists
-        if (group != null && group.getImageUrl() != null && !group.getImageUrl().isEmpty()) {
-            try {
-                localStorageService.deleteFile(group.getImageUrl());
-                System.out.println("✅ Đã xóa ảnh cũ: " + group.getImageUrl());
-            } catch (Exception e) {
-                System.err.println("⚠️  Không thể xóa ảnh cũ: " + e.getMessage());
-            }
-        }
-
-        // Upload new image
-        String imageUrl;
-        try {
-            imageUrl = localStorageService.uploadFile(imageFile, "food-images");
-            System.out.println("✅ Đã lưu ảnh: " + imageUrl);
-        } catch (Exception e) {
-            throw new IOException("Không thể lưu ảnh: " + e.getMessage(), e);
-        }
-
-        // Update imageUrl in database (via group)
-        ReqTTSDTO updateRequest = new ReqTTSDTO();
-        updateRequest.setText(group != null ? group.getOriginalText() : ttsAudio.getText());
-        updateRequest.setVoice(group != null ? group.getOriginalVoice() : ttsAudio.getVoice());
-        updateRequest.setSpeed(group != null ? group.getOriginalSpeed() : ttsAudio.getSpeed());
-        updateRequest.setTtsReturnOption(group != null ? group.getOriginalFormat() : ttsAudio.getFormat());
-        updateRequest.setWithoutFilter(group != null ? group.getOriginalWithoutFilter() : ttsAudio.getWithoutFilter());
-        updateRequest.setFoodName(group != null ? group.getFoodName() : null);
-        updateRequest.setPrice(group != null ? group.getPrice() : null);
-        updateRequest.setDescription(group != null ? group.getDescription() : null);
-        updateRequest.setImageUrl(imageUrl);
-        updateRequest.setLatitude(group != null ? group.getLatitude() : null);
-        updateRequest.setLongitude(group != null ? group.getLongitude() : null);
-        updateRequest.setAccuracy(group != null ? group.getAccuracy() : null);
-        updateRequest.setTriggerRadiusMeters(group != null ? group.getTriggerRadiusMeters() : null);
-        updateRequest.setPriority(group != null ? group.getPriority() : null);
-
-        TTSAudio updatedAudio = ttsAudioService.updateTTSAudio(id, updateRequest);
-        ResTTSAudioDTO dto = convertToDTO(updatedAudio);
-
-        System.out.println("========================================");
-        System.out.println("✅ ẢNH MÓN ĂN ĐÃ ĐƯỢC UPLOAD!");
-        System.out.println("🆔 Audio ID: " + dto.getId());
-        System.out.println("🖼️  Image URL: " + dto.getImageUrl());
-        System.out.println("========================================");
-
-        return ResponseEntity.ok(dto);
-    }
+    // ============ Images ============
 
     @PostMapping("/images/upload")
-    @ApiMessage("Upload ảnh món ăn (không cần audio ID)")
-    public ResponseEntity<java.util.Map<String, String>> uploadFoodImageOnly(
-            @RequestParam("image") MultipartFile imageFile)
-            throws IOException, IdInvalidException {
+    @ApiMessage("Upload ảnh món ăn")
+    public ResponseEntity<java.util.Map<String, String>> uploadImage(
+            @RequestParam("image") MultipartFile imageFile) throws IOException, IdInvalidException {
 
-        // Validate file
         if (imageFile.isEmpty()) {
             throw new IdInvalidException("File ảnh không được để trống");
         }
 
-        // Validate file type
         String contentType = imageFile.getContentType();
         if (contentType == null || !contentType.startsWith("image/")) {
             throw new IdInvalidException("File phải là ảnh (image/*)");
         }
 
-        // Upload image
         String imageUrl;
         try {
             imageUrl = localStorageService.uploadFile(imageFile, "food-images");
-            System.out.println("✅ Đã lưu ảnh: " + imageUrl);
         } catch (Exception e) {
-            throw new IOException("Không thể lưu ảnh: " + e.getMessage(), e);
+            throw new IdInvalidException("Upload ảnh thất bại: " + e.getMessage());
         }
 
-        java.util.Map<String, String> response = new java.util.HashMap<>();
+        Map<String, String> response = new HashMap<>();
         response.put("imageUrl", imageUrl);
         response.put("message", "Upload ảnh thành công");
 
         return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/images/{fileName:.+}")
-    @ApiMessage("Lấy ảnh từ local storage")
-    public ResponseEntity<Resource> getFoodImage(@PathVariable String fileName)
-            throws IOException {
-
-        // Decode fileName nếu có encoding
-        String decodedFileName = java.net.URLDecoder.decode(fileName, java.nio.charset.StandardCharsets.UTF_8);
-
-        try {
-            Resource resource = ttsAudioService.getImageResourceFromS3(decodedFileName);
-            if (resource == null || !resource.exists()) {
-                throw new IOException("Không tìm thấy ảnh: " + decodedFileName);
-            }
-
-            // Determine content type from file extension
-            String contentType = "image/jpeg";
-            String lowerPath = decodedFileName.toLowerCase();
-            if (lowerPath.endsWith(".png")) {
-                contentType = "image/png";
-            } else if (lowerPath.endsWith(".gif")) {
-                contentType = "image/gif";
-            } else if (lowerPath.endsWith(".webp")) {
-                contentType = "image/webp";
-            }
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(org.springframework.http.MediaType.parseMediaType(contentType));
-            headers.setCacheControl("public, max-age=31536000"); // Cache 1 year
-
-            return ResponseEntity.ok()
-                    .headers(headers)
-                    .body(resource);
-        } catch (Exception e) {
-            throw new IOException("Không tìm thấy ảnh: " + decodedFileName + " - " + e.getMessage());
-        }
-    }
-
-    // Helper methods
-    private String generateFileName(ReqTTSDTO request) {
-        String textPreview = request.getText()
-                .substring(0, Math.min(30, request.getText().length()))
-                .replaceAll("[^a-zA-Z0-9\\sàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]", "")
-                .replaceAll("\\s+", "-")
-                .toLowerCase()
-                .trim();
-
-        String voiceName = request.getVoice().split("-").length > 1
-                ? request.getVoice().split("-")[request.getVoice().split("-").length - 1]
-                : request.getVoice();
-
-        String timestamp = String.valueOf(System.currentTimeMillis());
-        String ext = request.getTtsReturnOption() == 2 ? "wav" : "mp3";
-
-        return String.format("%s-%s-%s.%s", textPreview, voiceName, timestamp, ext);
-    }
-
-    private ResTTSAudioDTO convertToDTO(TTSAudio ttsAudio) {
-        var group = ttsAudio.getGroup();
-
-        return ResTTSAudioDTO.builder()
-                .id(ttsAudio.getId())
-                .groupId(group != null ? group.getId() : null)
-                .groupKey(group != null ? group.getGroupKey() : null)
-                .languageCode(ttsAudio.getLanguageCode())
-                .text(ttsAudio.getText())
-                .voice(ttsAudio.getVoice())
-                .speed(ttsAudio.getSpeed())
-                .format(ttsAudio.getFormat())
-                .withoutFilter(ttsAudio.getWithoutFilter())
-                .fileName(ttsAudio.getFileName())
-                .s3Url(ttsAudio.getS3Url())
-                .fileSize(ttsAudio.getFileSize())
-                .mimeType(ttsAudio.getMimeType())
-                .createdAt(ttsAudio.getCreatedAt())
-                .updatedAt(ttsAudio.getUpdatedAt())
-                .createdBy(group != null ? group.getCreatedBy() : null)
-                .foodName(group != null ? group.getFoodName() : null)
-                .price(group != null ? group.getPrice() : null)
-                .description(group != null ? group.getDescription() : null)
-                .imageUrl(group != null ? group.getImageUrl() : null)
-                .latitude(group != null ? group.getLatitude() : null)
-                .longitude(group != null ? group.getLongitude() : null)
-                .accuracy(group != null ? group.getAccuracy() : null)
-                .triggerRadiusMeters(group != null ? group.getTriggerRadiusMeters() : null)
-                .priority(group != null ? group.getPriority() : null)
-                .originalText(group != null ? group.getOriginalText() : null)
-                .originalVoice(group != null ? group.getOriginalVoice() : null)
-                .userId(group != null && group.getUser() != null ? group.getUser().getId() : null)
-                .userEmail(group != null && group.getUser() != null ? group.getUser().getEmail() : null)
-                .userFullName(group != null && group.getUser() != null
-                        ? (group.getUser().getFirstName() + " " + group.getUser().getLastName()).trim()
-                        : null)
-                .userAvatar(group != null && group.getUser() != null ? group.getUser().getAvatar() : null)
-                .build();
     }
 }

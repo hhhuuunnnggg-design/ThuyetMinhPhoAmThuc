@@ -11,5 +11,10 @@ import com.example.demo.domain.response.tts.ResVoiceDTO;
 public interface TTSService {
     ResponseEntity<Resource> synthesizeSpeech(ReqTTSDTO request) throws IOException;
 
+    /**
+     * Tạo audio tiếng Việt qua ViettelAI (raw bytes, cùng logic với {@link #synthesizeSpeech}).
+     */
+    byte[] synthesizeViettelSpeechBytes(ReqTTSDTO request) throws IOException;
+
     ResVoiceDTO[] getAvailableVoices() throws IOException;
 }

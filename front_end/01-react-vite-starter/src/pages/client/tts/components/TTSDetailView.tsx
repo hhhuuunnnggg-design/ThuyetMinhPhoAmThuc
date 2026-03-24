@@ -1,9 +1,8 @@
-import type { TTSAudio } from "@/api/tts.api";
+import type { TTSAudio, AudioData } from "@/api/tts.api";
 import {
-  generateMultilingualAPI,
+  generateMultilingualForGroupAPI,
   getAudioGroupByIdAPI,
   getImageUrl,
-  type MultilingualAudioEntry,
 } from "@/api/tts.api";
 import {
   CompassOutlined,
@@ -40,6 +39,12 @@ interface TTSDetailViewProps {
   onPlayPause: (url?: string) => void;
 }
 
+interface AudioEntry {
+  languageCode: string;
+  s3Url: string | null;
+  fileSize: number;
+}
+
 export const TTSDetailView = ({
   selected,
   currentDistance,
@@ -50,9 +55,7 @@ export const TTSDetailView = ({
   onPlayPause,
 }: TTSDetailViewProps) => {
   const [selectedLang, setSelectedLang] = useState<string>("vi");
-  const [multilingualAudios, setMultilingualAudios] = useState<
-    MultilingualAudioEntry[]
-  >([]);
+  const [multilingualMap, setMultilingualMap] = useState<Record<string, AudioData>>({});
   const [loadingMultilingual, setLoadingMultilingual] = useState(false);
   const [generatingMultilingual, setGeneratingMultilingual] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -60,21 +63,22 @@ export const TTSDetailView = ({
 
   // Fetch multilingual audio group when selected changes
   useEffect(() => {
-    if (!selected.id) return;
+    if (!selected.groupKey) return;
     setLoadingMultilingual(true);
-    setMultilingualAudios([]);
+    setMultilingualMap({});
     setSelectedLang("vi");
     setCurrentTime(0);
 
     getAudioGroupByIdAPI(selected.id)
-      .then((res) => {
-        if (res.data.data?.audios && res.data.data.audios.length > 0) {
-          setMultilingualAudios(res.data.data.audios);
+      .then((res: any) => {
+        const group = res?.data?.data ?? res?.data ?? res;
+        if (group?.audioMap) {
+          setMultilingualMap(group.audioMap);
         }
       })
       .catch(() => {})
       .finally(() => setLoadingMultilingual(false));
-  }, [selected.id]);
+  }, [selected.id, selected.groupKey]);
 
   // Track playback progress
   useEffect(() => {
@@ -103,11 +107,13 @@ export const TTSDetailView = ({
   }, [isPlaying, audioDuration]);
 
   const handleGenerateMultilingual = async () => {
+    if (!selected.groupId) return;
     setGeneratingMultilingual(true);
     try {
-      const res = await generateMultilingualAPI(selected.id);
-      if (res.data?.audios) {
-        setMultilingualAudios(res.data.audios);
+      const res = await generateMultilingualForGroupAPI(selected.groupId);
+      const data = res?.data?.data ?? res?.data ?? res;
+      if (data) {
+        setMultilingualMap(data);
         message.success("Đã tạo audio đa ngôn ngữ!");
       }
     } catch {
@@ -122,14 +128,14 @@ export const TTSDetailView = ({
     if (lang === "vi") {
       onPlayPause();
     } else {
-      const entry = multilingualAudios.find((a) => a.languageCode === lang);
+      const entry = multilingualMap[lang];
       if (entry?.s3Url) {
         onPlayPause(entry.s3Url);
       }
     }
   };
 
-  const hasMultilingual = multilingualAudios.length > 0;
+  const hasMultilingual = Object.keys(multilingualMap).length > 0;
   const progressPercent =
     audioDuration > 0 ? (currentTime / audioDuration) * 100 : 0;
   const triggerRadius = selected.triggerRadiusMeters ?? selected.accuracy ?? 30;
@@ -137,6 +143,12 @@ export const TTSDetailView = ({
     selected.description && selected.description.length > 0
       ? "Lịch sử & cách chế biến"
       : "Thuyết minh món ăn";
+
+  const availableLangs = Object.entries(multilingualMap).map(([code, data]) => ({
+    languageCode: code,
+    s3Url: data.s3Url,
+    fileSize: data.fileSize,
+  })) as AudioEntry[];
 
   return (
     <>
@@ -164,7 +176,7 @@ export const TTSDetailView = ({
             <div className="badges">
               {hasMultilingual && (
                 <span className="badge secondary">
-                  <GlobalOutlined /> {multilingualAudios.length} ngôn ngữ
+                  <GlobalOutlined /> {Object.keys(multilingualMap).length} ngôn ngữ
                 </span>
               )}
             </div>
@@ -231,7 +243,7 @@ export const TTSDetailView = ({
           />
           {hasMultilingual ? (
             <div className="lang-avail">
-              {multilingualAudios.map((a) => (
+              {availableLangs.map((a) => (
                 <span
                   key={a.languageCode}
                   className={`lang-chip ${selectedLang === a.languageCode ? "active" : ""}`}

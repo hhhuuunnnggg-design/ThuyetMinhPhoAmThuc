@@ -2,6 +2,8 @@
 import axios from "@/api/axios";
 import { API_ENDPOINTS } from "@/constants";
 
+// ===== GIỌNG ĐỌC =====
+
 export interface Voice {
   name: string;
   description: string;
@@ -13,6 +15,8 @@ export interface IVoicesData {
   voices: Voice[];
 }
 
+// ===== REQUEST =====
+
 export interface TTSRequest {
   text: string;
   voice: string;
@@ -20,7 +24,7 @@ export interface TTSRequest {
   ttsReturnOption?: number; // 2: wav, 3: mp3
   withoutFilter?: boolean;
 
-  // Thông tin thuyết minh ẩm thực (dùng cho GPS Food Guide)
+  // Thông tin thuyết minh ẩm thực
   foodName?: string;
   price?: number;
   description?: string;
@@ -30,42 +34,51 @@ export interface TTSRequest {
   latitude?: number;
   longitude?: number;
   accuracy?: number;
-  
-  // Thông tin POI (Geofence)
-  triggerRadiusMeters?: number; // Bán kính kích hoạt (mét)
-  priority?: number; // Độ ưu tiên (số càng cao = ưu tiên càng cao)
 
-  // Multilingual
-  multilingual?: boolean; // Tự động tạo audio đa ngôn ngữ (EN, ZH, JA, KO, FR)
+  // Thông tin POI (Geofence)
+  triggerRadiusMeters?: number;
+  priority?: number;
 }
 
-export interface TTSAudio {
-  id: number;
+export interface UpdateTTSAudioGroupRequest {
+  foodName?: string | null;
+  price?: number | null;
+  description?: string | null;
+  imageUrl?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  accuracy?: number | null;
+  triggerRadiusMeters?: number | null;
+  priority?: number | null;
+  originalText: string;
+  originalVoice: string;
+  originalSpeed: number;
+  originalFormat: number;
+  originalWithoutFilter?: boolean;
+}
 
-  // ===== GROUP INFO =====
-  groupId?: number | null;
-  groupKey?: string | null;
+// ===== RESPONSE =====
 
-  // ===== NGÔN NGỮ =====
-  languageCode?: string | null; // vi, en, zh, ja, ko, fr
-
-  // ===== NỘI DUNG =====
-  text: string;
-  voice: string;
-  speed: number;
-  format: number;
-  withoutFilter: boolean;
-
-  // ===== FILE INFO =====
+/** Audio data — metadata của một file audio trên storage */
+export interface AudioData {
   fileName: string;
   s3Url: string | null;
   fileSize: number;
   mimeType: string;
+}
 
-  // ===== THỜI GIAN =====
+/** TTSAudio — chỉ dùng để xem (READ only), có kèm thông tin từ Group */
+export interface TTSAudio {
+  id: number;
+  groupId: number | null;
+  groupKey: string | null;
+  languageCode: string;
+  text: string;
+  translatedText: string | null;
+  voice: string;
+  speed: number;
   createdAt: string;
   updatedAt: string | null;
-  createdBy: string | null;
 
   // ===== THÔNG TIN ẨM THỰC (từ Group) =====
   foodName?: string | null;
@@ -91,72 +104,139 @@ export interface TTSAudio {
   userEmail?: string | null;
   userFullName?: string | null;
   userAvatar?: string | null;
+
+  // ===== AUDIO FILE INFO =====
+  fileName?: string | null;
+  s3Url?: string | null;
+  fileSize?: number | null;
+  mimeType?: string | null;
 }
 
-// Lấy danh sách giọng đọc
+/** Nhóm audio TTS — chứa toàn bộ thông tin CRUD + audio đa ngôn ngữ */
+export interface TTSAudioGroup {
+  id: number;
+  groupKey: string;
+
+  // ===== THÔNG TIN ẨM THỰC =====
+  foodName: string | null;
+  price?: number | null;
+  description?: string | null;
+  imageUrl?: string | null;
+
+  // ===== VỊ TRÍ GPS =====
+  latitude?: number | null;
+  longitude?: number | null;
+  accuracy?: number | null;
+
+  // ===== GEOFENCE =====
+  triggerRadiusMeters?: number | null;
+  priority?: number | null;
+
+  // ===== TEXT & VOICE GỐC (tiếng Việt) =====
+  originalText: string | null;
+  originalVoice: string | null;
+  originalSpeed?: number | null;
+  originalFormat?: number | null;
+  originalWithoutFilter?: boolean | null;
+
+  // ===== AUDIO ĐA NGÔN NGỮ — Map<languageCode, AudioData> =====
+  audioMap: Record<string, AudioData>;
+
+  // ===== USER & TIME =====
+  createdBy?: string | null;
+  createdAt: string;
+  updatedAt?: string | null;
+}
+
+// ===== API =====
+
+/** Lấy danh sách giọng đọc */
 export const getVoicesAPI = () => {
   return axios.get<IBackendRes<IVoicesData>>(API_ENDPOINTS.TTS.VOICES);
 };
 
-// Chuyển đổi text thành speech
+/** Chuyển đổi text thành speech */
 export const synthesizeSpeechAPI = (request: TTSRequest) => {
   return axios.post<Blob>(API_ENDPOINTS.TTS.SYNTHESIZE, request, {
-    responseType: "blob", // Quan trọng: để nhận audio file
+    responseType: "blob",
   });
 };
 
-// Chuyển đổi text thành speech và lưu lên S3
-export const synthesizeAndSaveAPI = (request: TTSRequest) => {
-  return axios.post<IBackendRes<TTSAudio>>(API_ENDPOINTS.TTS.SYNTHESIZE_AND_SAVE, request);
-};
+// ===== TTSAudio — chỉ READ =====
 
-// Lấy danh sách TTS audios
-// Response bị wrap trong RestResponse: { statusCode, error, message, data: IModelPaginate<TTSAudio> }
+/** Lấy danh sách TTS audios (phân trang) */
 export const getTTSAudiosAPI = (page: number = 1, size: number = 10) => {
   return axios.get<IBackendRes<IModelPaginate<TTSAudio>>>(API_ENDPOINTS.TTS.AUDIOS, {
     params: { page, size },
   });
 };
 
-// Lấy danh sách TTS audios của user hiện tại
-export const getMyTTSAudiosAPI = () => {
-  return axios.get<IBackendRes<TTSAudio[]>>(API_ENDPOINTS.TTS.MY_AUDIOS);
-};
-
-// Lấy TTS audio theo ID
+/** Lấy TTS audio theo ID */
 export const getTTSAudioByIdAPI = (id: number) => {
   return axios.get<IBackendRes<TTSAudio>>(API_ENDPOINTS.TTS.AUDIO_BY_ID(id));
 };
 
-// Cập nhật TTS audio
-export const updateTTSAudioAPI = (id: number, request: TTSRequest) => {
-  return axios.put<IBackendRes<TTSAudio>>(API_ENDPOINTS.TTS.AUDIO_BY_ID(id), request);
-};
-
-// Xóa TTS audio
-export const deleteTTSAudioAPI = (id: number) => {
-  return axios.delete<IBackendRes<void>>(API_ENDPOINTS.TTS.AUDIO_BY_ID(id));
-};
-
-// Tải xuống hoặc phát TTS audio (sử dụng khi không có S3 URL)
-export const downloadTTSAudioAPI = (id: number) => {
-  return axios.get<Blob>(API_ENDPOINTS.TTS.AUDIO_DOWNLOAD(id), {
+/** Stream audio: lấy file audio theo audio ID + ngôn ngữ */
+export const streamAudioAPI = (audioId: number, languageCode: string) => {
+  return axios.get<Blob>(API_ENDPOINTS.TTS.AUDIO_STREAM(audioId, languageCode), {
     responseType: "blob",
   });
 };
 
-// Upload ảnh món ăn lên S3 và cập nhật vào TTSAudio
-export const uploadFoodImageAPI = (id: number, imageFile: File) => {
-  const formData = new FormData();
-  formData.append("image", imageFile);
-  return axios.post<IBackendRes<TTSAudio>>(API_ENDPOINTS.TTS.AUDIO_IMAGE(id), formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+// ===== Group CRUD =====
+
+/** Tạo nhóm audio TTS mới (kèm tạo audio đa ngôn ngữ) */
+export const createTTSGroupAPI = (request: TTSRequest) => {
+  return axios.post<IBackendRes<TTSAudioGroup>>(API_ENDPOINTS.TTS.GROUPS, request);
+};
+
+/** Lấy danh sách tất cả groups (phân trang) */
+export const getTTSGroupsAPI = (page: number = 1, size: number = 10) => {
+  return axios.get<IBackendRes<IModelPaginate<TTSAudioGroup>>>(API_ENDPOINTS.TTS.GROUPS, {
+    params: { page, size },
   });
 };
 
-// Upload ảnh món ăn lên S3 (không cần audio ID)
+/** Lấy group audio theo ID (client-side dùng để hiển thị audio đa ngôn ngữ) */
+export const getAudioGroupByIdAPI = (id: number) => {
+  return axios.get<IBackendRes<TTSAudioGroup>>(API_ENDPOINTS.TTS.GROUP_BY_ID(id));
+};
+
+/** Lấy group audio theo groupKey */
+export const getTTSGroupByKeyAPI = (groupKey: string) => {
+  return axios.get<IBackendRes<TTSAudioGroup>>(API_ENDPOINTS.TTS.GROUP_BY_KEY(groupKey));
+};
+
+/** Cập nhật nhóm audio TTS */
+export const updateTTSGroupAPI = (id: number, body: UpdateTTSAudioGroupRequest) => {
+  return axios.put<IBackendRes<TTSAudioGroup>>(API_ENDPOINTS.TTS.GROUP_BY_ID(id), body);
+};
+
+/** Xóa nhóm audio TTS */
+export const deleteTTSGroupAPI = (id: number) => {
+  return axios.delete<IBackendRes<void>>(API_ENDPOINTS.TTS.GROUP_BY_ID(id));
+};
+
+/** Tạo audio đa ngôn ngữ cho group (bổ sung ngôn ngữ chưa có) */
+export const generateMultilingualForGroupAPI = (groupId: number) => {
+  return axios.post<IBackendRes<Record<string, AudioData>>>(
+    API_ENDPOINTS.TTS.GROUP_GENERATE_MULTILINGUAL(groupId)
+  );
+};
+
+/** Alias cho tương thích ngược với client-side code cũ */
+export const generateMultilingualAPI = generateMultilingualForGroupAPI;
+
+/** Lấy file audio: groupKey + languageCode */
+export const getGroupAudioAPI = (groupKey: string, languageCode: string) => {
+  return axios.get<Blob>(API_ENDPOINTS.TTS.GROUP_AUDIO(groupKey, languageCode), {
+    responseType: "blob",
+  });
+};
+
+// ===== Images =====
+
+/** Upload ảnh món ăn */
 export const uploadFoodImageOnlyAPI = (imageFile: File) => {
   const formData = new FormData();
   formData.append("image", imageFile);
@@ -171,114 +251,14 @@ export const uploadFoodImageOnlyAPI = (imageFile: File) => {
   );
 };
 
-// Helper function để lấy image URL (bucket đã public, dùng trực tiếp S3 URL)
+/** Build full image URL — prepends backend baseURL if imageUrl is a relative path */
 export const getImageUrl = (imageUrl: string | null | undefined): string | null => {
   if (!imageUrl) return null;
-  // Giữ nguyên URL (S3 bucket đã public)
-  return imageUrl;
-};
-
-// ============ Multi-language TTS ============
-
-export interface MultilingualAudioEntry {
-  id: number;
-  languageCode: string;
-  languageName: string;
-  s3Url: string | null;
-  fileSize: number;
-}
-
-export interface MultilingualAudioResponse {
-  groupId: string;
-  audios: MultilingualAudioEntry[];
-}
-
-export interface TTSAudioGroup {
-  id: number;
-  groupKey: string;
-  foodName: string | null;
-  price?: number | null;
-  description?: string | null;
-  imageUrl?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  accuracy?: number | null;
-  triggerRadiusMeters?: number | null;
-  priority?: number | null;
-  originalText: string | null;
-  originalVoice: string | null;
-  originalSpeed?: number | null;
-  originalFormat?: number | null;
-  originalWithoutFilter?: boolean | null;
-  createdAt: string;
-  updatedAt?: string | null;
-  createdBy?: string | null;
-  audios: MultilingualAudioEntry[];
-}
-
-/** Body cho PUT /tts/groups/{id} — khớp ReqUpdateTTSAudioGroupDTO */
-export interface UpdateTTSAudioGroupRequest {
-  foodName?: string | null;
-  price?: number | null;
-  description?: string | null;
-  imageUrl?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  accuracy?: number | null;
-  triggerRadiusMeters?: number | null;
-  priority?: number | null;
-  originalText: string;
-  originalVoice: string;
-  originalSpeed: number;
-  originalFormat: number;
-  originalWithoutFilter?: boolean;
-}
-
-// Tạo audio đa ngôn ngữ
-export const createMultilingualTTSAPI = (request: TTSRequest) => {
-  return axios.post<IBackendRes<MultilingualAudioResponse>>(API_ENDPOINTS.TTS.MULTILINGUAL, request);
-};
-
-// Lấy group audio theo ID
-export const getAudioGroupByIdAPI = (id: number) => {
-  return axios.get<IBackendRes<TTSAudioGroup>>(API_ENDPOINTS.TTS.GROUP_BY_ID(id));
-};
-
-// Lấy group audio theo groupKey
-export const getAudioGroupByKeyAPI = (groupKey: string) => {
-  return axios.get<IBackendRes<TTSAudioGroup>>(API_ENDPOINTS.TTS.GROUP_BY_KEY(groupKey));
-};
-
-// Generate multilingual audio cho audio đã tồn tại
-export const generateMultilingualAPI = (audioId: number) => {
-  return axios.post<IBackendRes<MultilingualAudioResponse>>(
-    API_ENDPOINTS.TTS.AUDIO_GENERATE_MULTILINGUAL(audioId)
-  );
-};
-
-// ============ Group CRUD ============
-
-export const getTTSGroupsAPI = (page: number = 1, size: number = 10) => {
-  return axios.get<IBackendRes<IModelPaginate<TTSAudioGroup>>>(
-    API_ENDPOINTS.TTS.GROUPS,
-    { params: { page, size } }
-  );
-};
-
-export const getTTSGroupByIdAPI = (id: number) => {
-  return axios.get<IBackendRes<TTSAudioGroup>>(API_ENDPOINTS.TTS.GROUP_BY_ID(id));
-};
-
-export const deleteTTSGroupAPI = (id: number) => {
-  return axios.delete<IBackendRes<void>>(API_ENDPOINTS.TTS.GROUP_BY_ID(id));
-};
-
-export const updateTTSGroupAPI = (id: number, body: UpdateTTSAudioGroupRequest) => {
-  return axios.put<IBackendRes<TTSAudioGroup>>(API_ENDPOINTS.TTS.GROUP_BY_ID(id), body);
-};
-
-export const generateMultilingualForGroupAPI = (groupId: number) => {
-  return axios.post<IBackendRes<MultilingualAudioResponse>>(
-    API_ENDPOINTS.TTS.GROUP_GENERATE_MULTILINGUAL(groupId)
-  );
+  if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+    return imageUrl;
+  }
+  // Relative path like "food-images/2026/03/25/file.jpg" or "/uploads/file.jpg"
+  const base = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+  const cleanPath = imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`;
+  return `${base}${cleanPath}`;
 };

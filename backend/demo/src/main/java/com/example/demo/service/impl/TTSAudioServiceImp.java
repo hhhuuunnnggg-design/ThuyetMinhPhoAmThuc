@@ -4,7 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -15,17 +15,17 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.demo.domain.AudioData;
 import com.example.demo.domain.TTSAudio;
 import com.example.demo.domain.User;
 import com.example.demo.domain.TTSAudioGroup;
 import com.example.demo.domain.dto.SupportedLanguage;
 import com.example.demo.domain.request.tts.ReqTTSDTO;
 import com.example.demo.domain.request.tts.ReqUpdateTTSAudioGroupDTO;
-import com.example.demo.domain.response.tts.ResMultilingualAudioDTO;
+import com.example.demo.domain.response.tts.ResAudioDataDTO;
 import com.example.demo.domain.response.tts.ResTTSAudioDTO;
 import com.example.demo.domain.response.tts.ResTTSAudioGroupDTO;
 import com.example.demo.repository.TTSAudioGroupRepository;
@@ -34,6 +34,7 @@ import com.example.demo.repository.UserServiceRepository;
 import com.example.demo.service.GoogleCloudTTSService;
 import com.example.demo.service.LocalStorageService;
 import com.example.demo.service.TTSAudioService;
+import com.example.demo.service.TTSService;
 import com.example.demo.service.TranslationService;
 import com.example.demo.util.error.IdInvalidException;
 
@@ -58,297 +59,38 @@ public class TTSAudioServiceImp implements TTSAudioService {
     @Autowired(required = false)
     private TranslationService translationService;
 
-    // ============ CREATE (với Group mới) ============
+    @Autowired
+    private TTSService ttsService;
+
+    // ============ READ — TTSAudio (chỉ xem) ============
 
     @Override
-    @Transactional
-    public TTSAudio createTTSAudio(ReqTTSDTO request, byte[] audioData, String fileName, String createdBy)
-            throws IOException {
-        String contentType = request.getTtsReturnOption() == 2 ? "audio/wav" : "audio/mpeg";
-        String s3Url = saveAudioFile(audioData, fileName, contentType);
-
-        // Tìm User từ email
-        User user = userServiceRepository.findByEmail(createdBy);
-
-        // Tạo Group mới
-        TTSAudioGroup group = TTSAudioGroup.builder()
-                .groupKey(UUID.randomUUID().toString())
-                .foodName(request.getFoodName())
-                .price(request.getPrice())
-                .description(request.getDescription())
-                .imageUrl(request.getImageUrl())
-                .latitude(request.getLatitude())
-                .longitude(request.getLongitude())
-                .accuracy(request.getAccuracy())
-                .triggerRadiusMeters(request.getTriggerRadiusMeters())
-                .priority(request.getPriority())
-                .originalText(request.getText())
-                .originalVoice(request.getVoice())
-                .originalSpeed(request.getSpeed())
-                .originalFormat(request.getTtsReturnOption())
-                .originalWithoutFilter(request.getWithoutFilter())
-                .createdBy(createdBy)
-                .user(user)
-                .createdAt(Instant.now())
-                .build();
-        group = ttsAudioGroupRepository.save(group);
-
-        // Tạo TTSAudio (tiếng Việt)
-        TTSAudio ttsAudio = TTSAudio.builder()
-                .group(group)
-                .languageCode(SupportedLanguage.VI)
-                .text(request.getText())
-                .translatedText(request.getText()) // Tiếng Việt = text gốc
-                .voice(request.getVoice())
-                .speed(request.getSpeed())
-                .format(request.getTtsReturnOption())
-                .withoutFilter(request.getWithoutFilter())
-                .fileName("tts-audios/" + fileName)
-                .s3Url(s3Url)
-                .fileSize((long) audioData.length)
-                .mimeType(contentType)
-                .createdAt(Instant.now())
-                .build();
-
-        return ttsAudioRepository.save(ttsAudio);
-    }
-
-    // ============ READ ============
-
-    @Override
-    public TTSAudio getTTSAudioById(Long id) throws IdInvalidException {
-        return ttsAudioRepository.findById(id)
+    public ResTTSAudioDTO getTTSAudioById(Long id) throws IdInvalidException {
+        TTSAudio ttsAudio = ttsAudioRepository.findById(id)
                 .orElseThrow(() -> new IdInvalidException("Không tìm thấy TTS audio với id: " + id));
+        return convertToDTO(ttsAudio);
     }
 
     @Override
-    public Page<ResTTSAudioDTO> getAllTTSAudios(Specification<TTSAudio> spec, Pageable pageable) {
-        Page<TTSAudio> ttsAudios = ttsAudioRepository.findAll(spec, pageable);
+    public Page<ResTTSAudioDTO> getAllTTSAudios(Pageable pageable) {
+        Page<TTSAudio> ttsAudios = ttsAudioRepository.findAll(pageable);
         return ttsAudios.map(this::convertToDTO);
     }
 
-    @Override
-    public List<ResTTSAudioDTO> getTTSAudiosByUser(String createdBy) {
-        List<TTSAudio> ttsAudios = ttsAudioRepository.findByGroup_CreatedByOrderByCreatedAtDesc(createdBy);
-        return ttsAudios.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
+    // ============ Group CRUD ============
 
-    // ============ UPDATE ============
-
+    /**
+     * Tạo mới một group: lưu metadata + tạo audio tiếng Việt + tạo audio đa ngôn ngữ (nếu có).
+     */
     @Override
     @Transactional
-    public TTSAudio updateTTSAudio(Long id, ReqTTSDTO request) throws IOException, IdInvalidException {
-        TTSAudio ttsAudio = getTTSAudioById(id);
-        TTSAudioGroup group = ttsAudio.getGroup();
-
-        // Cập nhật metadata audio
-        ttsAudio.setText(request.getText());
-        ttsAudio.setVoice(request.getVoice());
-        ttsAudio.setSpeed(request.getSpeed());
-        ttsAudio.setFormat(request.getTtsReturnOption());
-        ttsAudio.setWithoutFilter(request.getWithoutFilter());
-        ttsAudio.setUpdatedAt(Instant.now());
-
-        // Cập nhật metadata nhóm (thông tin ẩm thực, GPS, geofence)
-        if (group != null) {
-            group.setFoodName(request.getFoodName());
-            group.setPrice(request.getPrice());
-            group.setDescription(request.getDescription());
-            group.setImageUrl(request.getImageUrl());
-            group.setLatitude(request.getLatitude());
-            group.setLongitude(request.getLongitude());
-            group.setAccuracy(request.getAccuracy());
-            group.setTriggerRadiusMeters(request.getTriggerRadiusMeters());
-            group.setPriority(request.getPriority());
-            group.setOriginalText(request.getText());
-            group.setOriginalVoice(request.getVoice());
-            group.setOriginalSpeed(request.getSpeed());
-            group.setOriginalFormat(request.getTtsReturnOption());
-            group.setOriginalWithoutFilter(request.getWithoutFilter());
-            group.setUpdatedAt(Instant.now());
-            ttsAudioGroupRepository.save(group);
-        }
-
-        return ttsAudioRepository.save(ttsAudio);
-    }
-
-    @Override
-    @Transactional
-    public TTSAudio updateTTSAudioWithNewFile(Long id, ReqTTSDTO request, byte[] audioData, String fileName)
-            throws IOException, IdInvalidException {
-        TTSAudio ttsAudio = getTTSAudioById(id);
-        TTSAudioGroup group = ttsAudio.getGroup();
-        String contentType = request.getTtsReturnOption() == 2 ? "audio/wav" : "audio/mpeg";
-        String s3Url = saveAudioFile(audioData, fileName, contentType);
-
-        // Cập nhật audio
-        ttsAudio.setText(request.getText());
-        ttsAudio.setVoice(request.getVoice());
-        ttsAudio.setSpeed(request.getSpeed());
-        ttsAudio.setFormat(request.getTtsReturnOption());
-        ttsAudio.setWithoutFilter(request.getWithoutFilter());
-        ttsAudio.setFileName("tts-audios/" + fileName);
-        ttsAudio.setS3Url(s3Url);
-        ttsAudio.setFileSize((long) audioData.length);
-        ttsAudio.setMimeType(contentType);
-        ttsAudio.setUpdatedAt(Instant.now());
-
-        // Cập nhật group
-        if (group != null) {
-            group.setFoodName(request.getFoodName());
-            group.setPrice(request.getPrice());
-            group.setDescription(request.getDescription());
-            group.setImageUrl(request.getImageUrl());
-            group.setLatitude(request.getLatitude());
-            group.setLongitude(request.getLongitude());
-            group.setAccuracy(request.getAccuracy());
-            group.setTriggerRadiusMeters(request.getTriggerRadiusMeters());
-            group.setPriority(request.getPriority());
-            group.setOriginalText(request.getText());
-            group.setOriginalVoice(request.getVoice());
-            group.setOriginalSpeed(request.getSpeed());
-            group.setOriginalFormat(request.getTtsReturnOption());
-            group.setOriginalWithoutFilter(request.getWithoutFilter());
-            group.setUpdatedAt(Instant.now());
-            ttsAudioGroupRepository.save(group);
-        }
-
-        return ttsAudioRepository.save(ttsAudio);
-    }
-
-    // ============ DELETE ============
-
-    @Override
-    @Transactional
-    public void deleteTTSAudio(Long id) throws IOException, IdInvalidException {
-        TTSAudio ttsAudio = getTTSAudioById(id);
-        TTSAudioGroup group = ttsAudio.getGroup();
-
-        // Xóa file
-        if (ttsAudio.getS3Url() != null) {
-            try {
-                localStorageService.deleteFile(ttsAudio.getFileName());
-            } catch (Exception e) {
-                System.err.println("WARNING: Không thể xóa file: " + e.getMessage());
-            }
-        }
-
-        // Xóa audio
-        ttsAudioRepository.delete(ttsAudio);
-
-        // Nếu là audio cuối cùng trong group -> xóa luôn group
-        if (group != null) {
-            List<TTSAudio> remaining = ttsAudioRepository.findByGroupId(group.getId());
-            if (remaining == null || remaining.isEmpty()) {
-                ttsAudioGroupRepository.delete(group);
-            }
-        }
-    }
-
-    @Override
-    public void deleteTTSAudioFileFromS3(String fileName) throws IOException {
-        if (fileName != null) {
-            try {
-                localStorageService.deleteFile(fileName);
-            } catch (Exception e) {
-                throw new IOException("Không thể xóa file: " + e.getMessage(), e);
-            }
-        }
-    }
-
-    // ============ STORAGE HELPERS ============
-
-    @Override
-    public Resource getAudioResourceFromS3(String fileName) throws IOException {
-        try {
-            InputStream inputStream = localStorageService.getFileInputStream(fileName);
-            return new InputStreamResource(inputStream);
-        } catch (Exception e) {
-            throw new IOException("Không thể lấy file: " + e.getMessage(), e);
-        }
-    }
-
-    @Override
-    public Resource getImageResourceFromS3(String fileName) throws IOException {
-        try {
-            InputStream inputStream = localStorageService.getFileInputStream(fileName);
-            return new InputStreamResource(inputStream);
-        } catch (Exception e) {
-            throw new IOException("Không thể lấy ảnh: " + e.getMessage(), e);
-        }
-    }
-
-    // ============ DTO CONVERTER ============
-
-    private ResTTSAudioDTO convertToDTO(TTSAudio ttsAudio) {
-        TTSAudioGroup group = ttsAudio.getGroup();
-        String createdBy = group != null ? group.getCreatedBy() : null;
-        Long userId = group != null && group.getUser() != null ? group.getUser().getId() : null;
-        String userEmail = group != null && group.getUser() != null
-                ? group.getUser().getEmail() : createdBy;
-        String userFullName = group != null && group.getUser() != null
-                ? (group.getUser().getFirstName() + " " + group.getUser().getLastName()).trim()
-                : null;
-        String userAvatar = group != null && group.getUser() != null ? group.getUser().getAvatar() : null;
-
-        return ResTTSAudioDTO.builder()
-                .id(ttsAudio.getId())
-                .groupId(group != null ? group.getId() : null)
-                .groupKey(group != null ? group.getGroupKey() : null)
-                .languageCode(ttsAudio.getLanguageCode())
-                .text(ttsAudio.getText())
-                .voice(ttsAudio.getVoice())
-                .speed(ttsAudio.getSpeed())
-                .format(ttsAudio.getFormat())
-                .withoutFilter(ttsAudio.getWithoutFilter())
-                .fileName(ttsAudio.getFileName())
-                .s3Url(ttsAudio.getS3Url())
-                .fileSize(ttsAudio.getFileSize())
-                .mimeType(ttsAudio.getMimeType())
-                .createdAt(ttsAudio.getCreatedAt())
-                .updatedAt(ttsAudio.getUpdatedAt())
-                .createdBy(createdBy)
-                // Thông tin ẩm thực từ Group
-                .foodName(group != null ? group.getFoodName() : null)
-                .price(group != null ? group.getPrice() : null)
-                .description(group != null ? group.getDescription() : null)
-                .imageUrl(group != null ? group.getImageUrl() : null)
-                // GPS từ Group
-                .latitude(group != null ? group.getLatitude() : null)
-                .longitude(group != null ? group.getLongitude() : null)
-                .accuracy(group != null ? group.getAccuracy() : null)
-                // Geofence từ Group
-                .triggerRadiusMeters(group != null ? group.getTriggerRadiusMeters() : null)
-                .priority(group != null ? group.getPriority() : null)
-                // Original text/voice từ Group
-                .originalText(group != null ? group.getOriginalText() : null)
-                .originalVoice(group != null ? group.getOriginalVoice() : null)
-                // User info
-                .userId(userId)
-                .userEmail(userEmail)
-                .userFullName(userFullName)
-                .userAvatar(userAvatar)
-                .build();
-    }
-
-    // ============ MULTI-LANGUAGE ============
-
-    @Override
-    @Transactional
-    public ResMultilingualAudioDTO createMultilingualAudio(ReqTTSDTO request) throws IOException {
-        if (googleCloudTTSService == null || translationService == null) {
-            throw new IOException("Google Cloud TTS or Translation service is not available");
-        }
-
-        String originalText = request.getText();
-        String groupKey = UUID.randomUUID().toString();
+    public ResTTSAudioGroupDTO createGroup(ReqTTSDTO request) throws IOException {
         String createdBy = request.getCreatedBy() != null ? request.getCreatedBy() : "anonymous";
-        String contentType = request.getTtsReturnOption() == 2 ? "audio/wav" : "audio/mpeg";
         User user = userServiceRepository.findByEmail(createdBy);
+        String groupKey = UUID.randomUUID().toString();
+        float speed = request.getSpeed() != null ? request.getSpeed() : 1.0f;
 
-        // 1. Tạo Group với đầy đủ thông tin
+        // 1. Tạo Group
         TTSAudioGroup group = TTSAudioGroup.builder()
                 .groupKey(groupKey)
                 .foodName(request.getFoodName())
@@ -360,77 +102,97 @@ public class TTSAudioServiceImp implements TTSAudioService {
                 .accuracy(request.getAccuracy())
                 .triggerRadiusMeters(request.getTriggerRadiusMeters())
                 .priority(request.getPriority())
-                .originalText(originalText)
+                .originalText(request.getText())
                 .originalVoice(request.getVoice())
-                .originalSpeed(request.getSpeed())
+                .originalSpeed(speed)
                 .originalFormat(request.getTtsReturnOption())
-                .originalWithoutFilter(request.getWithoutFilter())
+                .originalWithoutFilter(request.getWithoutFilter() != null ? request.getWithoutFilter() : false)
                 .createdBy(createdBy)
                 .user(user)
                 .createdAt(Instant.now())
+                .audioMap(new HashMap<>())
                 .build();
         group = ttsAudioGroupRepository.save(group);
 
-        List<ResMultilingualAudioDTO.AudioEntry> entries = new ArrayList<>();
-        float speed = request.getSpeed() != null ? request.getSpeed() : 1.0f;
-
         // 2. Tạo audio cho 6 ngôn ngữ (VI + 5 ngôn ngữ khác)
-        String[] targetLangs = {
+        List<String> targetLangs = List.of(
                 SupportedLanguage.VI,
                 SupportedLanguage.EN, SupportedLanguage.ZH,
-                SupportedLanguage.JA, SupportedLanguage.KO, SupportedLanguage.FR
-        };
+                SupportedLanguage.JA, SupportedLanguage.KO, SupportedLanguage.FR);
 
         for (String lang : targetLangs) {
-            // Text cho ngôn ngữ này
             String textForLang = lang.equals(SupportedLanguage.VI)
-                    ? originalText
-                    : translationService.translate(originalText, lang);
+                    ? request.getText()
+                    : (translationService != null ? translationService.translate(request.getText(), lang) : null);
 
             if (textForLang == null || textForLang.isBlank()) {
                 continue;
             }
 
-            // Tạo audio
-            byte[] audioData = googleCloudTTSService.synthesize(textForLang, lang, speed);
+            try {
+                byte[] audioData;
+                String voiceCode = lang.equals(SupportedLanguage.VI)
+                        ? request.getVoice()
+                        : SupportedLanguage.getVoice(lang);
+                String mimeType;
+                String fileExt;
 
-            String fileName = String.format("tts-audios/%s/%s-%d.mp3",
-                    groupKey, lang, System.currentTimeMillis());
-            String s3Url = saveAudioFile(audioData, fileName, "audio/mpeg");
+                if (lang.equals(SupportedLanguage.VI)) {
+                    ReqTTSDTO viReq = new ReqTTSDTO();
+                    viReq.setText(textForLang);
+                    viReq.setVoice(request.getVoice());
+                    viReq.setSpeed(speed);
+                    viReq.setTtsReturnOption(request.getTtsReturnOption());
+                    viReq.setWithoutFilter(request.getWithoutFilter() != null ? request.getWithoutFilter() : false);
+                    audioData = ttsService.synthesizeViettelSpeechBytes(viReq);
+                    mimeType = request.getTtsReturnOption() == 2 ? "audio/wav" : "audio/mpeg";
+                    fileExt = request.getTtsReturnOption() == 2 ? "wav" : "mp3";
+                } else if (googleCloudTTSService != null) {
+                    audioData = googleCloudTTSService.synthesize(textForLang, lang, speed);
+                    mimeType = "audio/mpeg";
+                    fileExt = "mp3";
+                } else {
+                    continue;
+                }
 
-            TTSAudio audio = TTSAudio.builder()
-                    .group(group)
-                    .languageCode(lang)
-                    .text(textForLang)
-                    .translatedText(lang.equals(SupportedLanguage.VI) ? textForLang : textForLang)
-                    .voice(SupportedLanguage.getVoice(lang))
-                    .speed(speed)
-                    .format(3) // mp3
-                    .withoutFilter(request.getWithoutFilter() != null ? request.getWithoutFilter() : false)
-                    .fileName(fileName)
-                    .s3Url(s3Url)
-                    .fileSize((long) audioData.length)
-                    .mimeType("audio/mpeg")
-                    .createdAt(Instant.now())
-                    .build();
+                String fileName = String.format("tts-audios/%s/%s-%d.%s", groupKey, lang, System.currentTimeMillis(), fileExt);
+                String s3Url = saveAudioFile(audioData, fileName, mimeType);
 
-            audio = ttsAudioRepository.save(audio);
+                // Lưu TTSAudio riêng (dùng bảng cũ)
+                TTSAudio ttsAudio = TTSAudio.builder()
+                        .group(group)
+                        .languageCode(lang)
+                        .text(textForLang)
+                        .translatedText(textForLang)
+                        .voice(voiceCode)
+                        .speed(speed)
+                        .format(request.getTtsReturnOption())
+                        .withoutFilter(request.getWithoutFilter() != null ? request.getWithoutFilter() : false)
+                        .fileName(fileName)
+                        .s3Url(s3Url)
+                        .fileSize((long) audioData.length)
+                        .mimeType(mimeType)
+                        .createdAt(Instant.now())
+                        .build();
+                ttsAudioRepository.save(ttsAudio);
 
-            entries.add(ResMultilingualAudioDTO.AudioEntry.builder()
-                    .id(audio.getId())
-                    .languageCode(lang)
-                    .languageName(SupportedLanguage.getName(lang))
-                    .s3Url(s3Url)
-                    .fileSize((long) audioData.length)
-                    .build());
+                // Lưu vào audioMap của Group
+                AudioData audioEntry = AudioData.builder()
+                        .fileName(fileName)
+                        .s3Url(s3Url)
+                        .fileSize((long) audioData.length)
+                        .mimeType(mimeType)
+                        .build();
+                group.getAudioMap().put(lang, audioEntry);
 
-            System.out.println("✅ Đã tạo audio " + SupportedLanguage.getName(lang) + ": " + s3Url);
+                System.out.println("✅ Đã tạo audio " + SupportedLanguage.getName(lang) + ": " + s3Url);
+            } catch (Exception e) {
+                System.err.println("⚠️  Không thể tạo audio " + lang + ": " + e.getMessage());
+            }
         }
 
-        return ResMultilingualAudioDTO.builder()
-                .groupId(groupKey)
-                .audios(entries)
-                .build();
+        group = ttsAudioGroupRepository.save(group);
+        return buildGroupDTO(group);
     }
 
     @Override
@@ -448,245 +210,9 @@ public class TTSAudioServiceImp implements TTSAudioService {
     }
 
     @Override
-    @Transactional
-    public ResMultilingualAudioDTO createMultilingualForExisting(TTSAudio viAudio, ReqTTSDTO request) {
-        if (googleCloudTTSService == null || translationService == null) {
-            throw new RuntimeException("Google Cloud TTS or Translation service is not available");
-        }
-
-        String originalText = request.getText() != null ? request.getText()
-                : (viAudio.getGroup() != null ? viAudio.getGroup().getOriginalText() : viAudio.getText());
-        TTSAudioGroup group = viAudio.getGroup();
-
-        // Nếu audio chưa có group -> tạo group mới
-        if (group == null) {
-            String groupKey = UUID.randomUUID().toString();
-            group = TTSAudioGroup.builder()
-                    .groupKey(groupKey)
-                    .foodName(request.getFoodName())
-                    .price(request.getPrice())
-                    .description(request.getDescription())
-                    .imageUrl(request.getImageUrl())
-                    .latitude(request.getLatitude())
-                    .longitude(request.getLongitude())
-                    .accuracy(request.getAccuracy())
-                    .triggerRadiusMeters(request.getTriggerRadiusMeters())
-                    .priority(request.getPriority())
-                    .originalText(originalText)
-                    .originalVoice(request.getVoice() != null ? request.getVoice() : viAudio.getVoice())
-                    .originalSpeed(request.getSpeed() != null ? request.getSpeed() : viAudio.getSpeed())
-                    .originalFormat(request.getTtsReturnOption() != null ? request.getTtsReturnOption() : viAudio.getFormat())
-                    .originalWithoutFilter(request.getWithoutFilter() != null ? request.getWithoutFilter() : viAudio.getWithoutFilter())
-                    .createdBy(viAudio.getGroup() != null ? viAudio.getGroup().getCreatedBy() : null)
-                    .createdAt(Instant.now())
-                    .build();
-            group = ttsAudioGroupRepository.save(group);
-
-            // Link audio vào group
-            viAudio.setGroup(group);
-            viAudio.setLanguageCode(SupportedLanguage.VI);
-            viAudio.setText(originalText);
-            viAudio.setTranslatedText(originalText);
-            ttsAudioRepository.save(viAudio);
-        }
-
-        // Kiểm tra audio nào đã tồn tại trong group
-        Map<String, TTSAudio> existingByLang = group.getAudios().stream()
-                .collect(Collectors.toMap(
-                        a -> a.getLanguageCode() != null ? a.getLanguageCode() : SupportedLanguage.VI,
-                        a -> a,
-                        (a1, a2) -> a1));
-
-        List<ResMultilingualAudioDTO.AudioEntry> entries = new ArrayList<>();
-        float speed = request.getSpeed() != null ? request.getSpeed()
-                : (group.getOriginalSpeed() != null ? group.getOriginalSpeed() : 1.0f);
-
-        String[] targetLangs = {
-                SupportedLanguage.VI,
-                SupportedLanguage.EN, SupportedLanguage.ZH,
-                SupportedLanguage.JA, SupportedLanguage.KO, SupportedLanguage.FR
-        };
-
-        for (String lang : targetLangs) {
-            TTSAudio existing = existingByLang.get(lang);
-
-            if (existing != null) {
-                // Audio đã tồn tại -> thêm vào entries (không tạo lại)
-                entries.add(ResMultilingualAudioDTO.AudioEntry.builder()
-                        .id(existing.getId())
-                        .languageCode(lang)
-                        .languageName(SupportedLanguage.getName(lang))
-                        .s3Url(existing.getS3Url())
-                        .fileSize(existing.getFileSize())
-                        .build());
-                System.out.println("⏭️  Audio " + SupportedLanguage.getName(lang) + " đã tồn tại, bỏ qua.");
-                continue;
-            }
-
-            // Tạo audio mới cho ngôn ngữ này
-            String textForLang = lang.equals(SupportedLanguage.VI)
-                    ? originalText
-                    : translationService.translate(originalText, lang);
-
-            if (textForLang == null || textForLang.isBlank()) {
-                continue;
-            }
-
-            try {
-                byte[] audioData = googleCloudTTSService.synthesize(textForLang, lang, speed);
-
-                String fileName = String.format("tts-audios/%s/%s-%d.mp3",
-                        group.getGroupKey(), lang, System.currentTimeMillis());
-                String s3Url = saveAudioFile(audioData, fileName, "audio/mpeg");
-
-                TTSAudio audio = TTSAudio.builder()
-                        .group(group)
-                        .languageCode(lang)
-                        .text(textForLang)
-                        .translatedText(textForLang)
-                        .voice(SupportedLanguage.getVoice(lang))
-                        .speed(speed)
-                        .format(3)
-                        .withoutFilter(group.getOriginalWithoutFilter() != null ? group.getOriginalWithoutFilter() : false)
-                        .fileName(fileName)
-                        .s3Url(s3Url)
-                        .fileSize((long) audioData.length)
-                        .mimeType("audio/mpeg")
-                        .createdAt(Instant.now())
-                        .build();
-
-                audio = ttsAudioRepository.save(audio);
-
-                entries.add(ResMultilingualAudioDTO.AudioEntry.builder()
-                        .id(audio.getId())
-                        .languageCode(lang)
-                        .languageName(SupportedLanguage.getName(lang))
-                        .s3Url(s3Url)
-                        .fileSize((long) audioData.length)
-                        .build());
-
-                System.out.println("✅ Đã tạo audio " + SupportedLanguage.getName(lang) + ": " + s3Url);
-            } catch (Exception e) {
-                System.err.println("⚠️  Không thể tạo audio " + lang + ": " + e.getMessage());
-            }
-        }
-
-        return ResMultilingualAudioDTO.builder()
-                .groupId(group.getGroupKey())
-                .audios(entries)
-                .build();
-    }
-
-    // ============ GROUP DTO BUILDER ============
-
-    private ResTTSAudioGroupDTO buildGroupDTO(TTSAudioGroup group) {
-        List<ResMultilingualAudioDTO.AudioEntry> entries = new ArrayList<>();
-
-        if (group.getAudios() != null) {
-            for (TTSAudio audio : group.getAudios()) {
-                entries.add(ResMultilingualAudioDTO.AudioEntry.builder()
-                        .id(audio.getId())
-                        .languageCode(audio.getLanguageCode())
-                        .languageName(SupportedLanguage.getName(audio.getLanguageCode()))
-                        .s3Url(audio.getS3Url())
-                        .fileSize(audio.getFileSize())
-                        .build());
-            }
-        }
-
-        return ResTTSAudioGroupDTO.builder()
-                .id(group.getId())
-                .groupKey(group.getGroupKey())
-                .foodName(group.getFoodName())
-                .price(group.getPrice())
-                .description(group.getDescription())
-                .imageUrl(group.getImageUrl())
-                .latitude(group.getLatitude())
-                .longitude(group.getLongitude())
-                .accuracy(group.getAccuracy())
-                .triggerRadiusMeters(group.getTriggerRadiusMeters())
-                .priority(group.getPriority())
-                .originalText(group.getOriginalText())
-                .originalVoice(group.getOriginalVoice())
-                .originalSpeed(group.getOriginalSpeed())
-                .originalFormat(group.getOriginalFormat())
-                .originalWithoutFilter(group.getOriginalWithoutFilter())
-                .createdAt(group.getCreatedAt())
-                .updatedAt(group.getUpdatedAt())
-                .createdBy(group.getCreatedBy())
-                .audios(entries)
-                .build();
-    }
-
-    // ============ Group CRUD ============
-
-    @Override
     public Page<ResTTSAudioGroupDTO> getAllGroups(Pageable pageable) {
         Page<TTSAudioGroup> groups = ttsAudioGroupRepository.findAllOrderByCreatedAtDesc(pageable);
         return groups.map(this::buildGroupDTO);
-    }
-
-    @Override
-    @Transactional
-    public void deleteGroup(Long id) throws IOException, IdInvalidException {
-        TTSAudioGroup group = ttsAudioGroupRepository.findById(id)
-                .orElseThrow(() -> new IdInvalidException("Không tìm thấy group với id: " + id));
-
-        // Xóa tất cả audio files trong group từ S3
-        if (group.getAudios() != null) {
-            for (TTSAudio audio : group.getAudios()) {
-                if (audio.getFileName() != null) {
-                    try {
-                        localStorageService.deleteFile(audio.getFileName());
-                    } catch (Exception e) {
-                        System.err.println("⚠️ Không thể xóa file: " + e.getMessage());
-                    }
-                }
-            }
-        }
-
-        // Xóa group (cascade sẽ xóa các audio records)
-        ttsAudioGroupRepository.delete(group);
-    }
-
-    @Override
-    public ResMultilingualAudioDTO generateMultilingualForGroup(Long groupId) throws IOException, IdInvalidException {
-        TTSAudioGroup group = ttsAudioGroupRepository.findById(groupId)
-                .orElseThrow(() -> new IdInvalidException("Không tìm thấy group với id: " + groupId));
-
-        // Lấy audio tiếng Việt trong group
-        TTSAudio viAudio = null;
-        if (group.getAudios() != null) {
-            for (TTSAudio audio : group.getAudios()) {
-                if (SupportedLanguage.VI.equals(audio.getLanguageCode())) {
-                    viAudio = audio;
-                    break;
-                }
-            }
-        }
-
-        if (viAudio == null) {
-            throw new IdInvalidException("Không tìm thấy audio tiếng Việt trong group");
-        }
-
-        ReqTTSDTO request = new ReqTTSDTO();
-        request.setText(group.getOriginalText());
-        request.setVoice(group.getOriginalVoice());
-        request.setSpeed(group.getOriginalSpeed());
-        request.setTtsReturnOption(group.getOriginalFormat());
-        request.setWithoutFilter(group.getOriginalWithoutFilter());
-        request.setFoodName(group.getFoodName());
-        request.setPrice(group.getPrice());
-        request.setDescription(group.getDescription());
-        request.setImageUrl(group.getImageUrl());
-        request.setLatitude(group.getLatitude());
-        request.setLongitude(group.getLongitude());
-        request.setAccuracy(group.getAccuracy());
-        request.setTriggerRadiusMeters(group.getTriggerRadiusMeters());
-        request.setPriority(group.getPriority());
-        request.setCreatedBy(group.getCreatedBy());
-
-        return createMultilingualForExisting(viAudio, request);
     }
 
     @Override
@@ -708,22 +234,308 @@ public class TTSAudioServiceImp implements TTSAudioService {
         group.setOriginalVoice(req.getOriginalVoice());
         group.setOriginalSpeed(req.getOriginalSpeed());
         group.setOriginalFormat(req.getOriginalFormat());
-        group.setOriginalWithoutFilter(
-                req.getOriginalWithoutFilter() != null ? req.getOriginalWithoutFilter() : false);
+        group.setOriginalWithoutFilter(req.getOriginalWithoutFilter() != null ? req.getOriginalWithoutFilter() : false);
         group.setUpdatedAt(Instant.now());
 
-        ttsAudioRepository.findByGroupIdAndLanguageCode(id, SupportedLanguage.VI).ifPresent(vi -> {
-            vi.setText(req.getOriginalText());
-            vi.setTranslatedText(req.getOriginalText());
-            vi.setUpdatedAt(Instant.now());
-            ttsAudioRepository.save(vi);
-        });
-
-        ttsAudioGroupRepository.save(group);
+        group = ttsAudioGroupRepository.save(group);
         return buildGroupDTO(group);
     }
 
-    // ============ PRIVATE HELPERS ============
+    @Override
+    @Transactional
+    public void deleteGroup(Long id) throws IOException, IdInvalidException {
+        TTSAudioGroup group = ttsAudioGroupRepository.findById(id)
+                .orElseThrow(() -> new IdInvalidException("Không tìm thấy group với id: " + id));
+
+        // Xóa tất cả audio files trong group từ storage
+        if (group.getAudioMap() != null) {
+            for (AudioData audioData : group.getAudioMap().values()) {
+                if (audioData.getFileName() != null) {
+                    try {
+                        localStorageService.deleteFile(audioData.getFileName());
+                    } catch (Exception e) {
+                        System.err.println("⚠️ Không thể xóa file: " + e.getMessage());
+                    }
+                }
+            }
+        }
+
+        // Xóa tất cả TTSAudio records của group
+        ttsAudioRepository.findAll().stream()
+                .filter(a -> a.getGroup() != null && a.getGroup().getId().equals(id))
+                .forEach(ttsAudioRepository::delete);
+
+        // Xóa group (cascade sẽ xóa các audio records)
+        ttsAudioGroupRepository.delete(group);
+    }
+
+    // ============ Audio File ============
+
+    /**
+     * Sinh audio đa ngôn ngữ cho một group đã tồn tại.
+     */
+    @Override
+    @Transactional
+    public Map<String, ResAudioDataDTO> generateMultilingualAudio(Long groupId) throws IOException, IdInvalidException {
+        TTSAudioGroup group = ttsAudioGroupRepository.findById(groupId)
+                .orElseThrow(() -> new IdInvalidException("Không tìm thấy group với id: " + groupId));
+
+        boolean viMissing = group.getAudioMap() == null || !group.getAudioMap().containsKey(SupportedLanguage.VI);
+        List<String> foreignLangs = List.of(
+                SupportedLanguage.EN, SupportedLanguage.ZH,
+                SupportedLanguage.JA, SupportedLanguage.KO, SupportedLanguage.FR);
+        boolean anyForeignMissing = foreignLangs.stream().anyMatch(
+                l -> group.getAudioMap() == null || !group.getAudioMap().containsKey(l));
+
+        if (viMissing && ttsService == null) {
+            throw new IOException("Viettel TTS (tiếng Việt) không khả dụng");
+        }
+        if (anyForeignMissing && (googleCloudTTSService == null || translationService == null)) {
+            throw new IOException("Google Cloud TTS hoặc dịch thuật không khả dụng");
+        }
+
+        String originalText = group.getOriginalText();
+        float speed = group.getOriginalSpeed() != null ? group.getOriginalSpeed() : 1.0f;
+        String contentType = "audio/mpeg";
+        Map<String, ResAudioDataDTO> result = new HashMap<>();
+
+        List<String> targetLangs = List.of(
+                SupportedLanguage.VI,
+                SupportedLanguage.EN, SupportedLanguage.ZH,
+                SupportedLanguage.JA, SupportedLanguage.KO, SupportedLanguage.FR);
+
+        for (String lang : targetLangs) {
+            // Nếu audio đã tồn tại trong group -> bỏ qua
+            if (group.getAudioMap() != null && group.getAudioMap().containsKey(lang)) {
+                AudioData existing = group.getAudioMap().get(lang);
+                result.put(lang, ResAudioDataDTO.builder()
+                        .fileName(existing.getFileName())
+                        .s3Url(existing.getS3Url())
+                        .fileSize(existing.getFileSize())
+                        .mimeType(existing.getMimeType())
+                        .build());
+                System.out.println("⏭️  Audio " + SupportedLanguage.getName(lang) + " đã tồn tại, bỏ qua.");
+                continue;
+            }
+
+            String textForLang = lang.equals(SupportedLanguage.VI)
+                    ? originalText
+                    : translationService.translate(originalText, lang);
+
+            if (textForLang == null || textForLang.isBlank()) {
+                continue;
+            }
+
+            try {
+                byte[] audioData;
+                String mimeForFile;
+                String fileExt;
+                String voiceCode;
+                int formatCode;
+
+                if (lang.equals(SupportedLanguage.VI)) {
+                    ReqTTSDTO viReq = new ReqTTSDTO();
+                    viReq.setText(textForLang);
+                    viReq.setVoice(group.getOriginalVoice());
+                    viReq.setSpeed(speed);
+                    viReq.setTtsReturnOption(group.getOriginalFormat() != null ? group.getOriginalFormat() : 3);
+                    viReq.setWithoutFilter(group.getOriginalWithoutFilter() != null ? group.getOriginalWithoutFilter() : false);
+                    audioData = ttsService.synthesizeViettelSpeechBytes(viReq);
+                    formatCode = group.getOriginalFormat() != null ? group.getOriginalFormat() : 3;
+                    mimeForFile = formatCode == 2 ? "audio/wav" : "audio/mpeg";
+                    fileExt = formatCode == 2 ? "wav" : "mp3";
+                    voiceCode = group.getOriginalVoice();
+                } else {
+                    audioData = googleCloudTTSService.synthesize(textForLang, lang, speed);
+                    formatCode = 3;
+                    mimeForFile = contentType;
+                    fileExt = "mp3";
+                    voiceCode = SupportedLanguage.getVoice(lang);
+                }
+
+                String fileName = String.format("tts-audios/%s/%s-%d.%s",
+                        group.getGroupKey(), lang, System.currentTimeMillis(), fileExt);
+                String s3Url = saveAudioFile(audioData, fileName, mimeForFile);
+
+                // Lưu TTSAudio riêng
+                TTSAudio ttsAudio = TTSAudio.builder()
+                        .group(group)
+                        .languageCode(lang)
+                        .text(textForLang)
+                        .translatedText(textForLang)
+                        .voice(voiceCode)
+                        .speed(speed)
+                        .format(formatCode)
+                        .withoutFilter(group.getOriginalWithoutFilter() != null ? group.getOriginalWithoutFilter() : false)
+                        .fileName(fileName)
+                        .s3Url(s3Url)
+                        .fileSize((long) audioData.length)
+                        .mimeType(mimeForFile)
+                        .createdAt(Instant.now())
+                        .build();
+                ttsAudioRepository.save(ttsAudio);
+
+                // Lưu vào audioMap
+                if (group.getAudioMap() == null) {
+                    group.setAudioMap(new HashMap<>());
+                }
+                AudioData audioEntry = AudioData.builder()
+                        .fileName(fileName)
+                        .s3Url(s3Url)
+                        .fileSize((long) audioData.length)
+                        .mimeType(mimeForFile)
+                        .build();
+                group.getAudioMap().put(lang, audioEntry);
+
+                result.put(lang, ResAudioDataDTO.builder()
+                        .fileName(fileName)
+                        .s3Url(s3Url)
+                        .fileSize((long) audioData.length)
+                        .mimeType(mimeForFile)
+                        .build());
+
+                System.out.println("✅ Đã tạo audio " + SupportedLanguage.getName(lang) + ": " + s3Url);
+            } catch (Exception e) {
+                System.err.println("⚠️  Không thể tạo audio " + lang + ": " + e.getMessage());
+            }
+        }
+
+        ttsAudioGroupRepository.save(group);
+        return result;
+    }
+
+    /**
+     * Lấy file audio từ storage dựa vào groupKey và languageCode.
+     */
+    @Override
+    public Resource getAudioResource(String groupKey, String languageCode) throws IdInvalidException {
+        TTSAudioGroup group = ttsAudioGroupRepository.findByGroupKey(groupKey)
+                .orElseThrow(() -> new IdInvalidException("Không tìm thấy group với key: " + groupKey));
+
+        AudioData audioData = group.getAudioMap() != null ? group.getAudioMap().get(languageCode) : null;
+        if (audioData == null || audioData.getFileName() == null) {
+            throw new IdInvalidException("Không tìm thấy audio cho ngôn ngữ: " + languageCode);
+        }
+
+        try {
+            InputStream inputStream = localStorageService.getFileInputStream(audioData.getFileName());
+            return new InputStreamResource(inputStream);
+        } catch (Exception e) {
+            throw new IdInvalidException("Không thể lấy file audio: " + e.getMessage());
+        }
+    }
+
+    // ============ Helpers ============
+
+    @Override
+    public void deleteAudioFile(String fileName) throws IOException {
+        if (fileName != null) {
+            try {
+                localStorageService.deleteFile(fileName);
+            } catch (Exception e) {
+                throw new IOException("Không thể xóa file: " + e.getMessage(), e);
+            }
+        }
+    }
+
+    @Override
+    public Resource getImageResource(String fileName) throws IOException {
+        try {
+            InputStream inputStream = localStorageService.getFileInputStream(fileName);
+            return new InputStreamResource(inputStream);
+        } catch (Exception e) {
+            throw new IOException("Không thể lấy ảnh: " + e.getMessage(), e);
+        }
+    }
+
+    // ============ DTO CONVERTER ============
+
+    private ResTTSAudioDTO convertToDTO(TTSAudio ttsAudio) {
+        TTSAudioGroup group = ttsAudio.getGroup();
+
+        String createdBy = group != null ? group.getCreatedBy() : null;
+        Long userId = group != null && group.getUser() != null ? group.getUser().getId() : null;
+        String userEmail = group != null && group.getUser() != null
+                ? group.getUser().getEmail() : createdBy;
+        String userFullName = group != null && group.getUser() != null
+                ? (group.getUser().getFirstName() + " " + group.getUser().getLastName()).trim()
+                : null;
+        String userAvatar = group != null && group.getUser() != null ? group.getUser().getAvatar() : null;
+
+        return ResTTSAudioDTO.builder()
+                .id(ttsAudio.getId())
+                .groupId(group != null ? group.getId() : null)
+                .groupKey(group != null ? group.getGroupKey() : null)
+                .languageCode(ttsAudio.getLanguageCode())
+                .text(ttsAudio.getText())
+                .translatedText(ttsAudio.getTranslatedText())
+                .voice(ttsAudio.getVoice())
+                .speed(ttsAudio.getSpeed())
+                .format(ttsAudio.getFormat())
+                .withoutFilter(ttsAudio.getWithoutFilter())
+                .fileName(ttsAudio.getFileName())
+                .s3Url(ttsAudio.getS3Url())
+                .fileSize(ttsAudio.getFileSize())
+                .mimeType(ttsAudio.getMimeType())
+                .createdAt(ttsAudio.getCreatedAt())
+                .updatedAt(ttsAudio.getUpdatedAt())
+                .createdBy(createdBy)
+                .foodName(group != null ? group.getFoodName() : null)
+                .price(group != null ? group.getPrice() : null)
+                .description(group != null ? group.getDescription() : null)
+                .imageUrl(group != null ? group.getImageUrl() : null)
+                .latitude(group != null ? group.getLatitude() : null)
+                .longitude(group != null ? group.getLongitude() : null)
+                .accuracy(group != null ? group.getAccuracy() : null)
+                .triggerRadiusMeters(group != null ? group.getTriggerRadiusMeters() : null)
+                .priority(group != null ? group.getPriority() : null)
+                .originalText(group != null ? group.getOriginalText() : null)
+                .originalVoice(group != null ? group.getOriginalVoice() : null)
+                .userId(userId)
+                .userEmail(userEmail)
+                .userFullName(userFullName)
+                .userAvatar(userAvatar)
+                .build();
+    }
+
+    private ResTTSAudioGroupDTO buildGroupDTO(TTSAudioGroup group) {
+        Map<String, ResAudioDataDTO> audioMapDTO = new HashMap<>();
+
+        if (group.getAudioMap() != null) {
+            audioMapDTO = group.getAudioMap().entrySet().stream()
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            e -> ResAudioDataDTO.builder()
+                                    .fileName(e.getValue().getFileName())
+                                    .s3Url(e.getValue().getS3Url())
+                                    .fileSize(e.getValue().getFileSize())
+                                    .mimeType(e.getValue().getMimeType())
+                                    .build()));
+        }
+
+        return ResTTSAudioGroupDTO.builder()
+                .id(group.getId())
+                .groupKey(group.getGroupKey())
+                .foodName(group.getFoodName())
+                .price(group.getPrice())
+                .description(group.getDescription())
+                .imageUrl(group.getImageUrl())
+                .latitude(group.getLatitude())
+                .longitude(group.getLongitude())
+                .accuracy(group.getAccuracy())
+                .triggerRadiusMeters(group.getTriggerRadiusMeters())
+                .priority(group.getPriority())
+                .originalText(group.getOriginalText())
+                .originalVoice(group.getOriginalVoice())
+                .originalSpeed(group.getOriginalSpeed())
+                .originalFormat(group.getOriginalFormat())
+                .originalWithoutFilter(group.getOriginalWithoutFilter())
+                .audioMap(audioMapDTO)
+                .createdBy(group.getCreatedBy())
+                .createdAt(group.getCreatedAt())
+                .updatedAt(group.getUpdatedAt())
+                .build();
+    }
 
     private String saveAudioFile(byte[] audioData, String fileName, String contentType) {
         try {

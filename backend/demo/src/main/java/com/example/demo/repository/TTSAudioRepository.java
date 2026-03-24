@@ -11,11 +11,8 @@ import com.example.demo.domain.TTSAudio;
 
 @Repository
 public interface TTSAudioRepository extends JpaRepository<TTSAudio, Long>, JpaSpecificationExecutor<TTSAudio> {
-    List<TTSAudio> findByGroup_CreatedByOrderByCreatedAtDesc(String createdBy);
 
     List<TTSAudio> findAllByOrderByCreatedAtDesc();
-
-    List<TTSAudio> findByGroupId(Long groupId);
 
     Optional<TTSAudio> findByGroupIdAndLanguageCode(Long groupId, String languageCode);
 }

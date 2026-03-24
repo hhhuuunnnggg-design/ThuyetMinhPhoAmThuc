@@ -85,7 +85,7 @@ const AdminLayout = () => {
           },
         ]
       : []),
-    ...(hasPermission("/api/v1/tts/audios", "GET")
+    ...(hasPermission("/api/v1/tts/groups", "GET")
       ? [
           {
             label: <span>TTS Audio</span>,
@@ -93,7 +93,7 @@ const AdminLayout = () => {
             icon: <SoundOutlined />,
             children: [
               {
-                label: <Link to={ROUTES.ADMIN.TTS_AUDIO}>Quản lý Audios</Link>,
+                label: <Link to={ROUTES.ADMIN.TTS_AUDIO}>Danh sách Audios</Link>,
                 key: "tts-audio",
                 icon: <SoundOutlined />,
               },

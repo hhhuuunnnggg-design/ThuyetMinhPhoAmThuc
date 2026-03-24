@@ -2,10 +2,11 @@ package com.example.demo.domain;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
+import java.util.Map;
 
-import jakarta.persistence.CascadeType;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -13,7 +14,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.MapKeyColumn;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -38,7 +39,7 @@ public class TTSAudioGroup {
     @Column(nullable = false, unique = true, length = 36)
     String groupKey; // UUID — liên kết các audio cùng món
 
-    // ===== THÔNG TIN ẨM THỰC (DUY NHẤT trong group) =====
+    // ===== THÔNG TIN ẨM THỰC =====
     @Column
     String foodName; // Tên món ăn
 
@@ -51,7 +52,7 @@ public class TTSAudioGroup {
     @Column
     String imageUrl; // Link ảnh món ăn
 
-    // ===== VỊ TRÍ GPS (DUY NHẤT trong group) =====
+    // ===== VỊ TRÍ GPS =====
     @Column
     Double latitude; // Vĩ độ
 
@@ -61,14 +62,14 @@ public class TTSAudioGroup {
     @Column
     Float accuracy; // Độ chính xác của vị trí (mét)
 
-    // ===== CẤU HÌNH GEOFENCE (DUY NHẤT trong group) =====
+    // ===== CẤU HÌNH GEOFENCE =====
     @Column
     Float triggerRadiusMeters; // Bán kính kích hoạt POI (mét)
 
     @Column
     Integer priority; // Mức ưu tiên khi có nhiều POI gần nhau
 
-    // ===== TEXT & VOICE GỐC (DUY NHẤT trong group) =====
+    // ===== TEXT & VOICE GỐC (tiếng Việt) =====
     @Column(columnDefinition = "TEXT", nullable = false)
     String originalText; // Text gốc tiếng Việt
 
@@ -84,7 +85,13 @@ public class TTSAudioGroup {
     @Column
     Boolean originalWithoutFilter; // Có sử dụng filter hay không
 
-    // ===== USER INFO (DUY NHẤT trong group) =====
+    // ===== AUDIO ĐA NGÔN NGỮ — Map<languageCode, AudioData> =====
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "tts_audio_group_audios", joinColumns = @JoinColumn(name = "group_id"))
+    @MapKeyColumn(name = "language_code")
+    Map<String, AudioData> audioMap;
+
+    // ===== USER INFO =====
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     User user; // User sở hữu audio này
@@ -97,8 +104,4 @@ public class TTSAudioGroup {
 
     @Column
     Instant updatedAt;
-
-    // ===== DANH SÁCH AUDIO (1 audio mỗi ngôn ngữ) =====
-    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    List<TTSAudio> audios;
 }

@@ -1,52 +1,22 @@
-import { deleteTTSAudioAPI, getImageUrl, getTTSAudiosAPI, type TTSAudio } from "@/api/tts.api";
-import Restricted from "@/components/common/restricted";
-import { config } from "@/config";
-import { API_ENDPOINTS } from "@/constants";
+import { getTTSAudiosAPI, type TTSAudio } from "@/api/tts.api";
 import { logger } from "@/utils/logger";
-import { DeleteOutlined, EditOutlined, PlayCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import ProTable from "@ant-design/pro-table";
-import { Button, Image, message, Popconfirm, Space, Tag, Tooltip } from "antd";
-import { useRef, useState } from "react";
-import CreateTTSAudioModal from "./CreateTTSAudioModal";
-import EditTTSAudioModal from "./EditTTSAudioModal";
+import { Tag, message } from "antd";
+import { useRef } from "react";
+
+const LANGUAGE_COLORS: Record<string, string> = {
+  vi: "#ff6b35",
+  en: "#3b82f6",
+  zh: "#ef4444",
+  ja: "#ec4899",
+  ko: "#8b5cf6",
+  fr: "#10b981",
+};
 
 const TTSAudioTable = () => {
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [editingAudio, setEditingAudio] = useState<TTSAudio | null>(null);
   const actionRef = useRef<any>();
 
-  const handleEdit = (record: TTSAudio) => {
-    setEditingAudio(record);
-    setIsEditModalOpen(true);
-  };
-
-  const handleDelete = async (id: number) => {
-    try {
-      await deleteTTSAudioAPI(id);
-      message.success("Xóa audio thành công!");
-      actionRef.current?.reload();
-    } catch (error: any) {
-      message.error("Xóa audio thất bại: " + (error?.message || "Lỗi không xác định"));
-      logger.error("Delete TTS audio error:", error);
-    }
-  };
-
-  const handlePlayAudio = (record: TTSAudio) => {
-    const downloadUrl = `${config.api.baseURL}${API_ENDPOINTS.TTS.AUDIO_DOWNLOAD(record.id)}`;
-    const audio = new Audio(downloadUrl);
-    audio.play().catch(() => message.error("Không thể phát audio"));
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + " B";
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB";
-    return (bytes / (1024 * 1024)).toFixed(2) + " MB";
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString("vi-VN");
-  };
+  const formatDate = (dateString: string) => new Date(dateString).toLocaleString("vi-VN");
 
   const columns = [
     {
@@ -54,342 +24,103 @@ const TTSAudioTable = () => {
       dataIndex: "id",
       key: "id",
       hideInSearch: true,
-      width: 80,
+      width: 70,
     },
     {
-      title: "Ảnh",
-      dataIndex: "imageUrl",
-      key: "imageUrl",
-      width: 90,
+      title: "Ngôn ngữ",
+      dataIndex: "languageCode",
+      key: "languageCode",
       hideInSearch: true,
-      render: (_: any, record: TTSAudio) => {
-        const imageUrl = getImageUrl(record.imageUrl);
-        return imageUrl ? (
-          <Image
-            width={56}
-            height={56}
-            src={imageUrl}
-            alt={record.foodName || "Ảnh món"}
-            style={{ borderRadius: 8, objectFit: "cover" }}
-            preview={{ mask: "Xem ảnh" }}
-            fallback="https://via.placeholder.com/56x56?text=No+Image"
-          />
-        ) : (
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 8,
-              background: "#f5f5f5",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 12,
-              color: "#999",
-            }}
-          >
-            No image
-          </div>
-        );
-      },
+      width: 100,
+      render: (v: string) => (
+        <Tag color={LANGUAGE_COLORS[v] || "default"} style={{ fontWeight: 600 }}>
+          {(v || "").toUpperCase()}
+        </Tag>
+      ),
     },
     {
-      title: "Món ăn / Gian hàng",
-      dataIndex: "foodName",
-      key: "foodName",
-      width: 260,
+      title: "Nội dung",
+      dataIndex: "text",
+      key: "text",
+      width: 400,
+      ellipsis: true,
+      render: (v: string) => (
+        <span style={{ fontSize: 13 }}>{v}</span>
+      ),
+    },
+    {
+      title: "Giọng đọc",
+      dataIndex: "voice",
+      key: "voice",
+      hideInSearch: true,
+      width: 150,
+      render: (v: string) => (v ? <Tag color="blue">{v}</Tag> : "—"),
+    },
+    {
+      title: "Tốc độ",
+      dataIndex: "speed",
+      key: "speed",
+      hideInSearch: true,
+      width: 90,
+      render: (v: number) => (v != null ? `x${v.toFixed(1)}` : "—"),
+    },
+    {
+      title: "Group",
+      dataIndex: "groupKey",
+      key: "groupKey",
+      hideInSearch: true,
+      width: 280,
       render: (_: any, record: TTSAudio) => (
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <span style={{ fontWeight: 600 }}>{record.foodName || "—"}</span>
-          <span style={{ fontSize: 12, color: "#888", lineHeight: 1.4 }}>
-            {record.description
-              ? record.description.length > 60
-                ? record.description.substring(0, 60) + "..."
-                : record.description
-              : record.text.length > 60
-                ? record.text.substring(0, 60) + "..."
-                : record.text}
-          </span>
-          {record.price != null && (
-            <span style={{ fontSize: 12, color: "#ff6b35", fontWeight: 600, marginTop: 2 }}>
-              {Number(record.price).toLocaleString("vi-VN")} ₫
+          <span style={{ fontWeight: 600, fontSize: 12 }}>{record.groupKey || `Group #${record.groupId}`}</span>
+          {record.translatedText && record.translatedText !== record.text && (
+            <span style={{ fontSize: 11, color: "#888" }}>
+              → {record.translatedText.length > 40 ? record.translatedText.substring(0, 40) + "..." : record.translatedText}
             </span>
           )}
         </div>
       ),
     },
     {
-      title: "Giá",
-      dataIndex: "price",
-      key: "price",
-      hideInSearch: true,
-      width: 110,
-      render: (_: any, record: TTSAudio) =>
-        record.price != null ? `${Number(record.price).toLocaleString("vi-VN")} ₫` : "—",
-    },
-    {
-      title: "Voice",
-      dataIndex: "voice",
-      key: "voice",
-      width: 150,
-      render: (_: any, record: TTSAudio) => <Tag color="blue">{record.voice}</Tag>,
-    },
-    {
-      title: "Speed",
-      dataIndex: "speed",
-      key: "speed",
-      hideInSearch: true,
-      width: 100,
-      render: (_: any, record: TTSAudio) => `x${record.speed.toFixed(1)}`,
-    },
-    {
-      title: "Format",
-      dataIndex: "format",
-      key: "format",
-      hideInSearch: true,
-      width: 100,
-      render: (_: any, record: TTSAudio) => (
-        <Tag color={record.format === 2 ? "green" : "orange"}>{record.format === 2 ? "WAV" : "MP3"}</Tag>
-      ),
-    },
-    {
-      title: "File Size",
-      dataIndex: "fileSize",
-      key: "fileSize",
-      hideInSearch: true,
-      width: 120,
-      render: (_: any, record: TTSAudio) => formatFileSize(record.fileSize),
-    },
-    {
-      title: "GPS",
-      dataIndex: "latitude",
-      key: "gps",
-      hideInSearch: true,
-      width: 180,
-      render: (_: any, record: TTSAudio) =>
-        record.latitude != null && record.longitude != null ? (
-          <div style={{ fontSize: 12 }}>
-            <div>
-              Lat: <b>{record.latitude.toFixed(5)}</b>
-            </div>
-            <div>
-              Lng: <b>{record.longitude.toFixed(5)}</b>
-            </div>
-            {record.triggerRadiusMeters != null && (
-              <div style={{ color: "#1890ff", fontWeight: 500 }}>
-                Bán kính: {record.triggerRadiusMeters}m
-              </div>
-            )}
-            {record.priority != null && (
-              <div style={{ color: "#52c41a", fontWeight: 500 }}>
-                Ưu tiên: {record.priority}
-              </div>
-            )}
-            {record.accuracy != null && (
-              <div style={{ color: "#999", fontSize: 11 }}>Accuracy: {record.accuracy}m</div>
-            )}
-          </div>
-        ) : (
-          <span>—</span>
-        ),
-    },
-    {
-      title: "Người tạo",
-      key: "createdBy",
-      width: 180,
-      hideInSearch: true,
-      render: (_: any, record: TTSAudio) => {
-        if (record.userFullName) {
-          return (
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {record.userAvatar ? (
-                <img
-                  src={record.userAvatar}
-                  alt={record.userFullName}
-                  style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: "50%",
-                    background: "#1890ff",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#fff",
-                    fontSize: 12,
-                    fontWeight: 600,
-                  }}
-                >
-                  {record.userFullName.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                <span style={{ fontWeight: 500, fontSize: 13 }}>{record.userFullName}</span>
-                <span style={{ fontSize: 11, color: "#888" }}>{record.userEmail}</span>
-              </div>
-            </div>
-          );
-        }
-        return <span style={{ color: "#999" }}>{record.createdBy || "—"}</span>;
-      },
-    },
-    {
-      title: "Created At",
+      title: "Ngày tạo",
       dataIndex: "createdAt",
       key: "createdAt",
       hideInSearch: true,
-      width: 180,
-      render: (_: any, record: TTSAudio) => formatDate(record.createdAt),
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      hideInSearch: true,
-      width: 200,
-      fixed: "right" as const,
-      render: (_: any, record: TTSAudio) => (
-        <Space>
-          <Tooltip title={record.s3Url ? "Phát audio từ S3" : "Phát audio (regenerate)"}>
-            <Button
-              type="primary"
-              icon={<PlayCircleOutlined />}
-              size="small"
-              onClick={() => handlePlayAudio(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Chỉnh sửa">
-            <Button
-              type="default"
-              icon={<EditOutlined />}
-              size="small"
-              onClick={() => handleEdit(record)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Xóa audio"
-            description="Bạn có chắc chắn muốn xóa audio này?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Tooltip title="Xóa">
-              <Button type="primary" danger icon={<DeleteOutlined />} size="small" />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
-      ),
+      width: 170,
+      render: (v: string) => formatDate(v),
     },
   ];
 
   return (
     <div style={{ padding: 24 }}>
-      <Restricted
-        permission="/api/v1/tts/audios"
-        method="GET"
-        fallback={<div style={{ padding: 20 }}>Bạn không có quyền xem danh sách TTS audios</div>}
-      >
-        <ProTable<TTSAudio>
-          headerTitle="Quản lý TTS Audios"
-          actionRef={actionRef}
-          rowKey="id"
-          search={{
-            labelWidth: "auto",
-          }}
-          request={async (params) => {
-            try {
-              const response: any = await getTTSAudiosAPI(params.current || 1, params.pageSize || 10);
-              
-              logger.debug("TTS Audios response:", response);
-              logger.debug("Response type:", typeof response);
-              logger.debug("Response keys:", response ? Object.keys(response) : "null");
-              
-              // Response bị wrap trong RestResponse: { statusCode, error, message, data: { meta, result } }
-              // Axios interceptor đã unwrap response.data, nên response chính là RestResponse<IModelPaginate<TTSAudio>>
-              
-              // Kiểm tra nếu bị wrap trong RestResponse (có data field chứa IModelPaginate)
-              if (response?.data?.meta && response?.data?.result) {
-                return {
-                  data: Array.isArray(response.data.result) ? response.data.result : [],
-                  success: true,
-                  total: response.data.meta.total || 0,
-                };
-              }
-              
-              // Kiểm tra nếu response có meta và result trực tiếp (fallback)
-              if (response?.meta && response?.result) {
-                return {
-                  data: Array.isArray(response.result) ? response.result : [],
-                  success: true,
-                  total: response.meta.total || 0,
-                };
-              }
-              
-              logger.warn("Invalid response format:", response);
-              logger.warn("Expected format: { meta: {...}, result: [...] } or { data: { meta: {...}, result: [...] } }");
-              return {
-                data: [],
-                success: false,
-                total: 0,
-              };
-            } catch (error) {
-              logger.error("Fetch TTS audios error:", error);
-              message.error("Không thể tải danh sách TTS audios");
-              return {
-                data: [],
-                success: false,
-                total: 0,
-              };
+      <ProTable<TTSAudio>
+        headerTitle="Danh sách TTS Audio (Chỉ xem)"
+        actionRef={actionRef}
+        rowKey="id"
+        search={{ labelWidth: "auto" }}
+        request={async (params) => {
+          try {
+            const response: any = await getTTSAudiosAPI(params.current || 1, params.pageSize || 10);
+            if (response?.data?.meta && response?.data?.result) {
+              return { data: response.data.result || [], success: true, total: response.data.meta.total || 0 };
             }
-          }}
-          columns={columns as any}
-          toolBarRender={() => [
-            <Button
-              key="create"
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setIsCreateModalOpen(true)}
-            >
-              Tạo mới
-            </Button>,
-            <Button key="refresh" onClick={() => actionRef.current?.reload()}>
-              Làm mới
-            </Button>,
-          ]}
-          pagination={{
-            defaultPageSize: 10,
-            showSizeChanger: true,
-            showTotal: (total) => `Tổng ${total} audio`,
-          }}
-        />
-      </Restricted>
-
-      <CreateTTSAudioModal
-        open={isCreateModalOpen}
-        onCancel={() => setIsCreateModalOpen(false)}
-        onSuccess={() => {
-          setIsCreateModalOpen(false);
-          actionRef.current?.reload();
+            if (response?.meta && response?.result) {
+              return { data: response.result || [], success: true, total: response.meta.total || 0 };
+            }
+            return { data: [], success: false, total: 0 };
+          } catch (error) {
+            logger.error("Fetch TTS audios error:", error);
+            message.error("Không thể tải danh sách TTS audios");
+            return { data: [], success: false, total: 0 };
+          }
+        }}
+        columns={columns as any}
+        pagination={{
+          defaultPageSize: 15,
+          showSizeChanger: true,
+          showTotal: (total) => `Tổng ${total} audio`,
         }}
       />
-
-      {editingAudio && (
-        <EditTTSAudioModal
-          open={isEditModalOpen}
-          onCancel={() => {
-            setIsEditModalOpen(false);
-            setEditingAudio(null);
-          }}
-          onSuccess={() => {
-            setIsEditModalOpen(false);
-            setEditingAudio(null);
-            actionRef.current?.reload();
-          }}
-          audio={editingAudio}
-        />
-      )}
     </div>
   );
 };

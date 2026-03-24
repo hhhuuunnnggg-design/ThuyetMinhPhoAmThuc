@@ -1,7 +1,6 @@
 import {
-  generateMultilingualAPI,
+  createTTSGroupAPI,
   getVoicesAPI,
-  synthesizeAndSaveAPI,
   uploadFoodImageOnlyAPI,
   type TTSRequest,
   type Voice,
@@ -82,28 +81,15 @@ const CreateTTSAudioModal = ({ open, onCancel, onSuccess }: CreateTTSAudioModalP
     return false;
   };
 
-  const handleSubmit = async (values: TTSRequest & { autoMultilingual?: boolean }) => {
+  const handleSubmit = async (values: TTSRequest) => {
     try {
       setLoading(true);
-      const result = await synthesizeAndSaveAPI(values);
-      const audioId = result?.data?.id;
-
-      if (values.autoMultilingual && audioId) {
-        message.loading({ content: "Đang tạo audio đa ngôn ngữ...", key: "multilingual" });
-        try {
-          await generateMultilingualAPI(audioId);
-          message.success({ content: "Tạo audio + đa ngôn ngữ thành công!", key: "multilingual" });
-        } catch (multiError) {
-          message.warning({ content: "Audio tạo thành công nhưng tạo đa ngôn ngữ thất bại.", key: "multilingual" });
-          logger.error("Generate multilingual error:", multiError);
-        }
-      } else {
-        message.success("Tạo audio thành công!");
-      }
+      await createTTSGroupAPI(values);
+      message.success("Tạo nhóm audio thành công!");
       onSuccess();
     } catch (error: any) {
-      message.error("Tạo audio thất bại: " + (error?.message || "Lỗi không xác định"));
-      logger.error("Create TTS audio error:", error);
+      message.error("Tạo nhóm audio thất bại: " + (error?.message || "Lỗi không xác định"));
+      logger.error("Create TTS group error:", error);
     } finally {
       setLoading(false);
     }
@@ -111,7 +97,7 @@ const CreateTTSAudioModal = ({ open, onCancel, onSuccess }: CreateTTSAudioModalP
 
   return (
     <Modal
-      title="Tạo mới TTS Audio"
+      title="Tạo nhóm TTS Audio"
       open={open}
       onCancel={onCancel}
       footer={null}
@@ -122,7 +108,7 @@ const CreateTTSAudioModal = ({ open, onCancel, onSuccess }: CreateTTSAudioModalP
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
-        initialValues={{ speed: 1.0, ttsReturnOption: 3, withoutFilter: false, autoMultilingual: false }}
+        initialValues={{ speed: 1.0, ttsReturnOption: 3, withoutFilter: false }}
       >
         <SectionLabel>Cài đặt TTS</SectionLabel>
 
@@ -168,15 +154,6 @@ const CreateTTSAudioModal = ({ open, onCancel, onSuccess }: CreateTTSAudioModalP
           label="Bộ lọc giọng nói"
           valuePropName="checked"
           tooltip="Bật để giọng đọc tự nhiên hơn (có bộ lọc nâng cao), tắt để giữ nguyên tín hiệu gốc"
-        >
-          <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
-        </Form.Item>
-
-        <Form.Item
-          name="autoMultilingual"
-          label="Tạo đa ngôn ngữ"
-          valuePropName="checked"
-          tooltip="Bật để đồng thời tạo audio cho tất cả ngôn ngữ: EN, ZH, JA, KO, FR"
         >
           <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
         </Form.Item>

@@ -6,7 +6,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import java.io.ByteArrayInputStream;
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,9 +26,10 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.example.demo.domain.TTSAudio;
 import com.example.demo.domain.TTSAudioGroup;
 import com.example.demo.domain.request.tts.ReqTTSDTO;
+import com.example.demo.domain.response.tts.ResAudioDataDTO;
+import com.example.demo.domain.response.tts.ResTTSAudioGroupDTO;
 import com.example.demo.service.TTSAudioService;
 import com.example.demo.service.TTSService;
 
@@ -57,92 +61,69 @@ class TTSControllerTest {
             return ResponseEntity.ok().headers(headers).body(resource);
         });
 
-        when(ttsAudioService.createTTSAudio(any(ReqTTSDTO.class), any(byte[].class), anyString(), anyString()))
-                .thenAnswer(invocation -> {
-                    ReqTTSDTO req = invocation.getArgument(0);
-                    byte[] audio = invocation.getArgument(1);
-                    String fileName = invocation.getArgument(2);
-                    String createdBy = invocation.getArgument(3);
+        when(ttsAudioService.createGroup(any(ReqTTSDTO.class))).thenAnswer(invocation -> {
+            ReqTTSDTO req = invocation.getArgument(0);
 
-                    TTSAudioGroup group = TTSAudioGroup.builder()
-                            .id(1L)
-                            .groupKey("test-group-key")
-                            .originalText(req.getText())
-                            .originalVoice(req.getVoice())
-                            .createdBy(createdBy)
-                            .createdAt(Instant.now())
-                            .build();
+            Map<String, ResAudioDataDTO> audioMap = new HashMap<>();
+            audioMap.put("vi", ResAudioDataDTO.builder()
+                    .fileName("test-file.mp3")
+                    .s3Url("http://localhost/test-file.mp3")
+                    .fileSize(1024L)
+                    .mimeType("audio/mpeg")
+                    .build());
 
-                    boolean isWav = req.getTtsReturnOption() != null && req.getTtsReturnOption() == 2;
-                    return TTSAudio.builder()
-                            .id(1L)
-                            .group(group)
-                            .languageCode("vi")
-                            .text(req.getText())
-                            .voice(req.getVoice())
-                            .speed(req.getSpeed())
-                            .format(req.getTtsReturnOption())
-                            .withoutFilter(req.getWithoutFilter())
-                            .fileName(fileName)
-                            .s3Url(null)
-                            .fileSize((long) audio.length)
-                            .mimeType(isWav ? "audio/wav" : "audio/mpeg")
-                            .createdAt(Instant.now())
-                            .build();
-                });
+            return ResTTSAudioGroupDTO.builder()
+                    .id(1L)
+                    .groupKey("test-group-key")
+                    .originalText(req.getText())
+                    .originalVoice(req.getVoice())
+                    .originalSpeed(req.getSpeed())
+                    .originalFormat(req.getTtsReturnOption())
+                    .originalWithoutFilter(req.getWithoutFilter())
+                    .foodName(req.getFoodName())
+                    .price(req.getPrice())
+                    .description(req.getDescription())
+                    .imageUrl(req.getImageUrl())
+                    .latitude(req.getLatitude())
+                    .longitude(req.getLongitude())
+                    .accuracy(req.getAccuracy())
+                    .triggerRadiusMeters(req.getTriggerRadiusMeters())
+                    .priority(req.getPriority())
+                    .createdBy(req.getCreatedBy())
+                    .createdAt(Instant.now())
+                    .audioMap(audioMap)
+                    .build();
+        });
     }
 
     @Test
-    void testSynthesizeAndSave_Success() throws Exception {
-        // Dữ liệu test
+    void testCreateGroup_Success() throws Exception {
         String requestBody = """
                 {
                     "text": "Xin chào, đây là test text-to-speech",
                     "voice": "hcm-diemmy",
                     "speed": 1.0,
                     "ttsReturnOption": 3,
-                    "withoutFilter": false
+                    "withoutFilter": false,
+                    "foodName": "Phở bò",
+                    "price": 50000,
+                    "latitude": 10.762622,
+                    "longitude": 106.660172
                 }
                 """;
 
-        // Gọi API (cần authentication token)
-        mockMvc.perform(post("/api/v1/tts/synthesize-and-save")
+        mockMvc.perform(post("/api/v1/tts/groups")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(requestBody)
-        // .header("Authorization", "Bearer YOUR_TOKEN_HERE") // Uncomment và thêm token
-        )
+                .content(requestBody))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.statusCode").value(200))
-                .andExpect(jsonPath("$.message").value("Tạo và lưu audio thành công"))
-                .andExpect(jsonPath("$.data").exists())
-                .andExpect(jsonPath("$.data.text").value("Xin chào, đây là test text-to-speech"))
-                .andExpect(jsonPath("$.data.voice").value("hcm-diemmy"));
+                .andExpect(jsonPath("$.data.originalText").value("Xin chào, đây là test text-to-speech"))
+                .andExpect(jsonPath("$.data.originalVoice").value("hcm-diemmy"))
+                .andExpect(jsonPath("$.data.foodName").value("Phở bò"));
     }
 
     @Test
-    void testSynthesizeAndSave_WithWAV() throws Exception {
-        String requestBody = """
-                {
-                    "text": "Test với định dạng WAV",
-                    "voice": "hn-quynhanh",
-                    "speed": 1.2,
-                    "ttsReturnOption": 2,
-                    "withoutFilter": true
-                }
-                """;
-
-        mockMvc.perform(post("/api/v1/tts/synthesize-and-save")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(requestBody)
-        // .header("Authorization", "Bearer YOUR_TOKEN_HERE")
-        )
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.format").value(2));
-    }
-
-    @Test
-    void testSynthesizeAndSave_InvalidRequest() throws Exception {
-        // Test với text rỗng
+    void testCreateGroup_InvalidRequest() throws Exception {
         String requestBody = """
                 {
                     "text": "",
@@ -152,11 +133,9 @@ class TTSControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/v1/tts/synthesize-and-save")
+        mockMvc.perform(post("/api/v1/tts/groups")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(requestBody)
-        // .header("Authorization", "Bearer YOUR_TOKEN_HERE")
-        )
+                .content(requestBody))
                 .andExpect(status().isBadRequest());
     }
 }

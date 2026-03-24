@@ -1,9 +1,10 @@
 import {
+  getAudioGroupByIdAPI,
   getVoicesAPI,
-  updateTTSAudioAPI,
-  uploadFoodImageAPI,
-  type TTSAudio,
-  type TTSRequest,
+  updateTTSGroupAPI,
+  uploadFoodImageOnlyAPI,
+  type TTSAudioGroup,
+  type UpdateTTSAudioGroupRequest,
   type Voice,
 } from "@/api/tts.api";
 import { logger } from "@/utils/logger";
@@ -13,11 +14,21 @@ import { useEffect, useState } from "react";
 
 const { TextArea } = Input;
 
-interface EditTTSAudioModalProps {
+function unwrapGroupPayload(res: unknown): TTSAudioGroup | null {
+  const r = res as Record<string, unknown>;
+  if (r?.id != null && typeof r.id === "number") return r as unknown as TTSAudioGroup;
+  const top = r?.data as Record<string, unknown> | undefined;
+  if (top?.id != null && typeof top.id === "number") return top as unknown as TTSAudioGroup;
+  const nested = top?.data as TTSAudioGroup | undefined;
+  if (nested?.id != null) return nested;
+  return null;
+}
+
+interface EditTTSAudioGroupModalProps {
   open: boolean;
+  groupId: number | null;
   onCancel: () => void;
   onSuccess: () => void;
-  audio: TTSAudio;
 }
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
@@ -32,172 +43,210 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
   }}>{children}</div>
 );
 
-const EditTTSAudioModal = ({ open, onCancel, onSuccess, audio }: EditTTSAudioModalProps) => {
+const EditTTSAudioGroupModal = ({ open, groupId, onCancel, onSuccess }: EditTTSAudioGroupModalProps) => {
   const [form] = Form.useForm();
   const [voices, setVoices] = useState<Voice[]>([]);
   const [loadingVoices, setLoadingVoices] = useState(false);
+  const [loadingGroup, setLoadingGroup] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open && audio) {
-      fetchVoices();
-      form.setFieldsValue({
-        text: audio.text,
-        voice: audio.voice,
-        speed: audio.speed,
-        ttsReturnOption: audio.format,
-        withoutFilter: audio.withoutFilter,
-        foodName: audio.foodName,
-        price: audio.price,
-        description: audio.description,
-        imageUrl: audio.imageUrl,
-        latitude: audio.latitude,
-        longitude: audio.longitude,
-        accuracy: audio.accuracy,
-        triggerRadiusMeters: audio.triggerRadiusMeters,
-        priority: audio.priority,
-      });
-      setImagePreview(audio.imageUrl ?? null);
-    }
-  }, [open, audio, form]);
+    if (!open || !groupId) return;
 
-  const fetchVoices = async () => {
-    try {
-      setLoadingVoices(true);
-      const response = await getVoicesAPI();
-      if (response?.data?.voices) {
-        setVoices(response.data.voices);
-      } else {
-        message.warning("Không thể tải danh sách giọng đọc từ API");
+    const load = async () => {
+      try {
+        setLoadingGroup(true);
+        const res = await getAudioGroupByIdAPI(groupId);
+        const group = unwrapGroupPayload(res);
+        if (!group) {
+          message.error("Không đọc được dữ liệu nhóm từ server");
+          return;
+        }
+        form.setFieldsValue({
+          foodName: group.foodName,
+          price: group.price ?? undefined,
+          description: group.description,
+          imageUrl: group.imageUrl,
+          latitude: group.latitude ?? undefined,
+          longitude: group.longitude ?? undefined,
+          accuracy: group.accuracy ?? undefined,
+          triggerRadiusMeters: group.triggerRadiusMeters ?? undefined,
+          priority: group.priority ?? undefined,
+          originalText: group.originalText,
+          originalVoice: group.originalVoice,
+          originalSpeed: group.originalSpeed ?? 1,
+          originalFormat: group.originalFormat ?? 3,
+          originalWithoutFilter: group.originalWithoutFilter ?? false,
+        });
+        setImagePreview(group.imageUrl ?? null);
+      } catch (e: unknown) {
+        message.error("Không tải được nhóm audio");
+        logger.error("Load TTS group error:", e);
+      } finally {
+        setLoadingGroup(false);
       }
-    } catch (error: any) {
-      message.error("Không thể tải danh sách giọng đọc");
-      logger.error("Fetch voices error:", error);
-    } finally {
-      setLoadingVoices(false);
-    }
-  };
+    };
+
+    void load();
+  }, [open, groupId, form]);
+
+  useEffect(() => {
+    if (!open) return;
+    void (async () => {
+      try {
+        setLoadingVoices(true);
+        const response = await getVoicesAPI();
+        if (response?.data?.voices) {
+          setVoices(response.data.voices);
+        }
+      } catch (e: unknown) {
+        message.warning("Không thể tải danh sách giọng đọc");
+        logger.error("Fetch voices error:", e);
+      } finally {
+        setLoadingVoices(false);
+      }
+    })();
+  }, [open]);
 
   const handleImageUpload = async (file: File) => {
     try {
       setUploadingImage(true);
-      const response = await uploadFoodImageAPI(audio.id, file);
+      const response = await uploadFoodImageOnlyAPI(file);
       if (response?.data?.imageUrl) {
         form.setFieldsValue({ imageUrl: response.data.imageUrl });
-        setImagePreview(response.data.imageUrl ?? null);
+        setImagePreview(response.data.imageUrl);
         message.success("Upload ảnh thành công!");
       }
-    } catch (error: any) {
+    } catch (e: unknown) {
       message.error("Upload ảnh thất bại");
-      logger.error("Upload image error:", error);
+      logger.error("Upload image error:", e);
     } finally {
       setUploadingImage(false);
     }
     return false;
   };
 
-  const handleSubmit = async (values: TTSRequest) => {
+  const handleSubmit = async (values: UpdateTTSAudioGroupRequest & { originalWithoutFilter?: boolean }) => {
+    if (!groupId) return;
     try {
-      await updateTTSAudioAPI(audio.id, values);
-      message.success("Cập nhật audio thành công!");
+      setSaving(true);
+      const body: UpdateTTSAudioGroupRequest = {
+        foodName: values.foodName,
+        price: values.price,
+        description: values.description,
+        imageUrl: values.imageUrl,
+        latitude: values.latitude,
+        longitude: values.longitude,
+        accuracy: values.accuracy,
+        triggerRadiusMeters: values.triggerRadiusMeters,
+        priority: values.priority,
+        originalText: values.originalText,
+        originalVoice: values.originalVoice,
+        originalSpeed: values.originalSpeed,
+        originalFormat: values.originalFormat,
+        originalWithoutFilter: values.originalWithoutFilter,
+      };
+      await updateTTSGroupAPI(groupId, body);
+      message.success("Cập nhật nhóm audio thành công!");
       onSuccess();
-    } catch (error: any) {
-      message.error("Cập nhật audio thất bại: " + (error?.message || "Lỗi không xác định"));
-      logger.error("Update TTS audio error:", error);
+    } catch (e: unknown) {
+      message.error("Cập nhật nhóm thất bại");
+      logger.error("Update TTS group error:", e);
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
     <Modal
-      title="Chỉnh sửa TTS Audio"
+      title="Sửa nhóm Audio TTS"
       open={open}
       onCancel={onCancel}
       footer={null}
       width={620}
       destroyOnClose
+      confirmLoading={loadingGroup}
     >
       <Form
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
-        initialValues={{ speed: 1.0, ttsReturnOption: 3, withoutFilter: false }}
+        initialValues={{
+          originalSpeed: 1,
+          originalFormat: 3,
+          originalWithoutFilter: false,
+        }}
       >
-        <SectionLabel>Cài đặt TTS</SectionLabel>
+        <SectionLabel>Text &amp; giọng gốc (tiếng Việt)</SectionLabel>
 
         <Form.Item
-          name="text"
-          label="Nội dung text"
-          rules={[{ required: true, message: "Vui lòng nhập text" }]}
+          name="originalText"
+          label="Nội dung gốc"
+          rules={[{ required: true, message: "Vui lòng nhập nội dung" }]}
         >
-          <TextArea rows={4} placeholder="Nhập nội dung text..." />
+          <TextArea rows={4} placeholder="Nội dung thuyết minh tiếng Việt..." disabled={loadingGroup} />
         </Form.Item>
 
         <Form.Item
-          name="voice"
-          label="Giọng đọc"
-          rules={[{ required: true, message: "Vui lòng chọn giọng đọc" }]}
+          name="originalVoice"
+          label="Giọng gốc"
+          rules={[{ required: true, message: "Vui lòng chọn giọng" }]}
         >
           <Select
             placeholder="Chọn giọng đọc"
             loading={loadingVoices}
-            disabled={loadingVoices || voices.length === 0}
+            disabled={loadingVoices || loadingGroup || voices.length === 0}
           >
             {voices.map((voice) => (
               <Select.Option key={voice.code} value={voice.code}>
-                {voice.name} - {voice.description} ({voice.location})
+                {voice.name} — {voice.description}
               </Select.Option>
             ))}
           </Select>
         </Form.Item>
 
-        <Form.Item name="speed" label="Tốc độ">
-          <Slider min={0.8} max={1.2} step={0.1} marks={{ 0.8: "Chậm", 1.0: "Bình thường", 1.2: "Nhanh" }} />
+        <Form.Item name="originalSpeed" label="Tốc độ gốc">
+          <Slider
+            min={0.8}
+            max={1.2}
+            step={0.1}
+            marks={{ 0.8: "Chậm", 1.0: "Bình thường", 1.2: "Nhanh" }}
+            disabled={loadingGroup}
+          />
         </Form.Item>
 
-        <Form.Item name="ttsReturnOption" label="Định dạng">
-          <Select>
+        <Form.Item name="originalFormat" label="Định dạng gốc">
+          <Select disabled={loadingGroup}>
             <Select.Option value={2}>WAV</Select.Option>
             <Select.Option value={3}>MP3</Select.Option>
           </Select>
         </Form.Item>
 
-        <Form.Item
-          name="withoutFilter"
-          label="Bộ lọc giọng nói"
-          valuePropName="checked"
-          tooltip="Bật để giọng đọc tự nhiên hơn, tắt để giữ nguyên tín hiệu gốc"
-        >
-          <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
+        <Form.Item name="originalWithoutFilter" label="Bộ lọc giọng" valuePropName="checked">
+          <Switch checkedChildren="Bật" unCheckedChildren="Tắt" disabled={loadingGroup} />
         </Form.Item>
 
-        <SectionLabel>Thông tin món ăn</SectionLabel>
+        <SectionLabel>Thông tin món / POI</SectionLabel>
 
-        <Form.Item
-          name="foodName"
-          label="Tên món / gian hàng"
-          rules={[{ required: true, message: "Vui lòng nhập tên món hoặc gian hàng" }]}
-        >
-          <Input placeholder="Ví dụ: Bánh Xèo Cô Ba" />
+        <Form.Item name="foodName" label="Tên món / gian hàng">
+          <Input placeholder="Ví dụ: Phở béo" disabled={loadingGroup} />
         </Form.Item>
 
         <Form.Item name="price" label="Giá tham khảo (VNĐ)">
-          <InputNumber style={{ width: "100%" }} min={0} step={1000} />
+          <InputNumber style={{ width: "100%" }} min={0} step={1000} disabled={loadingGroup} />
         </Form.Item>
 
-        <Form.Item name="description" label="Mô tả món ăn / nội dung thuyết minh">
-          <TextArea rows={3} placeholder="Lịch sử, cách chế biến, điểm đặc biệt của món..." />
+        <Form.Item name="description" label="Mô tả">
+          <TextArea rows={3} disabled={loadingGroup} />
         </Form.Item>
 
         <Form.Item name="imageUrl" label="Ảnh minh họa">
           <Space direction="vertical" style={{ width: "100%" }}>
-            <Upload
-              beforeUpload={handleImageUpload}
-              showUploadList={false}
-              accept="image/*"
-            >
-              <Button icon={<UploadOutlined />} loading={uploadingImage}>
-                {uploadingImage ? "Đang upload..." : "Upload ảnh lên S3"}
+            <Upload beforeUpload={handleImageUpload} showUploadList={false} accept="image/*">
+              <Button icon={<UploadOutlined />} loading={uploadingImage} disabled={loadingGroup}>
+                Upload ảnh
               </Button>
             </Upload>
             {imagePreview && (
@@ -210,45 +259,45 @@ const EditTTSAudioModal = ({ open, onCancel, onSuccess, audio }: EditTTSAudioMod
           </Space>
         </Form.Item>
 
-        <SectionLabel>Vị trí GPS (tùy chọn, dùng cho auto-guide)</SectionLabel>
+        <SectionLabel>Vị trí &amp; geofence</SectionLabel>
 
         <Form.Item label="Tọa độ" style={{ marginBottom: 0 }}>
           <Space.Compact style={{ width: "100%" }}>
             <Form.Item name="latitude" noStyle>
-              <InputNumber style={{ width: "50%" }} placeholder="Latitude" min={-90} max={90} />
+              <InputNumber style={{ width: "50%" }} placeholder="Latitude" min={-90} max={90} disabled={loadingGroup} />
             </Form.Item>
             <Form.Item name="longitude" noStyle>
-              <InputNumber style={{ width: "50%" }} placeholder="Longitude" min={-180} max={180} />
+              <InputNumber
+                style={{ width: "50%" }}
+                placeholder="Longitude"
+                min={-180}
+                max={180}
+                disabled={loadingGroup}
+              />
             </Form.Item>
           </Space.Compact>
         </Form.Item>
 
-        <Form.Item
-          name="triggerRadiusMeters"
-          label="Bán kính kích hoạt (m)"
-          tooltip="Khoảng cách tối đa để kích hoạt thuyết minh tự động"
-        >
-          <InputNumber style={{ width: "100%" }} min={10} step={10} placeholder="Ví dụ: 50" />
+        <Form.Item name="triggerRadiusMeters" label="Bán kính kích hoạt (m)">
+          <InputNumber style={{ width: "100%" }} min={10} step={10} disabled={loadingGroup} />
         </Form.Item>
 
         <Form.Item name="accuracy" label="Accuracy GPS (m)">
-          <InputNumber style={{ width: "100%" }} min={1} step={1} placeholder="Ví dụ: 10" />
+          <InputNumber style={{ width: "100%" }} min={1} step={1} disabled={loadingGroup} />
         </Form.Item>
 
-        <Form.Item
-          name="priority"
-          label="Độ ưu tiên"
-          tooltip="Số càng cao = ưu tiên càng cao khi có nhiều POI trong cùng bán kính"
-        >
-          <InputNumber style={{ width: "100%" }} min={0} step={1} placeholder="Ví dụ: 10" />
+        <Form.Item name="priority" label="Độ ưu tiên">
+          <InputNumber style={{ width: "100%" }} min={0} step={1} disabled={loadingGroup} />
         </Form.Item>
 
         <Form.Item style={{ marginTop: 16 }}>
           <Space>
-            <Button type="primary" htmlType="submit">
-              Cập nhật
+            <Button type="primary" htmlType="submit" loading={saving} disabled={loadingGroup}>
+              Lưu nhóm
             </Button>
-            <Button onClick={onCancel}>Hủy</Button>
+            <Button onClick={onCancel} disabled={saving}>
+              Hủy
+            </Button>
           </Space>
         </Form.Item>
       </Form>
@@ -256,4 +305,4 @@ const EditTTSAudioModal = ({ open, onCancel, onSuccess, audio }: EditTTSAudioMod
   );
 };
 
-export default EditTTSAudioModal;
+export default EditTTSAudioGroupModal;
