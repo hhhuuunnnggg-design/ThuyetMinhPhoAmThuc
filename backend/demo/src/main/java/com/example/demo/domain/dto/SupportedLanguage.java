@@ -21,10 +21,10 @@ public final class SupportedLanguage {
     public static final Map<String, String> NAMES = Map.of(
             VI, "Tiếng Việt",
             EN, "English",
-            ZH, "中文",
-            JA, "日本語",
-            KO, "한국어",
-            FR, "Français");
+            ZH, "Chinese",
+            JA, "Chinese",
+            KO, "Chinese",
+            FR, "Chinese");
 
     public static final Map<String, String> GCP_TTS_VOICES = Map.of(
             EN, "en-US-Neural2-F",

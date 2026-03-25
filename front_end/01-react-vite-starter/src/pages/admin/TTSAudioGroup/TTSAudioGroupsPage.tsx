@@ -34,12 +34,12 @@ const LANGUAGE_COLORS: Record<string, string> = {
 };
 
 const LANGUAGE_LABELS: Record<string, string> = {
-  vi: "Tiếng Việt",
+  vi: "Vietnamese",
   en: "English",
-  zh: "中文",
-  ja: "日本語",
-  ko: "한국어",
-  fr: "Français",
+  zh: "Chinese",
+  ja: "Japanese",
+  ko: "Korean",
+  fr: "French",
 };
 
 const TTSAudioGroupsPage = () => {
