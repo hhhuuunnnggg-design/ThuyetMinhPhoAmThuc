@@ -10,10 +10,23 @@ import {
   parseAdminRestaurantListResponse,
   type AdminRestaurant,
 } from "@/api/adminRestaurant.api";
+import { uploadFoodImageOnlyAPI, getImageUrl } from "@/api/tts.api";
 import { useCurrentApp } from "@/components/context/app.context";
 import { logger } from "@/utils/logger";
-import { Alert, Form, Input, InputNumber, Modal, Select, Slider, message } from "antd";
+import {
+  Alert,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Select,
+  Slider,
+  message,
+  Upload,
+} from "antd";
+import { PlusOutlined, LoadingOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
+import type { UploadFile, UploadProps } from "antd/es/upload/interface";
 
 type Props = {
   open: boolean;
@@ -29,6 +42,10 @@ const UpsertPOIModal = ({ open, onCancel, onSuccess, editingId }: Props) => {
   /** Hiển thị chủ sở hữu khi sửa POI */
   const [editOwnerHint, setEditOwnerHint] = useState<string | null>(null);
   const { user } = useCurrentApp();
+  /** Upload ảnh */
+  const [imageFileList, setImageFileList] = useState<UploadFile[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
 
   const isEdit = editingId != null;
 
@@ -49,11 +66,15 @@ const UpsertPOIModal = ({ open, onCancel, onSuccess, editingId }: Props) => {
   useEffect(() => {
     if (!open) {
       form.resetFields();
+      setUploadedImageUrl(null);
+      setImageFileList([]);
       return;
     }
     if (editingId == null) {
       form.resetFields();
       setEditOwnerHint(null);
+      setUploadedImageUrl(null);
+      setImageFileList([]);
       return;
     }
 
@@ -74,6 +95,19 @@ const UpsertPOIModal = ({ open, onCancel, onSuccess, editingId }: Props) => {
               : `User ID: ${poi.userId}`
             : "Chưa gán user sở hữu"
         );
+        setUploadedImageUrl(poi.imageUrl ?? null);
+        if (poi.imageUrl) {
+          setImageFileList([
+            {
+              uid: "-1",
+              name: "current-image",
+              status: "done",
+              url: getImageUrl(poi.imageUrl) ?? undefined,
+            },
+          ]);
+        } else {
+          setImageFileList([]);
+        }
         form.setFieldsValue({
           foodName: poi.foodName ?? undefined,
           price: poi.price ?? undefined,
@@ -107,7 +141,7 @@ const UpsertPOIModal = ({ open, onCancel, onSuccess, editingId }: Props) => {
         foodName: values.foodName || undefined,
         price: values.price ?? undefined,
         description: values.description || undefined,
-        imageUrl: values.imageUrl || undefined,
+        imageUrl: uploadedImageUrl || undefined,
         address: values.address || undefined,
         category: values.category || undefined,
         openHours: values.openHours || undefined,
@@ -129,6 +163,8 @@ const UpsertPOIModal = ({ open, onCancel, onSuccess, editingId }: Props) => {
       onSuccess();
       onCancel();
       form.resetFields();
+      setUploadedImageUrl(null);
+      setImageFileList([]);
     } catch (e: any) {
       if (e?.errorFields) return;
       message.error(e?.message || "Thao tác thất bại");
@@ -143,13 +179,59 @@ const UpsertPOIModal = ({ open, onCancel, onSuccess, editingId }: Props) => {
     return { value: r.id, label };
   });
 
+  const imageUploadProps: UploadProps = {
+    name: "image",
+    accept: "image/*",
+    listType: "picture-card",
+    fileList: imageFileList,
+    beforeUpload: () => false,
+    onChange: async ({ fileList: newFileList }) => {
+      setImageFileList(newFileList);
+      const latest = newFileList[newFileList.length - 1];
+      if (!latest || latest.status === "uploading" || latest.status === "done") return;
+
+      const rawFile = latest.originFileObj as File | undefined;
+      if (!rawFile) return;
+
+      setUploadingImage(true);
+      try {
+        const res: any = await uploadFoodImageOnlyAPI(rawFile);
+        // Axios interceptor trả về body RestResponse: { data: { imageUrl, message } }
+        const url = res?.data?.imageUrl;
+        if (url) {
+          setUploadedImageUrl(url);
+          setImageFileList((prev) =>
+            prev.map((f) =>
+              f.uid === latest.uid ? { ...f, status: "done" as const, url: getImageUrl(url) ?? undefined } : f
+            )
+          );
+          message.success("Upload ảnh thành công");
+        } else {
+          message.error("Upload ảnh thất bại — không nhận được URL");
+          setImageFileList((prev) => prev.filter((f) => f.uid !== latest.uid));
+        }
+      } catch (e: any) {
+        logger.error("Upload image error:", e);
+        message.error(e?.message || "Upload ảnh thất bại");
+        setImageFileList((prev) => prev.filter((f) => f.uid !== latest.uid));
+      } finally {
+        setUploadingImage(false);
+      }
+    },
+    onRemove: () => {
+      setUploadedImageUrl(null);
+      setImageFileList([]);
+      return true;
+    },
+  };
+
   return (
     <Modal
       title={isEdit ? "Sửa POI" : "Tạo POI mới"}
       open={open}
       onCancel={onCancel}
       onOk={handleOk}
-      confirmLoading={loading}
+      confirmLoading={loading || uploadingImage}
       destroyOnClose
       width={640}
     >
@@ -210,8 +292,23 @@ const UpsertPOIModal = ({ open, onCancel, onSuccess, editingId }: Props) => {
           <Input.TextArea rows={3} placeholder="Mô tả chi tiết món ăn..." />
         </Form.Item>
 
-        <Form.Item name="imageUrl" label="Link ảnh">
-          <Input placeholder="https://..." />
+        <Form.Item label="Ảnh món ăn" required>
+          <Upload
+            {...imageUploadProps}
+            style={{ width: "100%" }}
+          >
+            {imageFileList.length === 0 && (
+              <div>
+                {uploadingImage ? <LoadingOutlined /> : <PlusOutlined />}
+                <div style={{ marginTop: 8, fontSize: 12 }}>Tải ảnh lên</div>
+              </div>
+            )}
+          </Upload>
+          {uploadedImageUrl && (
+            <div style={{ marginTop: 8, fontSize: 12, color: "#52c41a" }}>
+              Đã upload: {uploadedImageUrl}
+            </div>
+          )}
         </Form.Item>
 
         <Form.Item name="address" label="Địa chỉ">

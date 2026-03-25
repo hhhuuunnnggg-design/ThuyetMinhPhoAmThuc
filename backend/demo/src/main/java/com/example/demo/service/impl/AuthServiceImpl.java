@@ -77,12 +77,12 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public User handleGetUserByUsername(String username) {
-        return this.authServiceRepository.findByEmail(username);
+        return this.authServiceRepository.findByEmail(username).orElse(null);
     }
 
     @Override
     public User getUserByRefreshTokenAndEmail(String token, String email) {
-        return this.authServiceRepository.findByRefreshTokenAndEmail(token, email);
+        return this.authServiceRepository.findByRefreshTokenAndEmail(token, email).orElse(null);
     }
 
     public String generateAuthUrl(String loginType) {

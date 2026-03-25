@@ -4,6 +4,7 @@ import {
   parseAdminPOIListResponse,
   type AdminPOI,
 } from "@/api/adminPoi.api";
+import { getImageUrl } from "@/api/tts.api";
 import { logger } from "@/utils/logger";
 import {
   DeleteOutlined,
@@ -12,7 +13,7 @@ import {
   ReloadOutlined,
 } from "@ant-design/icons";
 import ProTable from "@ant-design/pro-table";
-import { Alert, Button, message, Popconfirm, Space, Tag, Tooltip } from "antd";
+import { Alert, Button, message, Popconfirm, Space, Tag, Tooltip, Image } from "antd";
 import { useRef, useState } from "react";
 import UpsertPOIModal from "./UpsertPOIModal";
 
@@ -87,6 +88,24 @@ const AdminPOIsPage = () => {
         }}
         columns={[
           { title: "ID", dataIndex: "id", width: 70 },
+          {
+            title: "Ảnh",
+            dataIndex: "imageUrl",
+            width: 80,
+            render: (_: unknown, r: AdminPOI) => {
+              const url = getImageUrl(r.imageUrl);
+              if (!url) return "—";
+              return (
+                <Image
+                  src={url}
+                  width={52}
+                  height={52}
+                  style={{ objectFit: "cover", borderRadius: 6 }}
+                  fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTIiIGhlaWdodD0iNTIiIHZpZXdCb3g9IjAgMCA1MiA1MiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNTIiIGhlaWdodD0iNTIiIGZpbGw9IiNlM2UzZTciLz48dGV4dCB4PSI1MiUiIHk9IjU1JSIgdGV4dCllbGVtZW50PSJzdHJvbmciIGZvbnQtYWxpZ25ubWVudD0ibWlkZGxlIiBmaWxsPSIjNzZiN2VhIiBmb250LXNpemU9IjEyIj5JbWFnZTwvdGV4dD48L3N2Zz4="
+                />
+              );
+            },
+          },
           {
             title: "Thông tin",
             dataIndex: "foodName",

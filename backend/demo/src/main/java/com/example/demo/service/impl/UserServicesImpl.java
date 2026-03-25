@@ -42,7 +42,7 @@ public class UserServicesImpl implements UserServices {
 
     @Override
     public User handleGetUserByUsernames(String username) {
-        User user = this.userServiceRepository.findByEmail(username);
+        User user = this.userServiceRepository.findByEmail(username).orElse(null);
         if (user == null) {
             throw new RuntimeException("User với email " + username + " không tồn tại");
         }
@@ -54,7 +54,7 @@ public class UserServicesImpl implements UserServices {
 
     @Override
     public User handleGetUserByUsername(String username) {
-        return this.userServiceRepository.findByEmail(username);
+        return this.userServiceRepository.findByEmail(username).orElse(null);
     }
 
     @Override
@@ -68,7 +68,7 @@ public class UserServicesImpl implements UserServices {
 
     @Override
     public User getUserByRefreshTokenAndEmail(String token, String email) {
-        return this.userServiceRepository.findByRefreshTokenAndEmail(token, email);
+        return this.userServiceRepository.findByRefreshTokenAndEmail(token, email).orElse(null);
     }
 
     @Override

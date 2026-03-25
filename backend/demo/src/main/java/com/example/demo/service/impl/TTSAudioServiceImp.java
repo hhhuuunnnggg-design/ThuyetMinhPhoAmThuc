@@ -74,7 +74,7 @@ public class TTSAudioServiceImp implements TTSAudioService {
                 .orElseThrow(() -> new IdInvalidException("Không tìm thấy POI: " + req.getPoiId()));
 
         String createdBy = req.getCreatedBy() != null ? req.getCreatedBy() : "anonymous";
-        User user = userServiceRepository.findByEmail(createdBy);
+        User user = userServiceRepository.findByEmail(createdBy).orElse(null);
 
         TTSAudioGroup group = TTSAudioGroup.builder()
                 .groupKey(UUID.randomUUID().toString())

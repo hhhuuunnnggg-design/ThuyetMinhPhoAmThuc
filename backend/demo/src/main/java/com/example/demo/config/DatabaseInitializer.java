@@ -46,25 +46,20 @@ public class DatabaseInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         System.out.println(">>> START INIT DATABASE");
-        long countPermissions = this.permissionRepository.count();
-        long countRoles = this.roleRepository.count();
-        long countUsers = this.userRepository.count();
 
-        if (countPermissions == 0) {
+        // ========== PERMISSIONS ==========
+        if (this.permissionRepository.count() == 0) {
             ArrayList<Permission> arr = new ArrayList<>();
 
             // Users permissions
             arr.add(createPermission("Xem tất cả danh sách người dùng", "/api/v1/users/fetch-all", "GET", "USERS"));
             arr.add(createPermission("Xóa người dùng", "/api/v1/users/{id}", "DELETE", "USERS"));
-            arr.add(createPermission("thay đổi trạng thái người dùng", "/api/v1/users/changeActivity/{id}", "PUT",
-                    "USERS"));
+            arr.add(createPermission("thay đổi trạng thái người dùng", "/api/v1/users/changeActivity/{id}", "PUT", "USERS"));
             arr.add(createPermission("Upload avatar", "/api/v1/users/avatar", "POST", "USERS"));
             arr.add(createPermission("Upload cover photo", "/api/v1/users/coverPhoto", "POST", "USERS"));
             arr.add(createPermission("Admin tạo người dùng", "/api/v1/users/admin/create", "POST", "USERS"));
             arr.add(createPermission("Admin cập nhật người dùng", "/api/v1/users/admin/{id}", "PUT", "USERS"));
-            // thêm người dùng
             arr.add(createPermission("Thêm người dùng", "/api/v1/users/add-user", "POST", "USERS"));
-            // cập nhật người dùng
             arr.add(createPermission("Cập nhật người dùng", "/api/v1/users/{id}", "PUT", "USERS"));
 
             // Permissions
@@ -80,75 +75,89 @@ public class DatabaseInitializer implements CommandLineRunner {
             arr.add(createPermission("Xem danh sách vai trò", "/api/v1/roles/fetch-all", "GET", "ROLES"));
 
             // TTS permissions
-            arr.add(createPermission("Chuyển đổi text thành speech",
-                    "/api/v1/tts/synthesize", "POST", "TTS"));
-            arr.add(createPermission("Xem danh sách giọng đọc", "/api/v1/tts/voices",
-                    "GET", "TTS"));
-            arr.add(createPermission("Tạo và lưu audio lên S3",
-                    "/api/v1/tts/synthesize-and-save", "POST", "TTS"));
-            arr.add(createPermission("Xem danh sách TTS audios",
-                    "/api/v1/tts/audios", "GET", "TTS"));
-            arr.add(createPermission("Xem danh sách TTS audios của mình",
-                    "/api/v1/tts/audios/my", "GET", "TTS"));
-            arr.add(createPermission("Xem TTS audio theo ID",
-                    "/api/v1/tts/audios/{id}", "GET", "TTS"));
-            arr.add(createPermission("Cập nhật TTS audio",
-                    "/api/v1/tts/audios/{id}", "PUT", "TTS"));
-            arr.add(createPermission("Xóa TTS audio",
-                    "/api/v1/tts/audios/{id}", "DELETE", "TTS"));
-            arr.add(createPermission("Tải xuống TTS audio",
-                    "/api/v1/tts/audios/{id}/download", "GET", "TTS"));
-            arr.add(createPermission("Upload ảnh món ăn lên TTS audio",
-                    "/api/v1/tts/audios/{id}/image", "POST", "TTS"));
-            arr.add(createPermission("Upload ảnh món ăn (không cần audio ID)",
-                    "/api/v1/tts/images/upload", "POST", "TTS"));
-            arr.add(createPermission("Tạo audio đa ngôn ngữ (batch)",
-                    "/api/v1/tts/multilingual", "POST", "TTS"));
-            arr.add(createPermission("Tạo đa ngôn ngữ cho audio đã tồn tại",
-                    "/api/v1/tts/audios/{id}/generate-multilingual", "POST", "TTS"));
+            arr.add(createPermission("Chuyển đổi text thành speech", "/api/v1/tts/synthesize", "POST", "TTS"));
+            arr.add(createPermission("Xem danh sách giọng đọc", "/api/v1/tts/voices", "GET", "TTS"));
+            arr.add(createPermission("Tạo và lưu audio lên S3", "/api/v1/tts/synthesize-and-save", "POST", "TTS"));
+            arr.add(createPermission("Xem danh sách TTS audios", "/api/v1/tts/audios", "GET", "TTS"));
+            arr.add(createPermission("Xem danh sách TTS audios của mình", "/api/v1/tts/audios/my", "GET", "TTS"));
+            arr.add(createPermission("Xem TTS audio theo ID", "/api/v1/tts/audios/{id}", "GET", "TTS"));
+            arr.add(createPermission("Cập nhật TTS audio", "/api/v1/tts/audios/{id}", "PUT", "TTS"));
+            arr.add(createPermission("Xóa TTS audio", "/api/v1/tts/audios/{id}", "DELETE", "TTS"));
+            arr.add(createPermission("Tải xuống TTS audio", "/api/v1/tts/audios/{id}/download", "GET", "TTS"));
+            arr.add(createPermission("Upload ảnh món ăn lên TTS audio", "/api/v1/tts/audios/{id}/image", "POST", "TTS"));
+            arr.add(createPermission("Upload ảnh món ăn (không cần audio ID)", "/api/v1/tts/images/upload", "POST", "TTS"));
+            arr.add(createPermission("Tạo audio đa ngôn ngữ (batch)", "/api/v1/tts/multilingual", "POST", "TTS"));
+            arr.add(createPermission("Tạo đa ngôn ngữ cho audio đã tồn tại", "/api/v1/tts/audios/{id}/generate-multilingual", "POST", "TTS"));
 
             // TTS Groups permissions
-            arr.add(createPermission("Xem danh sách tất cả groups",
-                    "/api/v1/tts/groups", "GET", "TTS_GROUPS"));
-            arr.add(createPermission("Xem group theo ID",
-                    "/api/v1/tts/groups/{id}", "GET", "TTS_GROUPS"));
-            arr.add(createPermission("Xem group theo groupKey",
-                    "/api/v1/tts/groups/key/{groupKey}", "GET", "TTS_GROUPS"));
-            arr.add(createPermission("Xóa group và tất cả audio trong group",
-                    "/api/v1/tts/groups/{id}", "DELETE", "TTS_GROUPS"));
-            arr.add(createPermission("Cập nhật metadata group TTS",
-                    "/api/v1/tts/groups/{id}", "PUT", "TTS_GROUPS"));
-            arr.add(createPermission("Tạo audio đa ngôn ngữ cho group",
-                    "/api/v1/tts/groups/{id}/generate-multilingual", "POST", "TTS_GROUPS"));
+            arr.add(createPermission("Xem danh sách tất cả groups", "/api/v1/tts/groups", "GET", "TTS_GROUPS"));
+            arr.add(createPermission("Xem group theo ID", "/api/v1/tts/groups/{id}", "GET", "TTS_GROUPS"));
+            arr.add(createPermission("Xem group theo groupKey", "/api/v1/tts/groups/key/{groupKey}", "GET", "TTS_GROUPS"));
+            arr.add(createPermission("Xóa group và tất cả audio trong group", "/api/v1/tts/groups/{id}", "DELETE", "TTS_GROUPS"));
+            arr.add(createPermission("Cập nhật metadata group TTS", "/api/v1/tts/groups/{id}", "PUT", "TTS_GROUPS"));
+            arr.add(createPermission("Tạo audio đa ngôn ngữ cho group", "/api/v1/tts/groups/{id}/generate-multilingual", "POST", "TTS_GROUPS"));
 
             // App client permissions (POI + narration)
-            arr.add(createPermission("App client - lấy danh sách POI",
-                    "/api/v1/app/pois", "GET", "APP_CLIENT"));
-            arr.add(createPermission("App client - kiểm tra phát narration",
-                    "/api/v1/app/narration/check", "POST", "APP_CLIENT"));
-            arr.add(createPermission("App client - ghi log narration",
-                    "/api/v1/app/narration/log", "POST", "APP_CLIENT"));
+            arr.add(createPermission("App client - lấy danh sách POI", "/api/v1/app/pois", "GET", "APP_CLIENT"));
+            arr.add(createPermission("App client - kiểm tra phát narration", "/api/v1/app/narration/check", "POST", "APP_CLIENT"));
+            arr.add(createPermission("App client - ghi log narration", "/api/v1/app/narration/log", "POST", "APP_CLIENT"));
 
             // Narration logs permissions (admin)
-            arr.add(createPermission("Xem danh sách narration logs",
-                    "/api/v1/admin/narration-logs", "GET", "NARRATION_LOGS"));
+            arr.add(createPermission("Xem danh sách narration logs", "/api/v1/admin/narration-logs", "GET", "NARRATION_LOGS"));
+
+            // POI Admin permissions
+            arr.add(createPermission("Xem danh sách POI (admin)", "/api/v1/admin/pois", "GET", "POI_ADMIN"));
+            arr.add(createPermission("Xem chi tiết POI (admin)", "/api/v1/admin/pois/{id}", "GET", "POI_ADMIN"));
+            arr.add(createPermission("Tạo POI (admin)", "/api/v1/admin/pois", "POST", "POI_ADMIN"));
+            arr.add(createPermission("Cập nhật POI (admin)", "/api/v1/admin/pois/{id}", "PUT", "POI_ADMIN"));
+            arr.add(createPermission("Xóa POI (admin)", "/api/v1/admin/pois/{id}", "DELETE", "POI_ADMIN"));
+
+            // Restaurant Admin permissions
+            arr.add(createPermission("Xem danh sách nhà hàng (admin)", "/api/v1/admin/restaurants", "GET", "RESTAURANT_ADMIN"));
+            arr.add(createPermission("Xem chi tiết nhà hàng (admin)", "/api/v1/admin/restaurants/{id}", "GET", "RESTAURANT_ADMIN"));
+            arr.add(createPermission("Tạo nhà hàng (admin)", "/api/v1/admin/restaurants", "POST", "RESTAURANT_ADMIN"));
+            arr.add(createPermission("Cập nhật nhà hàng (admin)", "/api/v1/admin/restaurants/{id}", "PUT", "RESTAURANT_ADMIN"));
+            arr.add(createPermission("Xóa nhà hàng (admin)", "/api/v1/admin/restaurants/{id}", "DELETE", "RESTAURANT_ADMIN"));
 
             this.permissionRepository.saveAll(arr);
         }
 
-        if (countRoles == 0) {
-            List<Permission> allPermissions = this.permissionRepository.findAll();
+        // ========== ROLES ==========
+        List<Permission> allPermissions = this.permissionRepository.findAll();
 
-            Role adminRole = new Role();
-            adminRole.setName("SUPER_ADMIN");
-            adminRole.setDescription("Admin thì full permissions");
-            adminRole.setActive(true);
-            adminRole.setPermissions(allPermissions);
-
-            this.roleRepository.save(adminRole);
+        Role superAdminRole = this.roleRepository.findByName("SUPER_ADMIN").orElse(null);
+        if (superAdminRole == null) {
+            superAdminRole = new Role();
+            superAdminRole.setName("SUPER_ADMIN");
+            superAdminRole.setDescription("Quản trị viên — toàn quyền hệ thống");
+            superAdminRole.setActive(true);
+            superAdminRole.setPermissions(allPermissions);
+            superAdminRole = this.roleRepository.save(superAdminRole);
         }
 
-        if (countUsers == 0) {
+        // SHOP_OWNER — chỉ quản lý POI, TTS, nhà hàng của mình
+        Role shopOwnerRole = this.roleRepository.findByName("SHOP_OWNER").orElse(null);
+        if (shopOwnerRole == null) {
+            List<Permission> shopPermissions = allPermissions.stream()
+                    .filter(p -> {
+                        String mod = p.getModule();
+                        return "TTS".equals(mod) || "TTS_GROUPS".equals(mod)
+                                || "POI_ADMIN".equals(mod) || "RESTAURANT_ADMIN".equals(mod)
+                                || "APP_CLIENT".equals(mod);
+                    })
+                    .toList();
+
+            shopOwnerRole = new Role();
+            shopOwnerRole.setName("SHOP_OWNER");
+            shopOwnerRole.setDescription("Chủ quán — quản lý POI, TTS, nhà hàng của mình");
+            shopOwnerRole.setActive(true);
+            shopOwnerRole.setPermissions(shopPermissions);
+            this.roleRepository.save(shopOwnerRole);
+        }
+
+        // ========== USERS ==========
+        // Tài khoản SUPER_ADMIN
+        if (this.userRepository.findByEmail("admin@gmail.com").isEmpty()) {
             User adminUser = new User();
             adminUser.setEmail("admin@gmail.com");
             adminUser.setAvatar("https://wellavn.com/wp-content/uploads/2025/07/anh-gai-xinh-2k-12.jpg");
@@ -157,25 +166,25 @@ public class DatabaseInitializer implements CommandLineRunner {
             adminUser.setGender(genderEnum.MALE);
             adminUser.setPassword(this.passwordEncoder.encode("123456"));
             adminUser.setIs_admin(true);
-            // adminUser.getRole().setId(1L);
-
-            // Tìm role SUPER_ADMIN bằng cách khác
-            List<Role> roles = this.roleRepository.findAll();
-            Role adminRole = roles.stream()
-                    .filter(role -> "SUPER_ADMIN".equals(role.getName()))
-                    .findFirst()
-                    .orElse(null);
-            if (adminRole != null) {
-                adminUser.setRole(adminRole);
-            }
-
+            adminUser.setRole(superAdminRole);
             this.userRepository.save(adminUser);
         }
 
-        if (countPermissions > 0 && countRoles > 0 && countUsers > 0) {
-            System.out.println(">>> SKIP INIT DATABASE ~ ALREADY HAVE DATA...");
-        } else
-            System.out.println(">>> END INIT DATABASE");
+        // Tài khoản SHOP_OWNER mặc định
+        if (this.userRepository.findByEmail("shop@gmail.com").isEmpty()) {
+            User shopUser = new User();
+            shopUser.setEmail("shop@gmail.com");
+            shopUser.setAvatar("https://wellavn.com/wp-content/uploads/2025/07/anh-gai-xinh-2k-12.jpg");
+            shopUser.setFirstName("Chủ");
+            shopUser.setLastName("Quán Phở");
+            shopUser.setGender(genderEnum.MALE);
+            shopUser.setPassword(this.passwordEncoder.encode("123456"));
+            shopUser.setIs_admin(false);
+            shopUser.setRole(shopOwnerRole);
+            this.userRepository.save(shopUser);
+        }
+
+        System.out.println(">>> END INIT DATABASE");
     }
 
 }
