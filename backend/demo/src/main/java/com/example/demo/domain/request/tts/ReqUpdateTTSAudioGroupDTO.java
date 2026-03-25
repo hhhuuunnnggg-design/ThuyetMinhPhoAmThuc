@@ -1,7 +1,5 @@
 package com.example.demo.domain.request.tts;
 
-import java.math.BigDecimal;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
@@ -11,17 +9,8 @@ import lombok.experimental.FieldDefaults;
 @Data
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ReqUpdateTTSAudioGroupDTO {
-    String foodName;
-    BigDecimal price;
-    String description;
-    String imageUrl;
 
-    Double latitude;
-    Double longitude;
-    Float accuracy;
-    Float triggerRadiusMeters;
-    Integer priority;
-
+    // Text & voice gốc
     @NotBlank(message = "Nội dung gốc (tiếng Việt) không được để trống")
     String originalText;
 

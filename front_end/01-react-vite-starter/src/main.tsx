@@ -21,6 +21,9 @@ import PermissionPage from "./pages/admin/Permission/PermissionTable";
 import RolePage from "./pages/admin/Role/RoleTable";
 import TTSAudioPage from "./pages/admin/TTSAudio/TTSAudioTable";
 import TTSAudioGroupsPage from "./pages/admin/TTSAudioGroup/TTSAudioGroupsPage";
+import AdminPOIsPage from "./pages/admin/POI/AdminPOIsPage";
+import AdminRestaurantsPage from "./pages/admin/Restaurant/AdminRestaurantsPage";
+import AdminDashboardPage from "./pages/admin/Dashboard/AdminDashboardPage";
 
 import { ROUTES, STORAGE_KEYS } from "@/constants";
 import { fetchAccountThunk } from "@/redux/slice/auth.slice";
@@ -28,6 +31,9 @@ import { logger } from "@/utils/logger";
 import Error404 from "./components/common/Error404";
 import Error500 from "./components/common/Error500";
 import UsersPage from "./pages/admin/User/UserTable";
+import AdminPaymentsPage from "./pages/admin/Payment/AdminPaymentsPage";
+import PaymentSuccessPage from "./pages/client/payment/PaymentSuccessPage";
+import PaymentCancelPage from "./pages/client/payment/PaymentCancelPage";
 import "./styles/global.scss";
 
 const router = createBrowserRouter([
@@ -75,7 +81,33 @@ const router = createBrowserRouter([
         path: "narration-logs",
         element: <NarrationLogPage />,
       },
+      {
+        path: "dashboard-realtime",
+        element: <AdminDashboardPage />,
+      },
+      {
+        path: "pois",
+        element: <AdminPOIsPage />,
+      },
+      {
+        path: "restaurants",
+        element: <AdminRestaurantsPage />,
+      },
+      {
+        path: "payments",
+        element: <AdminPaymentsPage />,
+      },
     ],
+  },
+  {
+    path: ROUTES.PAYMENT.SUCCESS,
+    element: <PaymentSuccessPage />,
+    errorElement: <Error500 />,
+  },
+  {
+    path: ROUTES.PAYMENT.CANCEL,
+    element: <PaymentCancelPage />,
+    errorElement: <Error500 />,
   },
   {
     path: ROUTES.LOGIN,

@@ -3,8 +3,11 @@ import { useCurrentApp } from "@/components/context/app.context";
 import { ROUTES, STORAGE_KEYS } from "@/constants";
 import {
   AppstoreOutlined,
+  DashboardOutlined,
   DollarCircleOutlined,
+  EnvironmentOutlined,
   ExceptionOutlined,
+  FileTextOutlined,
   GlobalOutlined,
   HeartTwoTone,
   MenuFoldOutlined,
@@ -12,7 +15,6 @@ import {
   SoundOutlined,
   TeamOutlined,
   UserOutlined,
-  FileTextOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Avatar, Dropdown, Layout, Menu, Space, message } from "antd";
@@ -56,65 +58,52 @@ const AdminLayout = () => {
       icon: <AppstoreOutlined />,
     },
     {
-      label: <span>Manage Users</span>,
-      key: "user",
-      icon: <UserOutlined />,
+      label: <Link to={ROUTES.ADMIN.DASHBOARD_REALTIME}>Dashboard Real-time</Link>,
+      key: "dashboard-realtime",
+      icon: <DashboardOutlined />,
+    },
+    {
+      label: <span>Quản lý</span>,
+      key: "manage",
+      icon: <GlobalOutlined />,
       children: [
         {
-          label: <Link to={ROUTES.ADMIN.USER}>CRUD</Link>,
+          label: <Link to={ROUTES.ADMIN.USER}>Người dùng</Link>,
           key: "crud",
           icon: <TeamOutlined />,
         },
+        {
+          label: <Link to={ROUTES.ADMIN.POIS}>Điểm POI (địa điểm / QR)</Link>,
+          key: "pois",
+          icon: <EnvironmentOutlined />,
+        },
+        {
+          label: <Link to={ROUTES.ADMIN.RESTAURANTS}>Nhà hàng</Link>,
+          key: "restaurants",
+          icon: <EnvironmentOutlined />,
+        },
+        {
+          label: <Link to={ROUTES.ADMIN.TTS_AUDIO}>Danh sách Audios</Link>,
+          key: "tts-audio",
+          icon: <SoundOutlined />,
+        },
+        {
+          label: <Link to={ROUTES.ADMIN.TTS_GROUPS}>Nhóm thuyết minh TTS</Link>,
+          key: "tts-groups",
+          icon: <GlobalOutlined />,
+        },
+        {
+          label: <Link to={ROUTES.ADMIN.NARRATION_LOGS}>Narration Logs</Link>,
+          key: "narration-logs",
+          icon: <FileTextOutlined />,
+        },
+        {
+          label: <Link to={ROUTES.ADMIN.PAYMENTS}>Thanh toán</Link>,
+          key: "payments",
+          icon: <DollarCircleOutlined />,
+        },
       ],
     },
-    ...(hasPermission("/api/v1/roles/fetch-all", "GET")
-      ? [
-          {
-            label: <Link to={ROUTES.ADMIN.ROLE}>Manage Role</Link>,
-            key: "role",
-            icon: <ExceptionOutlined />,
-          },
-        ]
-      : []),
-    ...(hasPermission("/api/v1/permissions/fetch-all", "GET")
-      ? [
-          {
-            label: <Link to={ROUTES.ADMIN.PERMISSION}>Manage Permission</Link>,
-            key: "permission",
-            icon: <DollarCircleOutlined />,
-          },
-        ]
-      : []),
-    ...(hasPermission("/api/v1/tts/groups", "GET")
-      ? [
-          {
-            label: <span>TTS Audio</span>,
-            key: "tts",
-            icon: <SoundOutlined />,
-            children: [
-              {
-                label: <Link to={ROUTES.ADMIN.TTS_AUDIO}>Danh sách Audios</Link>,
-                key: "tts-audio",
-                icon: <SoundOutlined />,
-              },
-              {
-                label: <Link to={ROUTES.ADMIN.TTS_GROUPS}>Quản lý Nhóm</Link>,
-                key: "tts-groups",
-                icon: <GlobalOutlined />,
-              },
-            ],
-          },
-        ]
-      : []),
-    ...(hasPermission("/api/v1/admin/narration-logs", "GET")
-      ? [
-          {
-            label: <Link to={ROUTES.ADMIN.NARRATION_LOGS}>Narration Logs</Link>,
-            key: "narration-logs",
-            icon: <FileTextOutlined />,
-          },
-        ]
-      : []),
   ];
 
   const itemsDropdown = [

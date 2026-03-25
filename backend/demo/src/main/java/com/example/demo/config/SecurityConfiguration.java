@@ -50,7 +50,15 @@ public class SecurityConfiguration {
                 "/v3/api-docs/**",
                 "/swagger-ui/**",
                 "/swagger-ui.html",
-                "/api/v1/auth/**"
+                "/api/v1/auth/**",
+                // App client APIs (không cần login)
+                "/api/v1/app/**",
+                // Admin dashboard APIs
+                "/api/v1/admin/dashboard/**",
+                "/api/v1/admin/load-test/**",
+                "/api/v1/admin/pois/**",
+                "/api/v1/admin/restaurants/**",
+                "/api/v1/admin/translation/**"
         };
         http
                 // 1. Tắt CSRF (Cross-Site Request Forgery) protection

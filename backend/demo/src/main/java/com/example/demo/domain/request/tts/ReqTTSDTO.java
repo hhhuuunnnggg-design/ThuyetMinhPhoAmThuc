@@ -1,7 +1,5 @@
 package com.example.demo.domain.request.tts;
 
-import java.math.BigDecimal;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
@@ -11,6 +9,7 @@ import lombok.experimental.FieldDefaults;
 @Data
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ReqTTSDTO {
+
     @NotBlank(message = "Text không được để trống")
     String text;
 
@@ -25,22 +24,9 @@ public class ReqTTSDTO {
 
     Boolean withoutFilter = false;
 
-    // Thông tin thuyết minh ẩm thực
-    String foodName;       // Tên món ăn
-    BigDecimal price;      // Giá món ăn
-    String description;    // Mô tả chi tiết món ăn
-    String imageUrl;       // Link ảnh món ăn
+    // POI liên kết — bắt buộc phải có POI đã tạo trước
+    Long poiId;
 
-    // Thông tin vị trí (GPS)
-    Double latitude;       // Vĩ độ
-    Double longitude;      // Kinh độ
-    Float accuracy;        // Độ chính xác vị trí (mét)
-
-    // Cấu hình geofence cho POI
-    Float triggerRadiusMeters; // Bán kính kích hoạt (mét)
-    Integer priority;          // Ưu tiên khi có nhiều POI gần nhau
-
-    // For multilingual TTS
-    Boolean multilingual = false; // Tự động tạo audio đa ngôn ngữ (EN, ZH, JA, KO, FR)
+    Boolean multilingual = false;
     String createdBy;
 }

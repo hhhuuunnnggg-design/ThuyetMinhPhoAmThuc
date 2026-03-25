@@ -49,6 +49,10 @@ public class User {
     @JoinColumn(name = "role_id")
     private Role role;
 
+    // ===== POI do user này tạo =====
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private List<POI> pois;
+
     // Phương thức tiện ích để kiểm tra trạng thái tài khoản
     @Transient
     public boolean isBlocked() {

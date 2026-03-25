@@ -24,32 +24,11 @@ export interface TTSRequest {
   ttsReturnOption?: number; // 2: wav, 3: mp3
   withoutFilter?: boolean;
 
-  // Thông tin thuyết minh ẩm thực
-  foodName?: string;
-  price?: number;
-  description?: string;
-  imageUrl?: string;
-
-  // Thông tin vị trí (GPS)
-  latitude?: number;
-  longitude?: number;
-  accuracy?: number;
-
-  // Thông tin POI (Geofence)
-  triggerRadiusMeters?: number;
-  priority?: number;
+  // POI liên kết — bắt buộc phải tạo POI trước
+  poiId?: number;
 }
 
 export interface UpdateTTSAudioGroupRequest {
-  foodName?: string | null;
-  price?: number | null;
-  description?: string | null;
-  imageUrl?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  accuracy?: number | null;
-  triggerRadiusMeters?: number | null;
-  priority?: number | null;
   originalText: string;
   originalVoice: string;
   originalSpeed: number;
@@ -67,9 +46,10 @@ export interface AudioData {
   mimeType: string;
 }
 
-/** TTSAudio — chỉ dùng để xem (READ only), có kèm thông tin từ Group */
+/** TTSAudio — chỉ dùng để xem (READ only), có kèm thông tin từ POI */
 export interface TTSAudio {
   id: number;
+  poiId?: number | null; // POI liên kết — dùng cho payment
   groupId: number | null;
   groupKey: string | null;
   languageCode: string;
@@ -80,18 +60,16 @@ export interface TTSAudio {
   createdAt: string;
   updatedAt: string | null;
 
-  // ===== THÔNG TIN ẨM THỰC (từ Group) =====
+  // ===== THÔNG TIN ẨM THỰC (từ POI liên kết với TTSAudioGroup) =====
   foodName?: string | null;
   price?: number | null;
   description?: string | null;
   imageUrl?: string | null;
 
-  // ===== VỊ TRÍ GPS (từ Group) =====
+  // ===== GPS (từ POI) =====
   latitude?: number | null;
   longitude?: number | null;
   accuracy?: number | null;
-
-  // ===== GEOFENCE (từ Group) =====
   triggerRadiusMeters?: number | null;
   priority?: number | null;
 
@@ -99,11 +77,12 @@ export interface TTSAudio {
   originalText?: string | null;
   originalVoice?: string | null;
 
-  // ===== USER INFO (từ Group) =====
+  // ===== USER INFO (từ POI) =====
   userId?: number | null;
   userEmail?: string | null;
   userFullName?: string | null;
   userAvatar?: string | null;
+  createdBy?: string | null;
 
   // ===== AUDIO FILE INFO =====
   fileName?: string | null;
@@ -117,20 +96,13 @@ export interface TTSAudioGroup {
   id: number;
   groupKey: string;
 
-  // ===== THÔNG TIN ẨM THỰC =====
-  foodName: string | null;
-  price?: number | null;
-  description?: string | null;
-  imageUrl?: string | null;
+  // ===== POI liên kết =====
+  poiId?: number | null;
 
-  // ===== VỊ TRÍ GPS =====
-  latitude?: number | null;
-  longitude?: number | null;
-  accuracy?: number | null;
-
-  // ===== GEOFENCE =====
-  triggerRadiusMeters?: number | null;
-  priority?: number | null;
+  // ===== USER info (từ POI) =====
+  userId?: number | null;
+  userEmail?: string | null;
+  userFullName?: string | null;
 
   // ===== TEXT & VOICE GỐC (tiếng Việt) =====
   originalText: string | null;
@@ -139,7 +111,7 @@ export interface TTSAudioGroup {
   originalFormat?: number | null;
   originalWithoutFilter?: boolean | null;
 
-  // ===== AUDIO ĐA NGÔN NGỮ — Map<languageCode, AudioData> =====
+  // ===== AUDIO ĐA NGÔN NGỮ =====
   audioMap: Record<string, AudioData>;
 
   // ===== USER & TIME =====

@@ -1,6 +1,7 @@
 import { Map } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { getActiveNarrationsAPI, type ActiveNarration } from "@/api/app.api";
 import { MapView } from "./components/MapView";
 import { TTSDetailView } from "./components/TTSDetailView";
 import { TTSSidebar } from "./components/TTSSidebar";
@@ -23,6 +24,30 @@ const TTSPage = () => {
   const mapRef = useRef<Map | null>(null);
   const hasManualPanRef = useRef(false);
   const useBackendNarration = true;
+  const [activePOIIds, setActivePOIIds] = useState<Set<number>>(new Set());
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Poll active narrations every 5s
+  const fetchActiveNarrations = useCallback(async () => {
+    try {
+      const res: any = await getActiveNarrationsAPI();
+      const data = Array.isArray(res?.data) ? res.data : res?.data?.result || [];
+      const playingPOIIds = new Set(
+        (data as ActiveNarration[])
+          .filter((n) => n.status === "PLAYING")
+          .map((n) => n.poiId)
+      );
+      setActivePOIIds(playingPOIIds);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    fetchActiveNarrations();
+    pollingRef.current = setInterval(fetchActiveNarrations, 5000);
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, [fetchActiveNarrations]);
 
   // Hooks
   const { audios, loading } = useTTSAudios();
@@ -224,6 +249,7 @@ const TTSPage = () => {
             onMarkerClick={handleSelect}
             mapRef={mapRef}
             hasManualPanRef={hasManualPanRef}
+            activePOIIds={activePOIIds}
           />
         )}
 

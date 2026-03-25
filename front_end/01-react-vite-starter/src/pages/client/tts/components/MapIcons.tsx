@@ -49,36 +49,92 @@ export const createUserIcon = () => {
   });
 };
 
-export const createFoodIcon = (isSelected: boolean, label: string) => {
+/**
+ * Tạo icon marker cho POI trên bản đồ.
+ * isSelected: POI đang được chọn
+ * isPlaying: POI đang có người nghe (hiển thị animation)
+ * label: tên POI
+ */
+export const createFoodIcon = (
+  isSelected: boolean,
+  label: string,
+  isPlaying = false
+) => {
+  const baseColor = isPlaying ? "#22c55e" : isSelected ? "#ff6b35" : "#9ca3af";
+  const glowStyle = isPlaying
+    ? `
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+    animation: pulse-green 1.5s infinite;
+  `
+    : "";
+
   return new DivIcon({
     className: "custom-food-marker",
     html: `
+      <style>
+        @keyframes pulse-green {
+          0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+          70% { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+        @keyframes playing-wave {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.3); opacity: 0.7; }
+        }
+      </style>
       <div style="
         display: flex;
         flex-direction: column;
         align-items: center;
       ">
+        ${isPlaying ? `
         <div style="
-          width: ${isSelected ? 20 : 16}px;
-          height: ${isSelected ? 20 : 16}px;
+          width: 32px;
+          height: 32px;
           border-radius: 50%;
-          background: ${isSelected ? "#ff6b35" : "#9ca3af"};
+          background: rgba(34, 197, 94, 0.2);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          animation: playing-wave 1.5s infinite;
+          margin-bottom: 2px;
+        ">
+          <span style="font-size: 16px;">🔊</span>
+        </div>
+        ` : `
+        <div style="
+          width: ${isSelected ? 16 : 12}px;
+          height: ${isSelected ? 16 : 12}px;
+          border-radius: 50%;
+          background: ${baseColor};
           border: 2px solid white;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          ${glowStyle}
+          transition: all 0.3s;
         "></div>
+        `}
         <div style="
           margin-top: 4px;
-          padding: 2px 6px;
-          background: ${isSelected ? "#ff6b35" : "#6b7280"};
+          padding: 2px 8px;
+          background: ${baseColor};
           color: white;
-          border-radius: 4px;
-          font-size: 10px;
+          border-radius: 6px;
+          font-size: 11px;
           font-weight: ${isSelected ? "bold" : "normal"};
           white-space: nowrap;
+          max-width: 120px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         ">${label}</div>
+        ${isPlaying ? `<div style="
+          font-size: 10px;
+          color: #22c55e;
+          font-weight: 700;
+          margin-top: 2px;
+        ">● LIVE</div>` : ""}
       </div>
     `,
-    iconSize: [120, 40],
-    iconAnchor: [60, 20],
+    iconSize: [140, isPlaying ? 64 : 44],
+    iconAnchor: [70, isPlaying ? 32 : 22],
   });
 };

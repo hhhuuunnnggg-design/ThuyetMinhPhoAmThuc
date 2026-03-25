@@ -1,7 +1,7 @@
 import { Button } from "antd";
 import { MapContainer, TileLayer, Marker, Circle } from "react-leaflet";
 import { Map } from "leaflet";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import type { TTSAudio } from "@/api/tts.api";
 import { GeoPosition } from "../types";
 import { MapCenter } from "./MapCenter";
@@ -16,6 +16,8 @@ interface TTSMapProps {
   onMarkerClick: (id: number) => void;
   mapRef: React.MutableRefObject<Map | null>;
   hasManualPanRef: React.MutableRefObject<boolean>;
+  /** Tập hợp POI đang có người nghe */
+  activePOIIds?: Set<number>;
 }
 
 export const TTSMap = ({
@@ -27,6 +29,7 @@ export const TTSMap = ({
   onMarkerClick,
   mapRef,
   hasManualPanRef,
+  activePOIIds = new Set(),
 }: TTSMapProps) => {
   return (
     <div className="gps-map-frame">
@@ -78,6 +81,7 @@ export const TTSMap = ({
           .filter((a) => a.latitude != null && a.longitude != null)
           .map((audio) => {
             const isSelected = audio.id === selected?.id;
+            const isPlaying = activePOIIds.has(audio.id);
             const radius = audio.triggerRadiusMeters ?? audio.accuracy ?? 30;
 
             return (
@@ -86,16 +90,16 @@ export const TTSMap = ({
                   center={[audio.latitude!, audio.longitude!]}
                   radius={radius}
                   pathOptions={{
-                    color: isSelected ? "#ff6b35" : "#9ca3af",
-                    fillColor: isSelected ? "#ff6b35" : "#9ca3af",
-                    fillOpacity: 0.1,
-                    weight: 2,
-                    dashArray: "5, 5",
+                    color: isPlaying ? "#22c55e" : isSelected ? "#ff6b35" : "#9ca3af",
+                    fillColor: isPlaying ? "#22c55e" : isSelected ? "#ff6b35" : "#9ca3af",
+                    fillOpacity: isPlaying ? 0.2 : 0.1,
+                    weight: isPlaying ? 3 : 2,
+                    dashArray: isPlaying ? undefined : "5, 5",
                   }}
                 />
                 <Marker
                   position={[audio.latitude!, audio.longitude!]}
-                  icon={createFoodIcon(isSelected, audio.foodName || "Food")}
+                  icon={createFoodIcon(isSelected, audio.foodName || "Food", isPlaying)}
                   eventHandlers={{
                     click: () => {
                       onMarkerClick(audio.id);

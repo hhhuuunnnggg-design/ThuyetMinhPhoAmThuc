@@ -7,7 +7,11 @@ export const config = {
     timeout: 30000,
   },
   app: {
-    name: "Facebook Clone",
+    name: "Thuyết Minh Ẩm Thực",
     version: "1.0.0",
+  },
+  payos: {
+    successUrl: import.meta.env.VITE_PAYMENT_SUCCESS_URL || "http://localhost:3000/payment/success",
+    cancelUrl: import.meta.env.VITE_PAYMENT_CANCEL_URL || "http://localhost:3000/payment/cancel",
   },
 } as const;

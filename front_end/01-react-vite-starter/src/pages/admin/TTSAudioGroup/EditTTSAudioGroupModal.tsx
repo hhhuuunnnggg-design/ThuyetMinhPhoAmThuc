@@ -2,14 +2,13 @@ import {
   getAudioGroupByIdAPI,
   getVoicesAPI,
   updateTTSGroupAPI,
-  uploadFoodImageOnlyAPI,
   type TTSAudioGroup,
   type UpdateTTSAudioGroupRequest,
   type Voice,
 } from "@/api/tts.api";
 import { logger } from "@/utils/logger";
 import { UploadOutlined } from "@ant-design/icons";
-import { Button, Form, Input, InputNumber, Modal, Select, Slider, Space, Switch, Upload, message } from "antd";
+import { Button, Form, Input, Modal, Select, Slider, Space, Switch, message } from "antd";
 import { useEffect, useState } from "react";
 
 const { TextArea } = Input;
@@ -59,8 +58,6 @@ const EditTTSAudioGroupModal = ({ open, groupId, onCancel, onSuccess }: EditTTSA
   const [loadingVoices, setLoadingVoices] = useState(false);
   const [loadingGroup, setLoadingGroup] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !groupId) return;
@@ -75,22 +72,12 @@ const EditTTSAudioGroupModal = ({ open, groupId, onCancel, onSuccess }: EditTTSA
           return;
         }
         form.setFieldsValue({
-          foodName: group.foodName,
-          price: group.price ?? undefined,
-          description: group.description,
-          imageUrl: group.imageUrl,
-          latitude: group.latitude ?? undefined,
-          longitude: group.longitude ?? undefined,
-          accuracy: group.accuracy ?? undefined,
-          triggerRadiusMeters: group.triggerRadiusMeters ?? undefined,
-          priority: group.priority ?? undefined,
           originalText: group.originalText,
           originalVoice: group.originalVoice,
           originalSpeed: group.originalSpeed ?? 1,
           originalFormat: group.originalFormat ?? 3,
           originalWithoutFilter: group.originalWithoutFilter ?? false,
         });
-        setImagePreview(group.imageUrl ?? null);
       } catch (e: unknown) {
         message.error("Không tải được nhóm audio");
         logger.error("Load TTS group error:", e);
@@ -120,38 +107,11 @@ const EditTTSAudioGroupModal = ({ open, groupId, onCancel, onSuccess }: EditTTSA
     })();
   }, [open]);
 
-  const handleImageUpload = async (file: File) => {
-    try {
-      setUploadingImage(true);
-      const response = await uploadFoodImageOnlyAPI(file);
-      if (response?.data?.imageUrl) {
-        form.setFieldsValue({ imageUrl: response.data.imageUrl });
-        setImagePreview(response.data.imageUrl);
-        message.success("Upload ảnh thành công!");
-      }
-    } catch (e: unknown) {
-      message.error("Upload ảnh thất bại");
-      logger.error("Upload image error:", e);
-    } finally {
-      setUploadingImage(false);
-    }
-    return false;
-  };
-
   const handleSubmit = async (values: UpdateTTSAudioGroupRequest & { originalWithoutFilter?: boolean }) => {
     if (!groupId) return;
     try {
       setSaving(true);
       const body: UpdateTTSAudioGroupRequest = {
-        foodName: values.foodName,
-        price: values.price,
-        description: values.description,
-        imageUrl: values.imageUrl,
-        latitude: values.latitude,
-        longitude: values.longitude,
-        accuracy: values.accuracy,
-        triggerRadiusMeters: values.triggerRadiusMeters,
-        priority: values.priority,
         originalText: values.originalText,
         originalVoice: values.originalVoice,
         originalSpeed: values.originalSpeed,
@@ -238,67 +198,10 @@ const EditTTSAudioGroupModal = ({ open, groupId, onCancel, onSuccess }: EditTTSA
           <Switch checkedChildren="Bật" unCheckedChildren="Tắt" disabled={loadingGroup} />
         </Form.Item>
 
-        <SectionLabel>Thông tin món / POI</SectionLabel>
-
-        <Form.Item name="foodName" label="Tên món / gian hàng">
-          <Input placeholder="Ví dụ: Phở béo" disabled={loadingGroup} />
-        </Form.Item>
-
-        <Form.Item name="price" label="Giá tham khảo (VNĐ)">
-          <InputNumber style={{ width: "100%" }} min={0} step={1000} disabled={loadingGroup} />
-        </Form.Item>
-
-        <Form.Item name="description" label="Mô tả">
-          <TextArea rows={3} disabled={loadingGroup} />
-        </Form.Item>
-
-        <Form.Item name="imageUrl" label="Ảnh minh họa">
-          <Space direction="vertical" style={{ width: "100%" }}>
-            <Upload beforeUpload={handleImageUpload} showUploadList={false} accept="image/*">
-              <Button icon={<UploadOutlined />} loading={uploadingImage} disabled={loadingGroup}>
-                Upload ảnh
-              </Button>
-            </Upload>
-            {imagePreview && (
-              <img
-                src={imagePreview}
-                alt="Preview"
-                style={{ maxWidth: "100%", maxHeight: 200, borderRadius: 8, objectFit: "cover" }}
-              />
-            )}
-          </Space>
-        </Form.Item>
-
-        <SectionLabel>Vị trí &amp; geofence</SectionLabel>
-
-        <Form.Item label="Tọa độ" style={{ marginBottom: 0 }}>
-          <Space.Compact style={{ width: "100%" }}>
-            <Form.Item name="latitude" noStyle>
-              <InputNumber style={{ width: "50%" }} placeholder="Latitude" min={-90} max={90} disabled={loadingGroup} />
-            </Form.Item>
-            <Form.Item name="longitude" noStyle>
-              <InputNumber
-                style={{ width: "50%" }}
-                placeholder="Longitude"
-                min={-180}
-                max={180}
-                disabled={loadingGroup}
-              />
-            </Form.Item>
-          </Space.Compact>
-        </Form.Item>
-
-        <Form.Item name="triggerRadiusMeters" label="Bán kính kích hoạt (m)">
-          <InputNumber style={{ width: "100%" }} min={10} step={10} disabled={loadingGroup} />
-        </Form.Item>
-
-        <Form.Item name="accuracy" label="Accuracy GPS (m)">
-          <InputNumber style={{ width: "100%" }} min={1} step={1} disabled={loadingGroup} />
-        </Form.Item>
-
-        <Form.Item name="priority" label="Độ ưu tiên">
-          <InputNumber style={{ width: "100%" }} min={0} step={1} disabled={loadingGroup} />
-        </Form.Item>
+        <p style={{ color: "#64748b", fontSize: 12, marginTop: 8 }}>
+          Thông tin ẩm thực (tên món, giá, mô tả, ảnh) nằm ở <strong>POI liên kết</strong> — chỉnh sửa tại trang{" "}
+          <strong>Quản lý POI</strong>.
+        </p>
 
         <Form.Item style={{ marginTop: 16 }}>
           <Space>

@@ -4,14 +4,16 @@ import {
   getAudioGroupByIdAPI,
   getImageUrl,
 } from "@/api/tts.api";
+import { createPaymentAPI, type Payment } from "@/api/app.api";
 import {
   CompassOutlined,
   GlobalOutlined,
   PauseCircleOutlined,
   PlayCircleOutlined,
 } from "@ant-design/icons";
-import { Button, message, Select, Spin, Tooltip } from "antd";
+import { Button, InputNumber, message, Modal, Select, Spin, Tooltip } from "antd";
 import { useEffect, useRef, useState } from "react";
+import { config } from "@/config";
 import { formatDistance } from "../utils/format";
 
 const LANGUAGE_OPTIONS = [
@@ -59,6 +61,9 @@ export const TTSDetailView = ({
   const [loadingMultilingual, setLoadingMultilingual] = useState(false);
   const [generatingMultilingual, setGeneratingMultilingual] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [payModalOpen, setPayModalOpen] = useState(false);
+  const [payAmount, setPayAmount] = useState<number | null>(null);
+  const [paying, setPaying] = useState(false);
   const audioTimeRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Fetch multilingual audio group when selected changes
@@ -132,6 +137,47 @@ export const TTSDetailView = ({
       if (entry?.s3Url) {
         onPlayPause(entry.s3Url);
       }
+    }
+  };
+
+  const handleOpenPayModal = () => {
+    setPayAmount(selected.price ?? null);
+    setPayModalOpen(true);
+  };
+
+  const handlePay = async () => {
+    if (!selected.poiId) {
+      message.error("Không tìm thấy thông tin POI để thanh toán");
+      return;
+    }
+    if (!payAmount || payAmount <= 0) {
+      message.error("Vui lòng nhập số tiền hợp lệ");
+      return;
+    }
+    setPaying(true);
+    try {
+      const res: any = await createPaymentAPI({
+        poiId: selected.poiId,
+        userId: "guest",
+        amount: payAmount,
+        description: `Thanh toan thuyet minh: ${selected.foodName || "mon an"}`,
+      });
+      const payment: Payment = res?.data?.data ?? res?.data ?? res;
+      if (payment.payosPaymentLink) {
+        setPayModalOpen(false);
+        // Mở PayOS checkout trong tab mới
+        window.open(payment.payosPaymentLink, "_blank");
+        message.success("Đã mở trang thanh toán PayOS!");
+      } else if (payment.mock === "true" || payment.mock === true) {
+        setPayModalOpen(false);
+        message.info("Chế độ mock: PayOS chưa được cấu hình phía backend.");
+      } else {
+        message.error("Không nhận được link thanh toán từ server");
+      }
+    } catch (e: any) {
+      message.error(e?.message || "Tạo thanh toán thất bại");
+    } finally {
+      setPaying(false);
     }
   };
 
@@ -267,7 +313,48 @@ export const TTSDetailView = ({
         </div>
 
         {geoError && <div className="geo-error">{geoError}</div>}
+
+        {selected.poiId && (
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #f0f0f0" }}>
+            <Button
+              type="primary"
+              size="large"
+              block
+              onClick={handleOpenPayModal}
+            >
+              Thanh toán PayOS
+            </Button>
+          </div>
+        )}
       </div>
+
+      <Modal
+        title="Thanh toán qua PayOS"
+        open={payModalOpen}
+        onCancel={() => setPayModalOpen(false)}
+        onOk={handlePay}
+        confirmLoading={paying}
+        okText="Thanh toán ngay"
+        cancelText="Hủy"
+      >
+        <p>Quét mã QR hoặc nhấn nút bên dưới để thanh toán cho món: <strong>{selected.foodName}</strong></p>
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: "block", marginBottom: 4 }}>Số tiền (VND):</label>
+          <InputNumber
+            style={{ width: "100%" }}
+            value={payAmount}
+            onChange={(v) => setPayAmount(v)}
+            min={1000}
+            step={1000}
+            formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+            parser={(v) => Number(String(v).replace(/,/g, "")) || 0}
+            placeholder="Nhập số tiền VND"
+          />
+        </div>
+        <p style={{ fontSize: 12, color: "#888" }}>
+          Thanh toán sẽ được xử lý qua PayOS. Sau khi hoàn tất, bạn sẽ được chuyển hướng về trang kết quả.
+        </p>
+      </Modal>
     </>
   );
 };

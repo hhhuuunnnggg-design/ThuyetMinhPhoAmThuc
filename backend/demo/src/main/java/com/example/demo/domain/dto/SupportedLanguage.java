@@ -1,5 +1,6 @@
 package com.example.demo.domain.dto;
 
+import java.util.List;
 import java.util.Map;
 
 import lombok.AccessLevel;
@@ -13,6 +14,9 @@ public final class SupportedLanguage {
     public static final String JA = "ja";
     public static final String KO = "ko";
     public static final String FR = "fr";
+
+    public static final List<String> ALL = List.of(VI, EN, ZH, JA, KO, FR);
+    public static final List<String> FOREIGN = List.of(EN, ZH, JA, KO, FR);
 
     public static final Map<String, String> NAMES = Map.of(
             VI, "Tiếng Việt",

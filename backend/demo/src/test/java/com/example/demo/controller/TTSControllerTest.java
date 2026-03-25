@@ -6,7 +6,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import java.io.ByteArrayInputStream;
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -26,7 +25,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.example.demo.domain.TTSAudioGroup;
 import com.example.demo.domain.request.tts.ReqTTSDTO;
 import com.example.demo.domain.response.tts.ResAudioDataDTO;
 import com.example.demo.domain.response.tts.ResTTSAudioGroupDTO;
@@ -80,15 +78,7 @@ class TTSControllerTest {
                     .originalSpeed(req.getSpeed())
                     .originalFormat(req.getTtsReturnOption())
                     .originalWithoutFilter(req.getWithoutFilter())
-                    .foodName(req.getFoodName())
-                    .price(req.getPrice())
-                    .description(req.getDescription())
-                    .imageUrl(req.getImageUrl())
-                    .latitude(req.getLatitude())
-                    .longitude(req.getLongitude())
-                    .accuracy(req.getAccuracy())
-                    .triggerRadiusMeters(req.getTriggerRadiusMeters())
-                    .priority(req.getPriority())
+                    .poiId(req.getPoiId())
                     .createdBy(req.getCreatedBy())
                     .createdAt(Instant.now())
                     .audioMap(audioMap)
@@ -105,10 +95,7 @@ class TTSControllerTest {
                     "speed": 1.0,
                     "ttsReturnOption": 3,
                     "withoutFilter": false,
-                    "foodName": "Phở bò",
-                    "price": 50000,
-                    "latitude": 10.762622,
-                    "longitude": 106.660172
+                    "poiId": 1
                 }
                 """;
 
@@ -119,7 +106,7 @@ class TTSControllerTest {
                 .andExpect(jsonPath("$.statusCode").value(200))
                 .andExpect(jsonPath("$.data.originalText").value("Xin chào, đây là test text-to-speech"))
                 .andExpect(jsonPath("$.data.originalVoice").value("hcm-diemmy"))
-                .andExpect(jsonPath("$.data.foodName").value("Phở bò"));
+                .andExpect(jsonPath("$.data.poiId").value(1));
     }
 
     @Test

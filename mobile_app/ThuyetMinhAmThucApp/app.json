@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "Thuyết Minh Phố Ăm Thực",
+    "slug": "thuyetminhamthucapp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ff6b35"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.thuyetminh.amthuc",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Ứng dụng cần vị trí để phát thuyết minh khi bạn đến gần quán ăn",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Ứng dụng cần vị trí để phát thuyết minh khi bạn đến gần quán ăn",
+        "NSCameraUsageDescription": "Ứng dụng cần camera để quét mã QR"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ff6b35"
+      },
+      "package": "com.thuyetminh.amthuc",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Ứng dụng cần quyền camera để quét mã QR"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Ứng dụng cần vị trí để phát thuyết minh khi bạn đến gần quán ăn",
+          "locationAlwaysAndWhenInUsePermission": "Ứng dụng cần vị trí để phát thuyết minh khi bạn đến gần quán ăn"
+        }
+      ]
+    ],
+    "extra": {
+      "apiBaseUrl": "http://10.0.2.2:8080"
+    }
+  }
+}

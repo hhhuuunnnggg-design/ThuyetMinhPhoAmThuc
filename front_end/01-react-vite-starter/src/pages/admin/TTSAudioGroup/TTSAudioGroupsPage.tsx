@@ -7,7 +7,7 @@ import {
   type TTSAudioGroup,
 } from "@/api/tts.api";
 import { config } from "@/config";
-import { API_ENDPOINTS } from "@/constants";
+import { API_ENDPOINTS, ROUTES } from "@/constants";
 import CreateTTSAudioModal from "@/pages/admin/TTSAudio/CreateTTSAudioModal";
 import EditTTSAudioGroupModal from "@/pages/admin/TTSAudioGroup/EditTTSAudioGroupModal";
 import { logger } from "@/utils/logger";
@@ -20,8 +20,9 @@ import {
   ReloadOutlined,
 } from "@ant-design/icons";
 import ProTable from "@ant-design/pro-table";
-import { Button, Image, message, Popconfirm, Space, Tag, Tooltip } from "antd";
+import { Alert, Button, message, Popconfirm, Space, Tag, Tooltip } from "antd";
 import { useRef, useState } from "react";
+import { Link } from "react-router-dom";
 
 const LANGUAGE_COLORS: Record<string, string> = {
   vi: "#ff6b35",
@@ -98,13 +99,13 @@ const TTSAudioGroupsPage = () => {
       width: 70,
     },
     {
-      title: "Nhóm / Món ăn",
-      dataIndex: "foodName",
-      key: "foodName",
+      title: "Nhóm / POI",
+      dataIndex: "poiId",
+      key: "poiId",
       width: 280,
       render: (_: any, record: TTSAudioGroup) => (
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <span style={{ fontWeight: 600 }}>{record.foodName || "—"}</span>
+          <span style={{ fontWeight: 600 }}>POI #{record.poiId ?? "—"}</span>
           <span style={{ fontSize: 12, color: "#888" }}>
             {record.groupKey || `Group #${record.id}`}
           </span>
@@ -117,27 +118,13 @@ const TTSAudioGroupsPage = () => {
       ),
     },
     {
-      title: "Ảnh",
-      dataIndex: "imageUrl",
-      key: "imageUrl",
+      title: "Người tạo",
+      dataIndex: "userEmail",
+      key: "userEmail",
       hideInSearch: true,
-      width: 80,
-      render: (url: string | null | undefined) =>
-        url ? (
-          <Image
-            width={56}
-            height={56}
-            src={url}
-            alt="food"
-            style={{ borderRadius: 8, objectFit: "cover" }}
-            preview={{ mask: "Xem" }}
-            fallback="https://via.placeholder.com/56x56?text=No+Img"
-          />
-        ) : (
-          <div style={{ width: 56, height: 56, borderRadius: 8, background: "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#999" }}>
-            No img
-          </div>
-        ),
+      width: 180,
+      render: (v: string | null | undefined) =>
+        v ? <span style={{ fontSize: 12 }}>{v}</span> : <span style={{ color: "#999" }}>—</span>,
     },
     {
       title: "Ngôn ngữ",
@@ -173,25 +160,6 @@ const TTSAudioGroupsPage = () => {
       hideInSearch: true,
       width: 150,
       render: (v: string) => (v ? <Tag color="blue">{v}</Tag> : <span style={{ color: "#999" }}>—</span>),
-    },
-    {
-      title: "GPS",
-      dataIndex: "latitude",
-      key: "gps",
-      hideInSearch: true,
-      width: 160,
-      render: (_: any, record: TTSAudioGroup) =>
-        record.latitude != null && record.longitude != null ? (
-          <div style={{ fontSize: 11 }}>
-            <div>Lat: <b>{record.latitude.toFixed(5)}</b></div>
-            <div>Lng: <b>{record.longitude.toFixed(5)}</b></div>
-            {record.triggerRadiusMeters != null && (
-              <div style={{ color: "#1890ff" }}>R: {record.triggerRadiusMeters}m</div>
-            )}
-          </div>
-        ) : (
-          <span style={{ color: "#999" }}>—</span>
-        ),
     },
     {
       title: "Ngày tạo",
@@ -230,7 +198,7 @@ const TTSAudioGroupsPage = () => {
               onClick={() => handleGenerateMultilingual(record.id)}
             />
           </Tooltip>
-          <Tooltip title="Sửa thông tin nhóm (món, GPS, text gốc)">
+          <Tooltip title="Sửa text/giọng nhóm (thông tin ẩm thực ở POI)">
             <Button
               type="default"
               icon={<EditOutlined />}
@@ -256,6 +224,19 @@ const TTSAudioGroupsPage = () => {
 
   return (
     <div style={{ padding: 24 }}>
+      <Alert
+        type="info"
+        showIcon
+        style={{ marginBottom: 16 }}
+        message="Nhóm thuyết minh TTS (audio đa ngôn ngữ)"
+        description={
+          <>
+            Tạo/sửa <strong>audio đa ngôn ngữ</strong> tại đây. Mỗi nhóm gắn với một <strong>POI</strong> đã tạo trước.
+            Thông tin ẩm thực (tên món, giá, mô tả, ảnh) nằm ở{" "}
+            <Link to={ROUTES.ADMIN.POIS}>POI</Link>.
+          </>
+        }
+      />
       <CreateTTSAudioModal
         open={createModalOpen}
         onCancel={() => setCreateModalOpen(false)}
@@ -274,7 +255,7 @@ const TTSAudioGroupsPage = () => {
         }}
       />
       <ProTable<TTSAudioGroup>
-        headerTitle="Quản lý Nhóm Audio TTS"
+        headerTitle="Nhóm thuyết minh TTS — món, GPS, audio đa ngôn ngữ"
         actionRef={actionRef}
         rowKey="id"
         search={{ labelWidth: "auto" }}

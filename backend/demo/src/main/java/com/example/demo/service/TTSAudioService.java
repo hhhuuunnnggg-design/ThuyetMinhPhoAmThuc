@@ -22,7 +22,7 @@ public interface TTSAudioService {
         Page<ResTTSAudioDTO> getAllTTSAudios(Pageable pageable);
 
         // ============ Group CRUD ============
-        ResTTSAudioGroupDTO createGroup(ReqTTSDTO request) throws IOException;
+        ResTTSAudioGroupDTO createGroup(ReqTTSDTO request) throws IOException, IdInvalidException;
 
         ResTTSAudioGroupDTO getGroupById(Long id) throws IdInvalidException;
 

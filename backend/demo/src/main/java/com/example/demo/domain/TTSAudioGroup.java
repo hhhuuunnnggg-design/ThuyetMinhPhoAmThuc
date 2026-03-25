@@ -1,6 +1,5 @@
 package com.example.demo.domain;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Map;
 
@@ -44,7 +43,7 @@ public class TTSAudioGroup {
     String foodName; // Tên món ăn
 
     @Column(precision = 12, scale = 2)
-    BigDecimal price; // Giá món ăn
+    java.math.BigDecimal price; // Giá món ăn
 
     @Column(columnDefinition = "TEXT")
     String description; // Mô tả chi tiết món ăn
@@ -52,22 +51,10 @@ public class TTSAudioGroup {
     @Column
     String imageUrl; // Link ảnh món ăn
 
-    // ===== VỊ TRÍ GPS =====
-    @Column
-    Double latitude; // Vĩ độ
-
-    @Column
-    Double longitude; // Kinh độ
-
-    @Column
-    Float accuracy; // Độ chính xác của vị trí (mét)
-
-    // ===== CẤU HÌNH GEOFENCE =====
-    @Column
-    Float triggerRadiusMeters; // Bán kính kích hoạt POI (mét)
-
-    @Column
-    Integer priority; // Mức ưu tiên khi có nhiều POI gần nhau
+    // ===== POI liên kết (1 POI → nhiều TTSAudioGroup, chứa audio đa ngôn ngữ) =====
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "poi_id")
+    POI poi;
 
     // ===== TEXT & VOICE GỐC (tiếng Việt) =====
     @Column(columnDefinition = "TEXT", nullable = false)
@@ -92,9 +79,6 @@ public class TTSAudioGroup {
     Map<String, AudioData> audioMap;
 
     // ===== USER INFO =====
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    User user; // User sở hữu audio này
 
     @Column
     String createdBy; // Email của user (backup)

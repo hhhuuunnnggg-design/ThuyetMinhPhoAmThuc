@@ -8,6 +8,9 @@ export * from "./post.api";
 export * from "./role.api";
 export * from "./tts.api";
 export * from "./user.api";
+export * from "./adminPoi.api";
+export * from "./app.api";
+export * from "./narrationLog.api";
 // Re-export axios as named export for convenience
 export { default } from "./axios";
 
