@@ -136,4 +136,30 @@ public class SecurityUtil {
                 .filter(authentication -> authentication.getCredentials() instanceof String)
                 .map(authentication -> (String) authentication.getCredentials());
     }
+
+    /**
+     * Lấy user id từ JWT (claim {@code user_id}) — dùng khi admin tạo bản ghi gắn chủ sở hữu.
+     */
+    public static Optional<Long> getCurrentUserId() {
+        SecurityContext securityContext = SecurityContextHolder.getContext();
+        Authentication authentication = securityContext.getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof Jwt jwt)) {
+            return Optional.empty();
+        }
+        Object claim = jwt.getClaim("user_id");
+        if (claim == null) {
+            return Optional.empty();
+        }
+        if (claim instanceof Number n) {
+            return Optional.of(n.longValue());
+        }
+        if (claim instanceof String s && !s.isBlank()) {
+            try {
+                return Optional.of(Long.parseLong(s));
+            } catch (NumberFormatException ignored) {
+                return Optional.empty();
+            }
+        }
+        return Optional.empty();
+    }
 }

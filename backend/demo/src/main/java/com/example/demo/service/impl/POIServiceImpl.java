@@ -12,7 +12,9 @@ import com.example.demo.domain.request.admin.ReqUpsertPOIDTO;
 import com.example.demo.domain.response.admin.ResAdminPOIDTO;
 import com.example.demo.repository.POIRepository;
 import com.example.demo.repository.RestaurantRepository;
+import com.example.demo.repository.UserServiceRepository;
 import com.example.demo.service.POIService;
+import com.example.demo.util.SecurityUtil;
 import com.example.demo.util.error.IdInvalidException;
 
 @Service
@@ -21,12 +23,15 @@ public class POIServiceImpl implements POIService {
 
     private final POIRepository poiRepository;
     private final RestaurantRepository restaurantRepository;
+    private final UserServiceRepository userServiceRepository;
 
     public POIServiceImpl(
             POIRepository poiRepository,
-            RestaurantRepository restaurantRepository) {
+            RestaurantRepository restaurantRepository,
+            UserServiceRepository userServiceRepository) {
         this.poiRepository = poiRepository;
         this.restaurantRepository = restaurantRepository;
+        this.userServiceRepository = userServiceRepository;
     }
 
     @Override
@@ -70,6 +75,10 @@ public class POIServiceImpl implements POIService {
                 .build();
 
         poi.resolveQrCode();
+
+        SecurityUtil.getCurrentUserId()
+                .flatMap(userServiceRepository::findById)
+                .ifPresent(poi::setUser);
 
         if (req.getRestaurantId() != null) {
             restaurantRepository.findById(req.getRestaurantId())

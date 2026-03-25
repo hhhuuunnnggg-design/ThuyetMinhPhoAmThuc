@@ -38,7 +38,6 @@ export interface AdminPOI {
 }
 
 export interface UpsertPOIRequest {
-  userId?: number | null;
   foodName?: string;
   price?: number;
   description?: string;

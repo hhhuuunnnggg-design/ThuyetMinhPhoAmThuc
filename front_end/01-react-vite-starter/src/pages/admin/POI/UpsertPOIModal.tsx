@@ -5,15 +5,14 @@ import {
   updateAdminPOIAPI,
   type UpsertPOIRequest,
 } from "@/api/adminPoi.api";
-import { logger } from "@/utils/logger";
 import {
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Slider,
-  message,
-} from "antd";
+  fetchAdminRestaurantsAPI,
+  parseAdminRestaurantListResponse,
+  type AdminRestaurant,
+} from "@/api/adminRestaurant.api";
+import { useCurrentApp } from "@/components/context/app.context";
+import { logger } from "@/utils/logger";
+import { Alert, Form, Input, InputNumber, Modal, Select, Slider, message } from "antd";
 import { useEffect, useState } from "react";
 
 type Props = {
@@ -26,8 +25,26 @@ type Props = {
 const UpsertPOIModal = ({ open, onCancel, onSuccess, editingId }: Props) => {
   const [form] = Form.useForm<UpsertPOIRequest>();
   const [loading, setLoading] = useState(false);
+  const [restaurants, setRestaurants] = useState<AdminRestaurant[]>([]);
+  /** Hiển thị chủ sở hữu khi sửa POI */
+  const [editOwnerHint, setEditOwnerHint] = useState<string | null>(null);
+  const { user } = useCurrentApp();
 
   const isEdit = editingId != null;
+
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      try {
+        const raw: any = await fetchAdminRestaurantsAPI(1, 500, "createdAt", "desc");
+        const { data } = parseAdminRestaurantListResponse(raw);
+        setRestaurants(data);
+      } catch (e) {
+        logger.error("Load restaurants for POI modal:", e);
+        setRestaurants([]);
+      }
+    })();
+  }, [open]);
 
   useEffect(() => {
     if (!open) {
@@ -36,6 +53,7 @@ const UpsertPOIModal = ({ open, onCancel, onSuccess, editingId }: Props) => {
     }
     if (editingId == null) {
       form.resetFields();
+      setEditOwnerHint(null);
       return;
     }
 
@@ -48,6 +66,14 @@ const UpsertPOIModal = ({ open, onCancel, onSuccess, editingId }: Props) => {
           message.error("Không đọc được dữ liệu POI");
           return;
         }
+        const name = [poi.userFullName, poi.userEmail].filter(Boolean).join(" — ");
+        setEditOwnerHint(
+          poi.userId != null
+            ? name
+              ? `${name} (user ID: ${poi.userId})`
+              : `User ID: ${poi.userId}`
+            : "Chưa gán user sở hữu"
+        );
         form.setFieldsValue({
           foodName: poi.foodName ?? undefined,
           price: poi.price ?? undefined,
@@ -63,7 +89,6 @@ const UpsertPOIModal = ({ open, onCancel, onSuccess, editingId }: Props) => {
           triggerRadiusMeters: poi.triggerRadiusMeters ?? 50,
           priority: poi.priority ?? 0,
           restaurantId: poi.restaurantId ?? undefined,
-          userId: poi.userId ?? undefined,
         });
       } catch (e: any) {
         message.error(e?.message || "Không tải được POI");
@@ -93,7 +118,6 @@ const UpsertPOIModal = ({ open, onCancel, onSuccess, editingId }: Props) => {
         triggerRadiusMeters: values.triggerRadiusMeters ?? undefined,
         priority: values.priority ?? undefined,
         restaurantId: values.restaurantId ?? undefined,
-        userId: values.userId ?? undefined,
       };
       if (isEdit) {
         await updateAdminPOIAPI(editingId!, body);
@@ -113,6 +137,12 @@ const UpsertPOIModal = ({ open, onCancel, onSuccess, editingId }: Props) => {
     }
   };
 
+  const restaurantOptions = restaurants.map((r) => {
+    const label =
+      [r.ownerName, r.ownerEmail].filter(Boolean).join(" — ") || `Nhà hàng #${r.id}`;
+    return { value: r.id, label };
+  });
+
   return (
     <Modal
       title={isEdit ? "Sửa POI" : "Tạo POI mới"}
@@ -127,6 +157,32 @@ const UpsertPOIModal = ({ open, onCancel, onSuccess, editingId }: Props) => {
         POI là điểm kinh doanh trên bản đồ. Chứa <strong>thông tin ẩm thực</strong>, <strong>GPS</strong>, bán kính kích
         hoạt. TTSAudioGroup tạo sau từ trang Nhóm TTS và liên kết ngược lại POI này.
       </p>
+
+      {!isEdit && user && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message="Chủ sở hữu POI"
+          description={
+            <>
+              POI sẽ được gắn với tài khoản đang đăng nhập: <strong>{user.fullname}</strong> (ID:{" "}
+              <strong>{user.id}</strong>). Không cần nhập tay.
+            </>
+          }
+        />
+      )}
+
+      {isEdit && editOwnerHint && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message="Chủ sở hữu POI"
+          description={<span>{editOwnerHint}. Cập nhật POI không đổi chủ sở hữu.</span>}
+        />
+      )}
+
       <Form form={form} layout="vertical">
         {/* Thông tin ẩm thực */}
         <Form.Item name="foodName" label="Tên món ăn">
@@ -168,6 +224,17 @@ const UpsertPOIModal = ({ open, onCancel, onSuccess, editingId }: Props) => {
 
         <Form.Item name="phone" label="Điện thoại">
           <Input placeholder="Số liên hệ" />
+        </Form.Item>
+
+        <Form.Item name="restaurantId" label="Nhà hàng (tùy chọn)">
+          <Select
+            allowClear
+            placeholder="Chọn nhà hàng trong danh sách"
+            options={restaurantOptions}
+            showSearch
+            optionFilterProp="label"
+            notFoundContent={restaurantOptions.length === 0 ? "Chưa có nhà hàng — tạo ở menu Nhà hàng" : undefined}
+          />
         </Form.Item>
 
         {/* GPS */}
@@ -214,25 +281,6 @@ const UpsertPOIModal = ({ open, onCancel, onSuccess, editingId }: Props) => {
         <Form.Item name="priority" label="Ưu tiên khi gần nhau" style={{ marginBottom: 0 }}>
           <InputNumber min={0} max={100} placeholder="0" style={{ width: "100%" }} />
         </Form.Item>
-
-        {/* User & Restaurant */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-          <Form.Item name="userId" label="ID User sở hữu (tùy chọn)" style={{ marginTop: 8 }}>
-            <InputNumber
-              min={1}
-              style={{ width: "100%" }}
-              placeholder="Nếu cần phân quyền"
-            />
-          </Form.Item>
-
-          <Form.Item name="restaurantId" label="ID nhà hàng (tùy chọn)" style={{ marginTop: 8 }}>
-            <InputNumber
-              min={1}
-              style={{ width: "100%" }}
-              placeholder="Nếu đã có bản ghi Nhà hàng"
-            />
-          </Form.Item>
-        </div>
       </Form>
     </Modal>
   );
