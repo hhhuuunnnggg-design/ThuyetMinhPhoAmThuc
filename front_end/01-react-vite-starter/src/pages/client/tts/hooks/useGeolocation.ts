@@ -21,6 +21,9 @@ export const useGeolocation = ({
   const lastPositionSourceRef = useRef<PositionSource>("slider");
   const watcherIdRef = useRef<number | null>(null);
   const hasUserGestureRef = useRef(false);
+  /** Tránh đưa `onPositionUpdate` vào deps useEffect — parent hay truyền inline fn → vòng lặp render vô hạn. */
+  const onPositionUpdateRef = useRef(onPositionUpdate);
+  onPositionUpdateRef.current = onPositionUpdate;
 
   // Chỉ request geolocation khi:
   // 1. autoGuide = true
@@ -35,7 +38,7 @@ export const useGeolocation = ({
       }
       // Fallback về mock position
       if (mockLat != null && mockLng != null) {
-        onPositionUpdate({ lat: mockLat, lng: mockLng }, "slider");
+        onPositionUpdateRef.current({ lat: mockLat, lng: mockLng }, "slider");
         setGeoEnabled(true);
         setGeoError(null);
       }
@@ -61,12 +64,12 @@ export const useGeolocation = ({
           setGeoError(null);
           const newPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
           lastPositionSourceRef.current = "gps";
-          onPositionUpdate(newPos, "gps");
+          onPositionUpdateRef.current(newPos, "gps");
         },
         (err) => {
           // Nếu có lỗi, fallback về mock position nếu có
           if (mockLat != null && mockLng != null) {
-            onPositionUpdate({ lat: mockLat, lng: mockLng }, "slider");
+            onPositionUpdateRef.current({ lat: mockLat, lng: mockLng }, "slider");
             setGeoEnabled(true);
             setGeoError(null);
           } else {
@@ -94,7 +97,7 @@ export const useGeolocation = ({
         watcherIdRef.current = null;
       }
     };
-  }, [autoGuide, mockGps, mockLat, mockLng, onPositionUpdate]);
+  }, [autoGuide, mockGps, mockLat, mockLng]);
 
   return { geoEnabled, geoError, lastPositionSourceRef };
 };

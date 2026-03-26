@@ -11,7 +11,7 @@ import { useMapPosition } from "./hooks/useMapPosition";
 import { useNarrationEngineWithBackend } from "./hooks/useNarrationEngineWithBackend";
 import { useTTSAudios } from "./hooks/useTTSAudios";
 import "./tts.scss";
-import { GeoPosition, ViewMode } from "./types";
+import { GeoPosition, PositionSource, ViewMode } from "./types";
 import { haversineDistance } from "./utils/geo";
 
 const TTSPage = () => {
@@ -59,18 +59,24 @@ const TTSPage = () => {
     sortedAudios,
   } = useMapPosition(audios);
 
-  const { geoEnabled, geoError, lastPositionSourceRef } = useGeolocation({
-    autoGuide,
-    mockGps,
-    mockLat,
-    mockLng,
-    onPositionUpdate: (pos, source) => {
+  /** Bắt buộc ổn định tham chiếu: useGeolocation đặt onPositionUpdate trong deps của useEffect — inline fn → render vô hạn. */
+  const onPositionUpdate = useCallback(
+    (pos: GeoPosition, source: PositionSource) => {
       setPosition(pos);
       if (source === "gps" && mockGps) {
         setMockLat(pos.lat);
         setMockLng(pos.lng);
       }
     },
+    [setPosition, mockGps],
+  );
+
+  const { geoEnabled, geoError, lastPositionSourceRef } = useGeolocation({
+    autoGuide,
+    mockGps,
+    mockLat,
+    mockLng,
+    onPositionUpdate,
   });
 
   // Initialize mock position from sortedAudios when position is first set

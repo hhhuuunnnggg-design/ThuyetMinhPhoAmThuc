@@ -43,7 +43,6 @@ export const MockGPSPanel = ({
           step={(latRange.max - latRange.min) / 200}
           value={mockLat ?? latRange.min}
           onChange={(value: number) => {
-            onMockGpsChange(true);
             onLatChange(value);
           }}
         />
@@ -62,7 +61,6 @@ export const MockGPSPanel = ({
           step={(lngRange.max - lngRange.min) / 200}
           value={mockLng ?? lngRange.min}
           onChange={(value: number) => {
-            onMockGpsChange(true);
             onLngChange(value);
           }}
         />

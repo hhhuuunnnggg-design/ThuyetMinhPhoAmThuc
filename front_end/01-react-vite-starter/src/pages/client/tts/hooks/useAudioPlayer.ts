@@ -1,4 +1,10 @@
-import { logNarrationAPI } from "@/api/app.api";
+import {
+  endNarrationAPI,
+  getActiveNarrationsAPI,
+  logNarrationAPI,
+  startNarrationAPI,
+  type ActiveNarration,
+} from "@/api/app.api";
 import type { TTSAudio } from "@/api/tts.api";
 import axios from "@/api/axios";
 import { API_ENDPOINTS } from "@/constants";
@@ -31,6 +37,7 @@ export const useAudioPlayer = ({
   const currentPlayingAudioIdRef = useRef<number | null>(null);
   const playStartTimeRef = useRef<number | null>(null);
   const blobUrlRef = useRef<string | null>(null);
+  const activeNarrationIdRef = useRef<number | null>(null);
 
   const revokeBlobUrl = () => {
     if (blobUrlRef.current) {
@@ -43,6 +50,91 @@ export const useAudioPlayer = ({
    * Tải qua axios (có Bearer) → blob → object URL.
    * Tránh <audio src="cross-origin"> không gửi JWT / CORS chặn media.
    */
+
+  const resolveActiveNarrationId = useCallback(
+    async (args: {
+      deviceId: string;
+      poiId: number;
+      audioId: number;
+      languageCode: string;
+    }): Promise<number | null> => {
+      const targetLang = args.languageCode.toLowerCase();
+      for (let i = 0; i < 3; i++) {
+        const res: any = await getActiveNarrationsAPI();
+        const data = Array.isArray(res?.data)
+          ? res.data
+          : res?.data?.result || [];
+
+        const found = (data as ActiveNarration[]).find(
+          (n) =>
+            n.deviceId === args.deviceId &&
+            n.poiId === args.poiId &&
+            n.audioId === args.audioId &&
+            (n.languageCode || "").toLowerCase() === targetLang &&
+            n.status === "PLAYING",
+        );
+
+        if (found?.id) return found.id;
+        await new Promise((r) => setTimeout(r, 150));
+      }
+
+      return null;
+    },
+    [],
+  );
+
+  const endActiveNarrationIfNeeded = useCallback(
+    async (status: string, durationSeconds?: number) => {
+      if (!useBackendLogging || !activeNarrationIdRef.current) return;
+      const id = activeNarrationIdRef.current;
+      activeNarrationIdRef.current = null;
+      try {
+        await endNarrationAPI({
+          activeNarrationId: id,
+          actualDurationSeconds: durationSeconds,
+          status,
+        });
+      } catch (e) {
+        // Không làm ảnh hưởng UI phát audio, nhưng cần log để debug dashboard
+        console.warn("endNarration failed:", e);
+      }
+    },
+    [useBackendLogging],
+  );
+
+  const startActiveNarrationIfNeeded = useCallback(
+    async (audioId: number, languageCode: string) => {
+      if (!useBackendLogging) return;
+      if (!deviceId) return;
+      if (!selected) return;
+      if (selected.poiId == null) return;
+
+      try {
+        await startNarrationAPI({
+          deviceId,
+          poiId: selected.poiId,
+          audioId,
+          languageCode: languageCode.toLowerCase(),
+          latitude: position?.lat ?? null,
+          longitude: position?.lng ?? null,
+        });
+
+        const activeId = await resolveActiveNarrationId({
+          deviceId,
+          poiId: selected.poiId,
+          audioId,
+          languageCode,
+        });
+
+        activeNarrationIdRef.current = activeId;
+      } catch (e) {
+        // Không làm ảnh hưởng UI phát audio, nhưng cần log để debug dashboard
+        console.warn("startNarration failed:", e);
+      }
+    },
+    [deviceId, position, resolveActiveNarrationId, selected, useBackendLogging],
+  );
+
   const playAudioInternal = useCallback(
     async (audioId: number, isAutoPlay: boolean, langExplicit?: string, groupKey?: string) => {
       if (userPaused && isAutoPlay) {
@@ -93,6 +185,11 @@ export const useAudioPlayer = ({
             status: "PLAYING",
           }).catch(() => {});
         }
+
+        // Tạo ActiveNarration để Dashboard Real-time có dữ liệu.
+        if (useBackendLogging) {
+          void startActiveNarrationIfNeeded(audioId, lang);
+        }
       } catch {
         message.error(
           "Không thể tải/phát audio — kiểm tra backend đang chạy và đã có file cho ngôn ngữ này",
@@ -118,12 +215,15 @@ export const useAudioPlayer = ({
       setUserPaused(false);
       void playAudioInternal(selected.id, false, undefined, selected.groupKey);
     } else {
+      const duration = playStartTimeRef.current
+        ? Math.round((Date.now() - playStartTimeRef.current) / 1000)
+        : undefined;
+
       audioRef.current.pause();
       setIsPlaying(false);
       setUserPaused(true);
 
       if (useBackendLogging && deviceId && currentPlayingAudioIdRef.current && playStartTimeRef.current) {
-        const duration = Math.round((Date.now() - playStartTimeRef.current) / 1000);
         logNarrationAPI({
           deviceId,
           ttsAudioId: currentPlayingAudioIdRef.current,
@@ -134,6 +234,8 @@ export const useAudioPlayer = ({
         currentPlayingAudioIdRef.current = null;
         playStartTimeRef.current = null;
       }
+
+      void endActiveNarrationIfNeeded("SKIPPED", duration);
     }
   };
 
@@ -171,6 +273,8 @@ export const useAudioPlayer = ({
         currentPlayingAudioIdRef.current = null;
         playStartTimeRef.current = null;
       }
+
+      void endActiveNarrationIfNeeded("SKIPPED");
     }
   }, [isPlaying, position, selected, useBackendLogging, deviceId]);
 
@@ -197,6 +301,8 @@ export const useAudioPlayer = ({
 
         currentPlayingAudioIdRef.current = null;
         playStartTimeRef.current = null;
+
+          void endActiveNarrationIfNeeded("COMPLETED", duration);
       }
     };
 

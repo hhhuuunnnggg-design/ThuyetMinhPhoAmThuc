@@ -378,6 +378,8 @@ public class TTSAudioServiceImp implements TTSAudioService {
                 .id(a.getId())
                 .groupId(g != null ? g.getId() : null)
                 .groupKey(g != null ? g.getGroupKey() : null)
+                // POI ID dùng cho start narration/dashboard + payment
+                .poiId(poi != null ? poi.getId() : null)
                 .languageCode(a.getLanguageCode())
                 .text(a.getText())
                 .translatedText(a.getTranslatedText())

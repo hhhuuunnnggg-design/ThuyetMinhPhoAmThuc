@@ -189,7 +189,12 @@ export const checkNarrationAPI = (request: NarrationCheckRequest) => {
 };
 
 export const startNarrationAPI = (request: NarrationStartRequest) => {
-  return axios.post<IBackendRes<void>>(API_ENDPOINTS.APP.NARRATION_START, request);
+  const { deviceId, ...body } = request;
+  return axios.post<IBackendRes<void>>(API_ENDPOINTS.APP.NARRATION_START, body, {
+    headers: {
+      "X-Device-Id": deviceId,
+    },
+  });
 };
 
 export const endNarrationAPI = (request: NarrationEndRequest) => {

@@ -15,11 +15,13 @@ import com.example.demo.domain.DeviceConfig;
 import com.example.demo.domain.DeviceConfig.NetworkType;
 import com.example.demo.domain.DeviceConfig.RunningMode;
 import com.example.demo.domain.POI;
+import com.example.demo.domain.NarrationLog;
 import com.example.demo.domain.Payment;
 import com.example.demo.domain.Payment.PaymentStatus;
 import com.example.demo.domain.TTSAudio;
 import com.example.demo.domain.TTSAudioGroup;
 import com.example.demo.domain.dto.SupportedLanguage;
+import com.example.demo.domain.request.app.ReqNarrationLogDTO;
 import com.example.demo.domain.response.app.ResActiveNarrationDTO;
 import com.example.demo.domain.response.app.ResDeviceConfigDTO;
 import com.example.demo.domain.response.app.ResNearbyPOIDTO;
@@ -33,6 +35,7 @@ import com.example.demo.repository.TTSAudioGroupRepository;
 import com.example.demo.repository.TTSAudioRepository;
 import com.example.demo.service.AppClientService;
 import com.example.demo.service.GeofenceService;
+import com.example.demo.service.NarrationService;
 import com.example.demo.util.error.IdInvalidException;
 
 @Service
@@ -45,6 +48,7 @@ public class AppClientServiceImpl implements AppClientService {
     private final TTSAudioRepository ttsAudioRepository;
     private final TTSAudioGroupRepository ttsAudioGroupRepository;
     private final GeofenceService geofenceService;
+    private final NarrationService narrationService;
 
     public AppClientServiceImpl(
             POIRepository poiRepository,
@@ -53,7 +57,8 @@ public class AppClientServiceImpl implements AppClientService {
             PaymentRepository paymentRepository,
             TTSAudioRepository ttsAudioRepository,
             TTSAudioGroupRepository ttsAudioGroupRepository,
-            GeofenceService geofenceService) {
+            GeofenceService geofenceService,
+            NarrationService narrationService) {
         this.poiRepository = poiRepository;
         this.deviceConfigRepository = deviceConfigRepository;
         this.activeNarrationRepository = activeNarrationRepository;
@@ -61,6 +66,7 @@ public class AppClientServiceImpl implements AppClientService {
         this.ttsAudioRepository = ttsAudioRepository;
         this.ttsAudioGroupRepository = ttsAudioGroupRepository;
         this.geofenceService = geofenceService;
+        this.narrationService = narrationService;
     }
 
     // ============ Device ============
@@ -237,6 +243,23 @@ public class AppClientServiceImpl implements AppClientService {
         active.setEstimatedEndAt(Instant.now().plusMillis(estimatedDuration));
 
         activeNarrationRepository.save(active);
+    }
+
+    @Override
+    @Transactional
+    public void logNarration(ReqNarrationLogDTO req) throws IdInvalidException {
+        TTSAudio audio = ttsAudioRepository.findById(req.getTtsAudioId())
+                .orElseThrow(() -> new IdInvalidException("Không tìm thấy audio: " + req.getTtsAudioId()));
+
+        NarrationLog log = NarrationLog.builder()
+                .deviceId(req.getDeviceId())
+                .ttsAudio(audio)
+                .playedAt(Instant.ofEpochMilli(req.getPlayedAt()))
+                .durationSeconds(req.getDurationSeconds())
+                .status(req.getStatus())
+                .build();
+
+        narrationService.logPlay(log);
     }
 
     @Override

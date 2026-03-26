@@ -16,6 +16,7 @@ import com.example.demo.domain.DeviceConfig.RunningMode;
 import com.example.demo.domain.request.app.ReqDeviceRegisterDTO;
 import com.example.demo.domain.request.app.ReqDeviceSyncDTO;
 import com.example.demo.domain.request.app.ReqNarrationEndDTO;
+import com.example.demo.domain.request.app.ReqNarrationLogDTO;
 import com.example.demo.domain.request.app.ReqNarrationStartDTO;
 import com.example.demo.domain.request.app.ReqPaymentCreateDTO;
 import com.example.demo.domain.response.app.ResActiveNarrationDTO;
@@ -167,6 +168,17 @@ public class AppClientController {
                 req.getActiveNarrationId(),
                 req.getActualDurationSeconds(),
                 req.getStatus());
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Ghi log phát thuyết minh (PLAYING/COMPLETED/SKIPPED).
+     * Frontend gọi khi bắt đầu/kết thúc phát — khác với ActiveNarration (dashboard real-time).
+     */
+    @PostMapping("/narration/log")
+    @ApiMessage("Ghi log narration")
+    public ResponseEntity<Void> logNarration(@Valid @RequestBody ReqNarrationLogDTO req) throws IdInvalidException {
+        appClientService.logNarration(req);
         return ResponseEntity.ok().build();
     }
 

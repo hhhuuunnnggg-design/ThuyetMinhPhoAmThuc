@@ -20,6 +20,10 @@ public class ResTTSAudioDTO {
     Long id;
     Long groupId;
     String groupKey;
+    /**
+     * POI ID liên kết dùng để start/end narration và hiển thị payment/dashboard.
+     */
+    Long poiId;
 
     String languageCode;
     String text;

@@ -9,6 +9,7 @@ import com.example.demo.domain.response.app.ResActiveNarrationDTO;
 import com.example.demo.domain.response.app.ResDeviceConfigDTO;
 import com.example.demo.domain.response.app.ResNearbyPOIDTO;
 import com.example.demo.domain.response.app.ResPOIDTO;
+import com.example.demo.domain.request.app.ReqNarrationLogDTO;
 import com.example.demo.domain.response.app.ResPaymentDTO;
 import com.example.demo.util.error.IdInvalidException;
 
@@ -38,6 +39,9 @@ public interface AppClientService {
             String languageCode, Double lat, Double lng) throws IdInvalidException;
 
     void endNarration(Long activeNarrationId, Integer durationSeconds, String status) throws IdInvalidException;
+
+    /** Ghi log phát thuyết minh (PLAYING/COMPLETED/SKIPPED) — dùng cho Narration Logs & analytics. */
+    void logNarration(ReqNarrationLogDTO req) throws IdInvalidException;
 
     // ============ Dashboard ============
     List<ResActiveNarrationDTO> getActiveNarrations();
