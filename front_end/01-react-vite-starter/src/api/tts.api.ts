@@ -155,6 +155,12 @@ export const streamAudioAPI = (audioId: number, languageCode: string) => {
   });
 };
 
+/** URL đầy đủ để gắn vào <audio src> (cùng logic backend getAudioResource theo groupKey + lang). */
+export const getTtsStreamPlaybackUrl = (audioId: number, languageCode: string): string => {
+  const base = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+  return `${base.replace(/\/$/, "")}${API_ENDPOINTS.TTS.AUDIO_STREAM(audioId, languageCode)}`;
+};
+
 // ===== Group CRUD =====
 
 /** Tạo nhóm audio TTS mới (kèm tạo audio đa ngôn ngữ) */

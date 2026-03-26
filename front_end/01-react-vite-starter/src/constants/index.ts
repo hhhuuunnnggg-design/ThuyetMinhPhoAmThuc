@@ -41,6 +41,9 @@ export const API_ENDPOINTS = {
     AUDIOS: "/api/v1/tts/audios",
     AUDIO_BY_ID: (id: number) => `/api/v1/tts/audios/${id}`,
     AUDIO_DOWNLOAD: (id: number) => `/api/v1/tts/audios/${id}/download`,
+    /** Phát đúng file theo ngôn ngữ trong nhóm (cùng groupKey, khác languageCode). */
+    AUDIO_STREAM: (id: number, languageCode: string) =>
+      `/api/v1/tts/audios/${id}/stream?languageCode=${encodeURIComponent(languageCode)}`,
     AUDIO_IMAGE: (id: number) => `/api/v1/tts/audios/${id}/image`,
     AUDIO_GENERATE_MULTILINGUAL: (id: number) => `/api/v1/tts/audios/${id}/generate-multilingual`,
     IMAGE_UPLOAD: "/api/v1/tts/images/upload",

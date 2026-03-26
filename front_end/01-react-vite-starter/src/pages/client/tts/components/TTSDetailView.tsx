@@ -13,7 +13,6 @@ import {
 } from "@ant-design/icons";
 import { Button, InputNumber, message, Modal, Select, Spin, Tooltip } from "antd";
 import { useEffect, useRef, useState } from "react";
-import { config } from "@/config";
 import { formatDistance } from "../utils/format";
 
 const LANGUAGE_OPTIONS = [
@@ -38,7 +37,11 @@ interface TTSDetailViewProps {
   autoGuide: boolean;
   geoError: string | null;
   audioDuration: number;
-  onPlayPause: (url?: string) => void;
+  onPlayPause: () => void;
+  /** Đổi ngôn ngữ và phát (axios + blob — có JWT). */
+  onPlayLanguage: (lang: string) => void;
+  /** Ngôn ngữ thuyết minh đang chọn (đồng bộ với player / stream API). */
+  narrationLang: string;
 }
 
 interface AudioEntry {
@@ -55,8 +58,9 @@ export const TTSDetailView = ({
   geoError,
   audioDuration,
   onPlayPause,
+  onPlayLanguage,
+  narrationLang,
 }: TTSDetailViewProps) => {
-  const [selectedLang, setSelectedLang] = useState<string>("vi");
   const [multilingualMap, setMultilingualMap] = useState<Record<string, AudioData>>({});
   const [loadingMultilingual, setLoadingMultilingual] = useState(false);
   const [generatingMultilingual, setGeneratingMultilingual] = useState(false);
@@ -66,15 +70,14 @@ export const TTSDetailView = ({
   const [paying, setPaying] = useState(false);
   const audioTimeRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Fetch multilingual audio group when selected changes
+  // Fetch multilingual audio group when selected changes (id phải là TTSAudioGroup.id, không phải TTSAudio.id)
   useEffect(() => {
-    if (!selected.groupKey) return;
+    if (selected.groupId == null) return;
     setLoadingMultilingual(true);
     setMultilingualMap({});
-    setSelectedLang("vi");
     setCurrentTime(0);
 
-    getAudioGroupByIdAPI(selected.id)
+    getAudioGroupByIdAPI(selected.groupId)
       .then((res: any) => {
         const group = res?.data?.data ?? res?.data ?? res;
         if (group?.audioMap) {
@@ -83,7 +86,7 @@ export const TTSDetailView = ({
       })
       .catch(() => {})
       .finally(() => setLoadingMultilingual(false));
-  }, [selected.id, selected.groupKey]);
+  }, [selected.groupId]);
 
   // Track playback progress
   useEffect(() => {
@@ -129,15 +132,7 @@ export const TTSDetailView = ({
   };
 
   const handleLanguageChange = (lang: string) => {
-    setSelectedLang(lang);
-    if (lang === "vi") {
-      onPlayPause();
-    } else {
-      const entry = multilingualMap[lang];
-      if (entry?.s3Url) {
-        onPlayPause(entry.s3Url);
-      }
-    }
+    onPlayLanguage(lang);
   };
 
   const handleOpenPayModal = () => {
@@ -255,6 +250,7 @@ export const TTSDetailView = ({
             shape="circle"
             icon={isPlaying ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
             onClick={() => onPlayPause()}
+            title="Phát / tạm dừng theo ngôn ngữ đang chọn"
           />
           <div className="audio-progress">
             <div className="bar-wrap">
@@ -281,7 +277,7 @@ export const TTSDetailView = ({
         <div className="language-selector">
           <div className="lang-label">Ngôn ngữ thuyết minh:</div>
           <Select
-            value={selectedLang}
+            value={narrationLang}
             onChange={handleLanguageChange}
             style={{ width: 180 }}
             options={LANGUAGE_OPTIONS}
@@ -292,7 +288,7 @@ export const TTSDetailView = ({
               {availableLangs.map((a) => (
                 <span
                   key={a.languageCode}
-                  className={`lang-chip ${selectedLang === a.languageCode ? "active" : ""}`}
+                  className={`lang-chip ${narrationLang.toLowerCase() === a.languageCode.toLowerCase() ? "active" : ""}`}
                 >
                   {a.languageCode.toUpperCase()}
                 </span>

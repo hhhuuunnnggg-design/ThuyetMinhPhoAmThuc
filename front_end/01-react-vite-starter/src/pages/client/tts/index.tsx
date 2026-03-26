@@ -99,6 +99,12 @@ const TTSPage = () => {
     [audios, selectedId]
   );
 
+  /** Đồng bộ với dropdown ngôn ngữ + stream API ?languageCode= */
+  const [narrationLang, setNarrationLang] = useState("vi");
+  useEffect(() => {
+    setNarrationLang("vi");
+  }, [selected?.id]);
+
   // State cho auto-play từ Narration Engine
   const [autoPlayAudioId, setAutoPlayAudioId] = useState<number | null>(null);
   const lastRequestedAudioIdRef = useRef<number | null>(null);
@@ -139,29 +145,31 @@ const TTSPage = () => {
     onShouldPlay: handleShouldPlay,
   });
 
-  const { isPlaying, setIsPlaying, audioRef, handlePlayPause, audioDuration } = useAudioPlayer({
+  const {
+    isPlaying,
+    setIsPlaying,
+    audioRef,
+    handlePlayPause,
+    audioDuration,
+    playAudioForLanguage,
+  } = useAudioPlayer({
     selected,
     position,
     autoPlayAudioId,
     deviceId: useBackendNarration ? deviceId : undefined,
     useBackendLogging: useBackendNarration,
+    playbackLanguageCode: narrationLang,
   });
 
-  // Wrapper for multilingual audio URL support
-  const handlePlayPauseWithUrl = useCallback((url?: string) => {
-    if (url) {
-      // Play specific URL (multilingual audio)
-      const audio = audioRef.current;
-      if (audio) {
-        audio.src = url;
-        audio.play().catch(() => {});
-        setIsPlaying(true);
+  const handlePlayLanguage = useCallback(
+    (lang: string) => {
+      setNarrationLang(lang);
+      if (selected) {
+        playAudioForLanguage(selected.id, lang, selected.groupKey);
       }
-    } else {
-      // Normal play/pause with selected audio
-      handlePlayPause();
-    }
-  }, [audioRef, handlePlayPause, setIsPlaying]);
+    },
+    [selected, playAudioForLanguage],
+  );
 
   // Set initial selectedId
   useEffect(() => {
@@ -234,7 +242,9 @@ const TTSPage = () => {
             autoGuide={autoGuide}
             geoError={geoError}
             audioDuration={audioDuration}
-            onPlayPause={handlePlayPauseWithUrl}
+            onPlayPause={handlePlayPause}
+            onPlayLanguage={handlePlayLanguage}
+            narrationLang={narrationLang}
           />
         )}
 

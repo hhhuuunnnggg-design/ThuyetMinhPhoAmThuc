@@ -79,7 +79,8 @@ export const AudioList = ({ audios, selectedId, loading, position, onSelect }: A
 
       {!loading && audios.length === 0 && (
         <div className="empty-state">
-          Chưa có audio ẩm thực nào.<br />Hãy tạo ở trang <strong>Admin &gt; TTS Audio</strong>.
+          Chưa có nhóm thuyết minh nào.<br />
+          Tạo ở <strong>Admin &gt; Nhóm thuyết minh TTS</strong> (món, GPS, audio đa ngôn ngữ).
         </div>
       )}
     </div>

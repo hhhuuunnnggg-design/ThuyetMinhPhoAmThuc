@@ -1,26 +1,28 @@
 import { logNarrationAPI } from "@/api/app.api";
 import type { TTSAudio } from "@/api/tts.api";
-import { config } from "@/config";
+import axios from "@/api/axios";
 import { API_ENDPOINTS } from "@/constants";
 import { message } from "antd";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { GeoPosition } from "../types";
 import { haversineDistance } from "../utils/geo";
 
 interface UseAudioPlayerProps {
   selected: TTSAudio | null;
   position: GeoPosition | null;
-  autoPlayAudioId?: number | null; // Audio ID để phát tự động từ Narration Engine
-  deviceId?: string; // Device ID để ghi log narration
-  useBackendLogging?: boolean; // Có ghi log lên backend không
+  autoPlayAudioId?: number | null;
+  deviceId?: string;
+  useBackendLogging?: boolean;
+  playbackLanguageCode?: string;
 }
 
-export const useAudioPlayer = ({ 
-  selected, 
-  position, 
+export const useAudioPlayer = ({
+  selected,
+  position,
   autoPlayAudioId,
   deviceId,
   useBackendLogging = false,
+  playbackLanguageCode = "vi",
 }: UseAudioPlayerProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [userPaused, setUserPaused] = useState(false);
@@ -28,28 +30,62 @@ export const useAudioPlayer = ({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentPlayingAudioIdRef = useRef<number | null>(null);
   const playStartTimeRef = useRef<number | null>(null);
+  const blobUrlRef = useRef<string | null>(null);
 
-  const playAudio = (audioId: number, isAutoPlay: boolean = false) => {
-    // Nếu user đã pause thủ công và đây là auto-play → không phát
-    if (userPaused && isAutoPlay) {
-      return;
+  const revokeBlobUrl = () => {
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
     }
+  };
 
-    const src = `${config.api.baseURL}${API_ENDPOINTS.TTS.AUDIO_DOWNLOAD(audioId)}`;
-    if (!audioRef.current) return;
+  /**
+   * Tải qua axios (có Bearer) → blob → object URL.
+   * Tránh <audio src="cross-origin"> không gửi JWT / CORS chặn media.
+   */
+  const playAudioInternal = useCallback(
+    async (audioId: number, isAutoPlay: boolean, langExplicit?: string, groupKey?: string) => {
+      if (userPaused && isAutoPlay) {
+        return;
+      }
+      if (!audioRef.current) return;
 
-    audioRef.current.src = src;
-    audioRef.current
-      .play()
-      .then(() => {
+      const lang = (langExplicit ?? playbackLanguageCode ?? "vi").toLowerCase();
+
+      revokeBlobUrl();
+
+      // Ưu tiên groupKey (chắc chắn đúng group), fallback qua audio ID
+      const url = groupKey
+        ? API_ENDPOINTS.TTS.GROUP_AUDIO(groupKey, lang)
+        : API_ENDPOINTS.TTS.AUDIO_STREAM(audioId, lang);
+
+      try {
+        const blob = (await axios.get(url, { responseType: "blob" })) as unknown as Blob;
+
+        if (!blob || blob.size === 0) {
+          message.error("File audio trống hoặc chưa có trên server");
+          return;
+        }
+
+        if (blob.type && blob.type.includes("json")) {
+          message.error("API trả lỗi thay vì file audio — kiểm tra backend / ngôn ngữ");
+          return;
+        }
+
+        const objectUrl = URL.createObjectURL(blob);
+        blobUrlRef.current = objectUrl;
+
+        const el = audioRef.current;
+        el.src = objectUrl;
+        await el.play();
+
         setIsPlaying(true);
         setUserPaused(false);
         currentPlayingAudioIdRef.current = audioId;
         playStartTimeRef.current = Date.now();
         setAudioDuration(0);
 
-        // Ghi log khi bắt đầu phát (nếu dùng backend logging)
-        if (useBackendLogging && deviceId) {
+        if (useBackendLogging && deviceId && playStartTimeRef.current) {
           logNarrationAPI({
             deviceId,
             ttsAudioId: audioId,
@@ -57,27 +93,35 @@ export const useAudioPlayer = ({
             status: "PLAYING",
           }).catch(() => {});
         }
-      })
-      .catch(() => {
-        message.error("Không thể phát audio");
-      });
-  };
+      } catch {
+        message.error(
+          "Không thể tải/phát audio — kiểm tra backend đang chạy và đã có file cho ngôn ngữ này",
+        );
+      }
+    },
+    [userPaused, playbackLanguageCode, useBackendLogging, deviceId],
+  );
+
+  /** Đổi ngôn ngữ + phát ngay (truyền lang rõ ràng, không phụ thuộc setState). */
+  const playAudioForLanguage = useCallback(
+    (audioId: number, lang: string, groupKey?: string) => {
+      void playAudioInternal(audioId, false, lang, groupKey);
+    },
+    [playAudioInternal],
+  );
 
   const handlePlayPause = () => {
     if (!selected) return;
     if (!audioRef.current) return;
 
     if (!isPlaying) {
-      // User bấm play → reset userPaused và phát
       setUserPaused(false);
-      playAudio(selected.id, false); // false = manual play, nhưng vẫn ghi log nếu useBackendLogging = true
+      void playAudioInternal(selected.id, false, undefined, selected.groupKey);
     } else {
-      // User bấm pause → đánh dấu là user pause thủ công
       audioRef.current.pause();
       setIsPlaying(false);
       setUserPaused(true);
-      
-      // Ghi log khi user pause thủ công (nếu đang phát)
+
       if (useBackendLogging && deviceId && currentPlayingAudioIdRef.current && playStartTimeRef.current) {
         const duration = Math.round((Date.now() - playStartTimeRef.current) / 1000);
         logNarrationAPI({
@@ -93,15 +137,12 @@ export const useAudioPlayer = ({
     }
   };
 
-  // Auto-play khi Narration Engine yêu cầu
   useEffect(() => {
     if (autoPlayAudioId && !isPlaying && !userPaused) {
-      playAudio(autoPlayAudioId, true); // true = auto-play
+      void playAudioInternal(autoPlayAudioId, true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoPlayAudioId]);
+  }, [autoPlayAudioId, isPlaying, userPaused, playAudioInternal]);
 
-  // Dừng audio nếu đã ra khỏi bán kính kích hoạt
   useEffect(() => {
     if (!isPlaying || !position || !selected) return;
     if (selected.latitude == null || selected.longitude == null) return;
@@ -115,10 +156,9 @@ export const useAudioPlayer = ({
     if (dist > radius && audioRef.current) {
       audioRef.current.pause();
       setIsPlaying(false);
-      
-      // Ghi log khi bị dừng do ra khỏi bán kính
+
       if (useBackendLogging && deviceId && currentPlayingAudioIdRef.current) {
-        const duration = playStartTimeRef.current 
+        const duration = playStartTimeRef.current
           ? Math.round((Date.now() - playStartTimeRef.current) / 1000)
           : undefined;
         logNarrationAPI({
@@ -134,7 +174,6 @@ export const useAudioPlayer = ({
     }
   }, [isPlaying, position, selected, useBackendLogging, deviceId]);
 
-  // Ghi log khi audio phát xong
   useEffect(() => {
     if (!useBackendLogging || !deviceId || !audioRef.current) return;
 
@@ -167,7 +206,6 @@ export const useAudioPlayer = ({
     };
   }, [useBackendLogging, deviceId]);
 
-  // Track audio duration when metadata loads
   useEffect(() => {
     if (!audioRef.current) return;
     const audio = audioRef.current;
@@ -178,5 +216,18 @@ export const useAudioPlayer = ({
     return () => audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
   }, []);
 
-  return { isPlaying, setIsPlaying, audioRef, handlePlayPause, audioDuration };
+  useEffect(() => {
+    return () => {
+      revokeBlobUrl();
+    };
+  }, []);
+
+  return {
+    isPlaying,
+    setIsPlaying,
+    audioRef,
+    handlePlayPause,
+    audioDuration,
+    playAudioForLanguage,
+  };
 };

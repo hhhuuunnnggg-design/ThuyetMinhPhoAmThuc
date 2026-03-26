@@ -1,6 +1,7 @@
 import { getTTSAudiosAPI, type TTSAudio } from "@/api/tts.api";
 import { message } from "antd";
 import { useEffect, useState } from "react";
+import { dedupeTTSAudiosByGroup } from "../utils/dedupeAudiosByGroup";
 
 export const useTTSAudios = () => {
   const [audios, setAudios] = useState<TTSAudio[]>([]);
@@ -17,7 +18,8 @@ export const useTTSAudios = () => {
         } else if (res?.meta && res?.result) {
           data = res.result as TTSAudio[];
         }
-        setAudios(data);
+        /** API trả mỗi ngôn ngữ một bản ghi → gộp theo nhóm TTS (một dòng / POI+nhóm). */
+        setAudios(dedupeTTSAudiosByGroup(data));
       } catch (err: any) {
         message.error("Không thể tải danh sách audio ẩm thực");
       } finally {
