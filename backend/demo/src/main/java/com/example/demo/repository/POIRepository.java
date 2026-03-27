@@ -20,6 +20,11 @@ public interface POIRepository extends JpaRepository<POI, Long> {
     @Query("SELECT p FROM POI p")
     Page<POI> findPageForAdmin(Pageable pageable);
 
+    /** Danh sách POI do một user tạo — dùng cho SHOP_OWNER. */
+    @EntityGraph(attributePaths = { "user", "restaurant" })
+    @Query("SELECT p FROM POI p WHERE p.user.id = :userId")
+    Page<POI> findPageForAdminByOwnerUserId(@Param("userId") Long userId, Pageable pageable);
+
     @EntityGraph(attributePaths = { "user", "restaurant" })
     @Query("SELECT p FROM POI p WHERE p.id = :id")
     Optional<POI> findDetailForAdmin(@Param("id") Long id);

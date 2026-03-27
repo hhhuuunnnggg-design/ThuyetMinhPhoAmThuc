@@ -1,9 +1,13 @@
 package com.example.demo.service.impl;
 
 import java.time.Instant;
+import java.util.Collections;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,14 +40,52 @@ public class POIServiceImpl implements POIService {
 
     @Override
     public Page<ResAdminPOIDTO> getAllPOIs(Pageable pageable) {
-        return poiRepository.findPageForAdmin(pageable)
-                .map(ResAdminPOIDTO::from);
+        return resolveAdminPoiPage(pageable);
+    }
+
+    /**
+     * SUPER_ADMIN / {@code is_admin}: tất cả POI.
+     * SHOP_OWNER (và user đã đăng nhập khác không phải full admin): chỉ POI có {@code user_id} = mình.
+     * Không có JWT: giữ hành vi cũ (xem tất cả) — phục vụ môi trường dev / permitAll.
+     */
+    private Page<ResAdminPOIDTO> resolveAdminPoiPage(Pageable pageable) {
+        return SecurityUtil.getCurrentJwt()
+                .map(jwt -> {
+                    if (SecurityUtil.isFullAdminJwt(jwt)) {
+                        return poiRepository.findPageForAdmin(pageable).map(ResAdminPOIDTO::from);
+                    }
+                    return SecurityUtil.getCurrentUserId()
+                            .map(uid -> poiRepository.findPageForAdminByOwnerUserId(uid, pageable)
+                                    .map(ResAdminPOIDTO::from))
+                            .orElseGet(() -> new PageImpl<>(Collections.emptyList(), pageable, 0));
+                })
+                .orElseGet(() -> poiRepository.findPageForAdmin(pageable).map(ResAdminPOIDTO::from));
+    }
+
+    /** Chỉ full admin hoặc chủ POI (user tạo) mới được thao tác. */
+    private void assertShopOwnerOrAdminAccess(POI poi) throws IdInvalidException {
+        Optional<Jwt> jwtOpt = SecurityUtil.getCurrentJwt();
+        if (jwtOpt.isEmpty()) {
+            return;
+        }
+        Jwt jwt = jwtOpt.get();
+        if (SecurityUtil.isFullAdminJwt(jwt)) {
+            return;
+        }
+        Long uid = SecurityUtil.getCurrentUserId().orElse(null);
+        if (uid == null) {
+            throw new IdInvalidException("Không có quyền truy cập POI");
+        }
+        if (poi.getUser() == null || !uid.equals(poi.getUser().getId())) {
+            throw new IdInvalidException("Bạn chỉ được thao tác POI do chính mình tạo");
+        }
     }
 
     @Override
     public ResAdminPOIDTO getPOIById(Long id) throws IdInvalidException {
         POI poi = poiRepository.findDetailForAdmin(id)
                 .orElseThrow(() -> new IdInvalidException("Không tìm thấy POI: " + id));
+        assertShopOwnerOrAdminAccess(poi);
         return ResAdminPOIDTO.from(poi);
     }
 
@@ -95,6 +137,7 @@ public class POIServiceImpl implements POIService {
     public ResAdminPOIDTO updatePOI(Long id, ReqUpsertPOIDTO req) throws IdInvalidException {
         POI poi = poiRepository.findDetailForAdmin(id)
                 .orElseThrow(() -> new IdInvalidException("Không tìm thấy POI: " + id));
+        assertShopOwnerOrAdminAccess(poi);
 
         // Thông tin ẩm thực
         poi.setFoodName(req.getFoodName());
@@ -129,9 +172,9 @@ public class POIServiceImpl implements POIService {
 
     @Override
     public void deletePOI(Long id) throws IdInvalidException {
-        if (!poiRepository.existsById(id)) {
-            throw new IdInvalidException("Không tìm thấy POI: " + id);
-        }
+        POI poi = poiRepository.findDetailForAdmin(id)
+                .orElseThrow(() -> new IdInvalidException("Không tìm thấy POI: " + id));
+        assertShopOwnerOrAdminAccess(poi);
         poiRepository.deleteById(id);
     }
 }

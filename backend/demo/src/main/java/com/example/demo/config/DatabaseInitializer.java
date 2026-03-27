@@ -105,7 +105,8 @@ public class DatabaseInitializer implements CommandLineRunner {
             // Narration logs permissions (admin)
             arr.add(createPermission("Xem danh sách narration logs", "/api/v1/admin/narration-logs", "GET", "NARRATION_LOGS"));
 
-            // POI Admin permissions
+            // POI Admin — SHOP_OWNER có quyền API nhưng backend lọc theo JWT:
+            // SUPER_ADMIN / is_admin xem & sửa mọi POI; SHOP_OWNER chỉ POI do user_id của họ tạo (POIServiceImpl).
             arr.add(createPermission("Xem danh sách POI (admin)", "/api/v1/admin/pois", "GET", "POI_ADMIN"));
             arr.add(createPermission("Xem chi tiết POI (admin)", "/api/v1/admin/pois/{id}", "GET", "POI_ADMIN"));
             arr.add(createPermission("Tạo POI (admin)", "/api/v1/admin/pois", "POST", "POI_ADMIN"));
@@ -135,7 +136,7 @@ public class DatabaseInitializer implements CommandLineRunner {
             superAdminRole = this.roleRepository.save(superAdminRole);
         }
 
-        // SHOP_OWNER — chỉ quản lý POI, TTS, nhà hàng của mình
+        // SHOP_OWNER — cùng endpoint admin POI/nhà hàng/TTS nhưng POIServiceImpl / RestaurantServiceImpl lọc theo user trong JWT
         Role shopOwnerRole = this.roleRepository.findByName("SHOP_OWNER").orElse(null);
         if (shopOwnerRole == null) {
             List<Permission> shopPermissions = allPermissions.stream()
@@ -149,7 +150,8 @@ public class DatabaseInitializer implements CommandLineRunner {
 
             shopOwnerRole = new Role();
             shopOwnerRole.setName("SHOP_OWNER");
-            shopOwnerRole.setDescription("Chủ quán — quản lý POI, TTS, nhà hàng của mình");
+            shopOwnerRole.setDescription(
+                    "Chủ quán — POI/TTS/nhà hàng: API giống admin nhưng chỉ thấy & sửa bản ghi do chính user đó tạo (user_id trên JWT)");
             shopOwnerRole.setActive(true);
             shopOwnerRole.setPermissions(shopPermissions);
             this.roleRepository.save(shopOwnerRole);

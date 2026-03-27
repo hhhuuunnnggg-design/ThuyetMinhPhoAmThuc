@@ -162,4 +162,34 @@ public class SecurityUtil {
         }
         return Optional.empty();
     }
+
+    /**
+     * JWT hiện tại (Resource Server) — dùng đọc claim vai trò / quyền.
+     */
+    public static Optional<Jwt> getCurrentJwt() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
+            return Optional.of(jwt);
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Xem toàn bộ dữ liệu admin (ví dụ mọi POI): {@code is_admin} hoặc vai trò {@code SUPER_ADMIN}.
+     * SHOP_OWNER và các role khác (khi đã đăng nhập) chỉ thấy dữ liệu của chính họ ở từng service.
+     */
+    public static boolean isFullAdminJwt(Jwt jwt) {
+        if (jwt == null) {
+            return false;
+        }
+        Object adminClaim = jwt.getClaim("user_is_admin");
+        if (adminClaim instanceof Boolean b && b) {
+            return true;
+        }
+        if (adminClaim instanceof String s && "true".equalsIgnoreCase(s)) {
+            return true;
+        }
+        Object role = jwt.getClaim("user_role_name");
+        return role != null && "SUPER_ADMIN".equalsIgnoreCase(String.valueOf(role));
+    }
 }
