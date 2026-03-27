@@ -57,6 +57,13 @@ public class Payment {
     @Column(nullable = false)
     Long amount;
 
+    /**
+     * Số suất / số lượng món (gửi PayOS: quantity × unitPrice = amount).
+     */
+    @Column(nullable = false)
+    @Builder.Default
+    Integer quantity = 1;
+
     @Column(length = 10)
     @Builder.Default
     String currency = "VND";

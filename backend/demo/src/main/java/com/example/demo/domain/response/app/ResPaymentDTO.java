@@ -19,6 +19,7 @@ public class ResPaymentDTO {
     Long restaurantId;
     String restaurantName;
     Long amount;
+    Integer quantity;
     String currency;
     String status;
     String payosTransactionId;

@@ -117,6 +117,21 @@ public class PayOSServiceImpl implements PayOSService {
             return result;
         }
 
+        int lineQty = payment.getQuantity() != null && payment.getQuantity() > 0 ? payment.getQuantity() : 1;
+        long unitPrice = amount;
+        if (lineQty > 1) {
+            if (amount % lineQty != 0) {
+                log.warn(
+                        "PayOS line item: amount {} không chia hết cho quantity {} — gửi 1 dòng tổng (x1)",
+                        amount,
+                        lineQty);
+                lineQty = 1;
+                unitPrice = amount;
+            } else {
+                unitPrice = amount / lineQty;
+            }
+        }
+
         // orderCode phải LỚN HƠN 0 và DUY NHẤT cho mỗi lần gọi PayOS.
         // PayOS sẽ từ chối nếu orderCode đã tồn tại trong hệ thống của họ.
         // Do mỗi Payment đại diện cho một giao dịch độc lập (bấm thanh toán → tạo payment mới),
@@ -148,8 +163,8 @@ public class PayOSServiceImpl implements PayOSService {
                 .cancelUrl(cancelUrl)
                 .item(PaymentLinkItem.builder()
                         .name(productName)
-                        .quantity(1)
-                        .price(amount)
+                        .quantity(lineQty)
+                        .price(unitPrice)
                         .build())
                 .build();
 

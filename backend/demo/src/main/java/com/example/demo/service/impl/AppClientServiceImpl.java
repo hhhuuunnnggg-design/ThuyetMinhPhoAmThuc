@@ -342,16 +342,19 @@ public class AppClientServiceImpl implements AppClientService {
 
     @Override
     @Transactional
-    public ResPaymentDTO createPayment(Long poiId, String userId, Long amount, String description)
+    public ResPaymentDTO createPayment(Long poiId, String userId, Long amount, String description, Integer quantity)
             throws IdInvalidException {
         POI poi = poiRepository.findById(poiId)
                 .orElseThrow(() -> new IdInvalidException("Không tìm thấy POI: " + poiId));
+
+        int qty = quantity != null && quantity > 0 ? quantity : 1;
 
         Payment payment = Payment.builder()
                 .userId(userId)
                 .poi(poi)
                 .restaurant(poi.getRestaurant())
                 .amount(amount)
+                .quantity(qty)
                 .status(PaymentStatus.PENDING)
                 .description(description != null ? description : "Thanh toan thuyet minh")
                 .createdAt(Instant.now())
@@ -530,6 +533,7 @@ public class AppClientServiceImpl implements AppClientService {
                 .restaurantId(p.getRestaurant() != null ? p.getRestaurant().getId() : null)
                 .restaurantName(p.getRestaurant() != null ? p.getRestaurant().getOwnerName() : null)
                 .amount(p.getAmount())
+                .quantity(p.getQuantity() != null ? p.getQuantity() : 1)
                 .currency(p.getCurrency())
                 .status(p.getStatus().name())
                 .payosTransactionId(p.getPayosTransactionId())

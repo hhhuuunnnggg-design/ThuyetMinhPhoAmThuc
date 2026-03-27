@@ -242,6 +242,7 @@ export interface PaymentCreateRequest {
   poiId: number;
   userId: string;
   amount: number;
+  quantity?: number;
   description?: string;
 }
 
@@ -253,6 +254,7 @@ export interface Payment {
   restaurantId: number | null;
   restaurantName: string | null;
   amount: number;
+  quantity?: number;
   currency: string;
   status: string;
   payosTransactionId: string | null;

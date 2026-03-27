@@ -72,6 +72,7 @@ const PaymentScreen: React.FC = () => {
           poiId: poi.id,
           userId,
           amount,
+          quantity,
           description: desc,
         });
         if (!cancelled) {

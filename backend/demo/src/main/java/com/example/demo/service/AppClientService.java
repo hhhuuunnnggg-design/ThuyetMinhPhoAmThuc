@@ -60,7 +60,8 @@ public interface AppClientService {
     long getActiveCountNearby(double lat, double lng, double radiusKm);
 
     // ============ Payment ============
-    ResPaymentDTO createPayment(Long poiId, String userId, Long amount, String description) throws IdInvalidException;
+    ResPaymentDTO createPayment(Long poiId, String userId, Long amount, String description, Integer quantity)
+            throws IdInvalidException;
 
     ResPaymentDTO getPayment(Long paymentId) throws IdInvalidException;
 

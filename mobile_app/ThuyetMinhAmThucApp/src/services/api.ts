@@ -173,6 +173,7 @@ export const createPayment = async (data: {
   poiId: number;
   userId: string;
   amount: number;
+  quantity?: number;
   description?: string;
 }) => {
   const res = await api.post("/api/v1/app/payment/create", data);

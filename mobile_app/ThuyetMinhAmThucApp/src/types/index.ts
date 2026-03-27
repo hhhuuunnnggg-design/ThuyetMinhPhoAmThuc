@@ -85,6 +85,7 @@ export interface Payment {
   restaurantId: number | null;
   restaurantName: string | null;
   amount: number;
+  quantity?: number;
   currency: string;
   status: "PENDING" | "SUCCESS" | "FAILED" | "REFUNDED" | "CANCELLED";
   payosTransactionId: string | null;

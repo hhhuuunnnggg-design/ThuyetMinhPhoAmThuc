@@ -233,7 +233,8 @@ public class AppClientController {
                 req.getPoiId(),
                 req.getUserId(),
                 req.getAmount(),
-                req.getDescription()));
+                req.getDescription(),
+                req.getQuantity()));
     }
 
     /**
