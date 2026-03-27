@@ -61,12 +61,12 @@ class DeviceService {
    */
   determineRunningMode(deviceInfo: DeviceInfo): "OFFLINE" | "STREAMING" {
     if (
-      deviceInfo.ramMB >= APP_CONFIG.MIN_RAM_MB &&
-      deviceInfo.storageFreeMB >= APP_CONFIG.MIN_STORAGE_MB
+      deviceInfo.ramMB >= APP_CONFIG.MIN_RAM_MB &&       // RAM >= 4GB
+      deviceInfo.storageFreeMB >= APP_CONFIG.MIN_STORAGE_MB // Ổ trống >= 500MB
     ) {
-      return "OFFLINE";
+      return "OFFLINE";    // ✅ Đủ → tải audio về máy, chơi offline
     }
-    return "STREAMING";
+    return "STREAMING";   // ❌ Không đủ → chơi audio TRỰC TIẾP từ server mỗi lần
   }
 
   async isCapableOfOffline(): Promise<boolean> {

@@ -79,27 +79,45 @@ interface MapScreenProps {
 }
 
 // ============ Mock Slider (native, smooth like web) ============
+/**
+ * State kéo giữ trong component này, chỉ gọi onSlidingComplete khi thả tay.
+ * Tránh "Maximum update depth exceeded": Slider điều khiển bằng value từ parent +
+ * setState trong onValueChange → re-render → Slider lại bắn onValueChange → vòng lặp vô hạn.
+ */
 const MockSlider: React.FC<{
   min: number;
   max: number;
   value: number;
-  onChange: (v: number) => void;
-}> = ({ min, max, value, onChange }) => (
-  <View style={sliderStyles.trackWrap}>
-    <Slider
-      style={sliderStyles.slider}
-      minimumValue={min}
-      maximumValue={max}
-      step={(max - min) / 200}
-      value={value}
-      onValueChange={onChange}
-      onSlidingComplete={onChange}
-      minimumTrackTintColor="#ff6b35"
-      maximumTrackTintColor="#e0e0e0"
-      thumbTintColor="#ff6b35"
-    />
-  </View>
-);
+  /** Gọi mỗi bước kéo — chỉ dùng cho preview bản đồ (không setState parent). */
+  onValueChange?: (v: number) => void;
+  /** Gọi một lần khi thả tay — cập nhật mockLat/mockLng ở parent. */
+  onSlidingComplete: (v: number) => void;
+}> = ({ min, max, value, onValueChange, onSlidingComplete }) => {
+  const [internal, setInternal] = useState(value);
+  useEffect(() => {
+    setInternal(value);
+  }, [value]);
+
+  return (
+    <View style={sliderStyles.trackWrap}>
+      <Slider
+        style={sliderStyles.slider}
+        minimumValue={min}
+        maximumValue={max}
+        step={(max - min) / 200}
+        value={internal}
+        onValueChange={(v) => {
+          setInternal(v);
+          onValueChange?.(v);
+        }}
+        onSlidingComplete={onSlidingComplete}
+        minimumTrackTintColor="#ff6b35"
+        maximumTrackTintColor="#e0e0e0"
+        thumbTintColor="#ff6b35"
+      />
+    </View>
+  );
+};
 
 const sliderStyles = StyleSheet.create({
   trackWrap: {
@@ -673,9 +691,8 @@ const MapScreen: React.FC<MapScreenProps> = ({
     }
   }, [activePOIIds, webviewReady, postToMap]);
 
-  const handleMockLatChange = useCallback(
+  const handleMockLatLive = useCallback(
     (v: number) => {
-      setMockLat(v);
       postToMap(
         JSON.stringify({
           type: "update",
@@ -687,9 +704,12 @@ const MapScreen: React.FC<MapScreenProps> = ({
     [mockLng, postToMap]
   );
 
-  const handleMockLngChange = useCallback(
+  const handleMockLatComplete = useCallback((v: number) => {
+    setMockLat(v);
+  }, []);
+
+  const handleMockLngLive = useCallback(
     (v: number) => {
-      setMockLng(v);
       postToMap(
         JSON.stringify({
           type: "update",
@@ -700,6 +720,10 @@ const MapScreen: React.FC<MapScreenProps> = ({
     },
     [mockLat, postToMap]
   );
+
+  const handleMockLngComplete = useCallback((v: number) => {
+    setMockLng(v);
+  }, []);
 
   const webviewSource = useMemo(
     () => ({
@@ -791,7 +815,8 @@ const MapScreen: React.FC<MapScreenProps> = ({
                 min={mockRange.latMin}
                 max={mockRange.latMax}
                 value={mockLat ?? mockRange.latMin}
-                onChange={handleMockLatChange}
+                onValueChange={handleMockLatLive}
+                onSlidingComplete={handleMockLatComplete}
               />
             </View>
           </View>
@@ -804,7 +829,8 @@ const MapScreen: React.FC<MapScreenProps> = ({
                 min={mockRange.lngMin}
                 max={mockRange.lngMax}
                 value={mockLng ?? mockRange.lngMin}
-                onChange={handleMockLngChange}
+                onValueChange={handleMockLngLive}
+                onSlidingComplete={handleMockLngComplete}
               />
             </View>
           </View>
