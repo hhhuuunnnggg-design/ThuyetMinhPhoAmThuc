@@ -9,6 +9,11 @@ import {
   Platform,
   SafeAreaView,
   Alert,
+  Animated,
+  PanResponder,
+  ScrollView,
+  Image,
+  Linking,
 } from "react-native";
 import Slider from "@react-native-community/slider";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
@@ -27,8 +32,18 @@ import type { OfflinePOI } from "../services/offlineDb";
 import { formatDistance, haversineDistance } from "../utils/geo";
 import { unwrapEntityResponse, unwrapListResponse } from "../utils/apiResponse";
 import { POIGeofence } from "../utils/geoEngine";
+import { resolveMediaUrl } from "../utils/mediaUrl";
 
 const { height: SCREEN_H } = Dimensions.get("window");
+
+function formatPriceVnd(price: number | null | undefined): string {
+  if (price == null || Number.isNaN(Number(price))) return "—";
+  try {
+    return `${new Intl.NumberFormat("vi-VN").format(Number(price))} đ`;
+  } catch {
+    return `${price} đ`;
+  }
+}
 
 function pickAudioInfo(poi: NearbyPOI, lang: string): { lang: string; info: any } | null {
   const audios = poi.audios as Record<string, any> | undefined;
@@ -449,6 +464,78 @@ const MapScreen: React.FC<MapScreenProps> = ({
   const [showLangSelector, setShowLangSelector] = useState(false);
   const [webviewReady, setWebviewReady] = useState(false);
 
+  const expandedSheetH = useMemo(() => Math.round(SCREEN_H * 0.76), []);
+  const collapsedSheetH = 172;
+  const sheetCollapsedOffset = expandedSheetH - collapsedSheetH;
+  const sheetY = useRef(new Animated.Value(sheetCollapsedOffset)).current;
+  const sheetDragStartRef = useRef(sheetCollapsedOffset);
+
+  const toggleSheetExpand = useCallback(() => {
+    sheetY.stopAnimation((v: number) => {
+      const isExpanded = v < sheetCollapsedOffset / 2;
+      const target = isExpanded ? sheetCollapsedOffset : 0;
+      sheetDragStartRef.current = target;
+      Animated.spring(sheetY, {
+        toValue: target,
+        useNativeDriver: true,
+        friction: 9,
+        tension: 70,
+      }).start();
+    });
+  }, [sheetCollapsedOffset, sheetY]);
+
+  const sheetPanResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (_, g) =>
+          Math.abs(g.dy) > 8 && Math.abs(g.dy) > Math.abs(g.dx) * 0.55,
+        onPanResponderGrant: () => {
+          sheetY.stopAnimation((v: number) => {
+            sheetDragStartRef.current = v;
+          });
+        },
+        onPanResponderMove: (_, g) => {
+          const next = Math.min(Math.max(sheetDragStartRef.current + g.dy, 0), sheetCollapsedOffset);
+          sheetY.setValue(next);
+        },
+        onPanResponderRelease: (_, g) => {
+          const end = sheetDragStartRef.current + g.dy;
+          let target = sheetCollapsedOffset;
+          if (g.vy < -0.45 || end < sheetCollapsedOffset * 0.22) target = 0;
+          else if (g.vy > 0.45 || end > sheetCollapsedOffset * 0.78) target = sheetCollapsedOffset;
+          else target = end < sheetCollapsedOffset / 2 ? 0 : sheetCollapsedOffset;
+          sheetDragStartRef.current = target;
+          Animated.spring(sheetY, {
+            toValue: target,
+            useNativeDriver: true,
+            friction: 9,
+            tension: 70,
+          }).start();
+        },
+      }),
+    [sheetCollapsedOffset, sheetY]
+  );
+
+  useEffect(() => {
+    if (!showPlayerBar || !currentPOI) return;
+    sheetY.setValue(sheetCollapsedOffset);
+    sheetDragStartRef.current = sheetCollapsedOffset;
+  }, [showPlayerBar, currentPOI?.id, sheetCollapsedOffset, sheetY]);
+
+  useEffect(() => {
+    if (!currentPOI || !showPlayerBar) return;
+    const snapshot = currentPOI;
+    let cancelled = false;
+    fetchPOIWithAudios(snapshot).then((full) => {
+      if (cancelled || full.id !== snapshot.id) return;
+      setCurrentPOI((prev) => (prev && prev.id === full.id ? full : prev));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentPOI?.id, showPlayerBar]);
+
   /** Đồng bộ chip ngôn ngữ / lần phát tiếp theo với Cài đặt (preferredLang cập nhật khi quay lại tab Bản đồ). */
   useEffect(() => {
     setCurrentLang(preferredLang);
@@ -748,7 +835,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
     };
   }, [pois]);
 
-  const mockPanelBottom = showPlayerBar ? 130 : 30;
+  const mockPanelBottom = showPlayerBar ? collapsedSheetH + (Platform.OS === "ios" ? 10 : 14) : 30;
 
   // Sync position changes to webview (only when mockEnabled)
   useEffect(() => {
@@ -957,75 +1044,181 @@ const MapScreen: React.FC<MapScreenProps> = ({
         </TouchableOpacity>
       )}
 
-      {/* ====== PLAYER BAR ====== */}
+      {/* ====== BOTTOM SHEET: chi tiết POI (kéo lên) + phát audio ====== */}
       {showPlayerBar && currentPOI && (
-        <View style={styles.playerBar}>
-          <View style={styles.playerBarInfo}>
-            <Text style={styles.playerBarName} numberOfLines={1}>
-              {currentPOI.foodName || `POI #${currentPOI.id}`}
-            </Text>
-            <TouchableOpacity
-              style={styles.langChip}
-              onPress={() => setShowLangSelector((v) => !v)}
-            >
-              <Text style={styles.langChipText}>
-                {LANGUAGE_LABELS[currentLang] || currentLang}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {showLangSelector && (
-            <View style={styles.langSelector}>
-              {Object.entries(currentPOI.audios || {}).map(([lang, audio]) => (
-                <TouchableOpacity
-                  key={lang}
-                  style={[styles.langOption, currentLang === lang && styles.langOptionActive]}
-                  onPress={() => handleLangSelect(lang)}
-                >
-                  <View
-                    style={[
-                      styles.langDot,
-                      { backgroundColor: LANGUAGE_COLORS[lang] || "#888" },
-                    ]}
-                  />
-                  <Text
-                    style={[
-                      styles.langOptionText,
-                      currentLang === lang && styles.langOptionTextActive,
-                    ]}
-                  >
-                    {LANGUAGE_LABELS[lang] || lang}
-                  </Text>
-                  {playingLang === lang && <Text style={styles.playingEmoji}>🔊</Text>}
-                </TouchableOpacity>
-              ))}
+        <Animated.View
+          style={[
+            styles.detailSheet,
+            {
+              height: expandedSheetH,
+              transform: [{ translateY: sheetY }],
+            },
+          ]}
+        >
+          <View style={styles.detailSheetInner}>
+            <View {...sheetPanResponder.panHandlers}>
+              <TouchableOpacity
+                style={styles.sheetHandleWrap}
+                activeOpacity={0.88}
+                onPress={toggleSheetExpand}
+              >
+                <View style={styles.sheetHandle} />
+                <Text style={styles.sheetHandleHint}>Chi tiết · chạm hoặc kéo lên</Text>
+              </TouchableOpacity>
             </View>
-          )}
 
-          <View style={styles.playerBarControls}>
-            {loadingAudio ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <>
-                <TouchableOpacity
-                  style={[styles.playerBtn, isPlaying && styles.playerBtnPlaying]}
-                  onPress={() => {
-                    if (isPlaying) {
-                      stopAudio();
-                      return;
+            <ScrollView
+              style={styles.detailScroll}
+              contentContainerStyle={styles.detailScrollContent}
+              showsVerticalScrollIndicator
+              keyboardShouldPersistTaps="handled"
+            >
+              {resolveMediaUrl(currentPOI.imageUrl) ? (
+                <Image
+                  source={{ uri: resolveMediaUrl(currentPOI.imageUrl)! }}
+                  style={styles.detailHeroImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.detailHeroPlaceholder}>
+                  <Text style={styles.detailHeroPlaceholderEmoji}>🍜</Text>
+                </View>
+              )}
+
+              <Text style={styles.detailTitle}>
+                {currentPOI.foodName ||
+                  currentPOI.restaurantName ||
+                  `Địa điểm #${currentPOI.id}`}
+              </Text>
+              {currentPOI.restaurantName && currentPOI.foodName ? (
+                <Text style={styles.detailSubtitle}>{currentPOI.restaurantName}</Text>
+              ) : null}
+
+              <View style={styles.detailMetaRow}>
+                {currentPOI.category ? (
+                  <View style={styles.detailChip}>
+                    <Text style={styles.detailChipText}>{currentPOI.category}</Text>
+                  </View>
+                ) : null}
+                <Text style={styles.detailPrice}>{formatPriceVnd(currentPOI.price)}</Text>
+              </View>
+
+              <View style={styles.detailBlock}>
+                <Text style={styles.detailLabel}>Địa chỉ</Text>
+                <Text style={styles.detailValue}>
+                  {currentPOI.address?.trim() ? currentPOI.address : "—"}
+                </Text>
+              </View>
+
+              <View style={styles.detailBlock}>
+                <Text style={styles.detailLabel}>Giờ mở cửa</Text>
+                <Text style={styles.detailValue}>
+                  {currentPOI.openHours?.trim() ? currentPOI.openHours : "—"}
+                </Text>
+              </View>
+
+              <View style={styles.detailBlock}>
+                <Text style={styles.detailLabel}>Liên hệ</Text>
+                {currentPOI.phone?.trim() ? (
+                  <TouchableOpacity
+                    onPress={() =>
+                      Linking.openURL(`tel:${currentPOI.phone!.replace(/\s/g, "")}`)
                     }
-                    void playAudio(currentPOI, currentLang);
-                  }}
+                  >
+                    <Text style={styles.detailLink}>{currentPOI.phone}</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={styles.detailValue}>—</Text>
+                )}
+              </View>
+
+              <View style={styles.detailBlock}>
+                <Text style={styles.detailLabel}>Giới thiệu</Text>
+                <Text style={styles.detailDesc}>
+                  {currentPOI.description?.trim()
+                    ? currentPOI.description
+                    : currentPOI.originalText?.trim()
+                      ? currentPOI.originalText
+                      : "—"}
+                </Text>
+              </View>
+              <View style={styles.detailScrollPad} />
+            </ScrollView>
+
+            <View
+              style={[
+                styles.detailPlayerSection,
+                Platform.OS === "ios" && styles.detailPlayerSectionIos,
+              ]}
+            >
+              <View style={styles.playerBarInfo}>
+                <Text style={styles.playerBarName} numberOfLines={1}>
+                  {currentPOI.foodName || `POI #${currentPOI.id}`}
+                </Text>
+                <TouchableOpacity
+                  style={styles.langChip}
+                  onPress={() => setShowLangSelector((v) => !v)}
                 >
-                  <Text style={styles.playerBtnText}>{isPlaying ? "⏸" : "▶"}</Text>
+                  <Text style={styles.langChipText}>
+                    {LANGUAGE_LABELS[currentLang] || currentLang}
+                  </Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.playerStopBtn} onPress={stopAudio}>
-                  <Text style={styles.playerStopBtnText}>⏹</Text>
-                </TouchableOpacity>
-              </>
-            )}
+              </View>
+
+              {showLangSelector && (
+                <View style={styles.langSelector}>
+                  {Object.entries(currentPOI.audios || {}).map(([lang]) => (
+                    <TouchableOpacity
+                      key={lang}
+                      style={[styles.langOption, currentLang === lang && styles.langOptionActive]}
+                      onPress={() => handleLangSelect(lang)}
+                    >
+                      <View
+                        style={[
+                          styles.langDot,
+                          { backgroundColor: LANGUAGE_COLORS[lang] || "#888" },
+                        ]}
+                      />
+                      <Text
+                        style={[
+                          styles.langOptionText,
+                          currentLang === lang && styles.langOptionTextActive,
+                        ]}
+                      >
+                        {LANGUAGE_LABELS[lang] || lang}
+                      </Text>
+                      {playingLang === lang && <Text style={styles.playingEmoji}>🔊</Text>}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+              <View style={styles.playerBarControls}>
+                {loadingAudio ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      style={[styles.playerBtn, isPlaying && styles.playerBtnPlaying]}
+                      onPress={() => {
+                        if (isPlaying) {
+                          stopAudio();
+                          return;
+                        }
+                        void playAudio(currentPOI, currentLang);
+                      }}
+                    >
+                      <Text style={styles.playerBtnText}>{isPlaying ? "⏸" : "▶"}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.playerStopBtn} onPress={stopAudio}>
+                      <Text style={styles.playerStopBtnText}>⏹</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            </View>
           </View>
-        </View>
+        </Animated.View>
       )}
 
       {activePOIIds.size > 0 && (
@@ -1124,16 +1317,145 @@ const styles = StyleSheet.create({
   },
   gpsEnableBtnText: { fontSize: 13, fontWeight: "600", color: "#ff6b35" },
 
-  // Player bar
-  playerBar: {
-    position: "absolute", bottom: 0, left: 0, right: 0,
-    backgroundColor: "#1a1a1a",
-    paddingHorizontal: 16, paddingVertical: 14,
-    paddingBottom: Platform.OS === "ios" ? 34 : 14,
-    borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
-    zIndex: 10,
+  // Bottom sheet chi tiết POI (kéo lên như Google Maps)
+  detailSheet: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    shadowColor: "#000",
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 16,
+    zIndex: 20,
+    overflow: "hidden",
   },
+  detailSheetInner: {
+    flex: 1,
+  },
+  sheetHandleWrap: {
+    alignItems: "center",
+    paddingTop: 10,
+    paddingBottom: 6,
+  },
+  sheetHandle: {
+    width: 44,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: "#cfd4dc",
+  },
+  sheetHandleHint: {
+    marginTop: 6,
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#9aa0a6",
+  },
+  detailScroll: {
+    flex: 1,
+  },
+  detailScrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 4,
+  },
+  detailHeroImage: {
+    width: "100%",
+    height: 188,
+    borderRadius: 14,
+    backgroundColor: "#eee",
+    marginBottom: 14,
+  },
+  detailHeroPlaceholder: {
+    height: 160,
+    borderRadius: 14,
+    backgroundColor: "#f1f3f5",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  detailHeroPlaceholderEmoji: {
+    fontSize: 52,
+  },
+  detailTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#1a1a1a",
+    letterSpacing: -0.3,
+  },
+  detailSubtitle: {
+    marginTop: 6,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#5f6368",
+  },
+  detailMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 12,
+    marginBottom: 4,
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  detailChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 10,
+    backgroundColor: "#fff3e0",
+  },
+  detailChipText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#e65100",
+  },
+  detailPrice: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#ff6b35",
+  },
+  detailBlock: {
+    marginTop: 16,
+  },
+  detailLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#80868b",
+    letterSpacing: 0.6,
+    marginBottom: 6,
+  },
+  detailValue: {
+    fontSize: 15,
+    color: "#202124",
+    lineHeight: 22,
+  },
+  detailLink: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1565c0",
+  },
+  detailDesc: {
+    fontSize: 15,
+    color: "#3c4043",
+    lineHeight: 24,
+  },
+  detailScrollPad: {
+    height: 12,
+  },
+  detailPlayerSection: {
+    backgroundColor: "#1a1a1a",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.12)",
+  },
+  detailPlayerSectionIos: {
+    paddingBottom: 30,
+  },
+
   playerBarInfo: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
   playerBarName: { flex: 1, fontSize: 15, fontWeight: "600", color: "#fff" },
   langChip: {
