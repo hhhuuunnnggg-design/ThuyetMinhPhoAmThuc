@@ -83,6 +83,10 @@ export const API_ENDPOINTS = {
     POI_BY_ID: (id: number) => `/api/v1/admin/pois/${id}`,
     POI_STATS: (id: number) => `/api/v1/admin/pois/${id}/stats`,
     RESTAURANTS: "/api/v1/admin/restaurants",
+    PAYMENTS: "/api/v1/admin/payments",
+    PAYMENTS_STATS_MONTH: "/api/v1/admin/payments/stats/month",
+    PAYMENT_SYNC_PAYOS: (id: number) =>
+      `/api/v1/admin/payments/${id}/sync-payos`,
     LOAD_TEST_START: "/api/v1/admin/load-test/start",
     TRANSLATION_CORPUS: "/api/v1/admin/translation/corpus",
     TRANSLATION_STATS: "/api/v1/admin/translation/stats",

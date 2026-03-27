@@ -3,6 +3,7 @@ package com.example.demo.service.impl;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -21,6 +22,7 @@ import vn.payos.PayOS;
 import vn.payos.core.ClientOptions;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkRequest;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkResponse;
+import vn.payos.model.v2.paymentRequests.PaymentLink;
 import vn.payos.model.v2.paymentRequests.PaymentLinkItem;
 
 /**
@@ -188,6 +190,40 @@ public class PayOSServiceImpl implements PayOSService {
         }
 
         return result;
+    }
+
+    @Override
+    public Optional<PaymentLink> fetchPaymentLink(Payment payment) {
+        Restaurant restaurant = payment.getRestaurant();
+        String clientId = defaultClientId;
+        String apiKey = defaultApiKey;
+        String checksumKey = defaultChecksumKey;
+        if (hasRestaurantPayos(restaurant)) {
+            clientId = restaurant.getPayosClientId();
+            apiKey = restaurant.getPayosApiKey();
+            checksumKey = restaurant.getPayosChecksumKey();
+        }
+        if (!isTripleConfigured(clientId, apiKey, checksumKey)) {
+            return Optional.empty();
+        }
+        PayOS payOS = buildClient(clientId, apiKey, checksumKey);
+        String txn = payment.getPayosTransactionId();
+        try {
+            if (txn != null && !txn.isBlank() && !txn.startsWith("MOCK")) {
+                try {
+                    long oc = Long.parseLong(txn.trim());
+                    return Optional.ofNullable(payOS.paymentRequests().get(oc));
+                } catch (NumberFormatException e) {
+                    return Optional.ofNullable(payOS.paymentRequests().get(txn.trim()));
+                }
+            }
+            if (payment.getPayosPaymentLinkId() != null && !payment.getPayosPaymentLinkId().isBlank()) {
+                return Optional.ofNullable(payOS.paymentRequests().get(payment.getPayosPaymentLinkId().trim()));
+            }
+        } catch (Exception e) {
+            log.warn("PayOS fetch payment link failed: {}", e.getMessage());
+        }
+        return Optional.empty();
     }
 
     @Override

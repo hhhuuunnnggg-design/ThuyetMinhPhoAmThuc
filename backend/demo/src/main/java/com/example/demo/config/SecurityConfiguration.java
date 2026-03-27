@@ -58,6 +58,7 @@ public class SecurityConfiguration {
                 "/api/v1/admin/load-test/**",
                 "/api/v1/admin/pois/**",
                 "/api/v1/admin/restaurants/**",
+                "/api/v1/admin/payments/**",
                 "/api/v1/admin/translation/**"
         };
         http

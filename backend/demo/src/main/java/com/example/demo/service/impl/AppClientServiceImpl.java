@@ -404,7 +404,9 @@ public class AppClientServiceImpl implements AppClientService {
         Payment payment = paymentRepository.findByPayosTransactionId(transactionId)
                 .orElseThrow(() -> new IdInvalidException("Không tìm thấy payment: " + transactionId));
 
-        if ("SUCCESS".equalsIgnoreCase(status) || "COMPLETED".equalsIgnoreCase(status)) {
+        if ("SUCCESS".equalsIgnoreCase(status)
+                || "COMPLETED".equalsIgnoreCase(status)
+                || "PAID".equalsIgnoreCase(status)) {
             payment.markSuccess(transactionId);
         } else if ("CANCELLED".equalsIgnoreCase(status)) {
             payment.markCancelled();
