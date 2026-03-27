@@ -35,13 +35,13 @@ public class PayOSServiceImpl implements PayOSService {
 
     private static final Logger log = LoggerFactory.getLogger(PayOSServiceImpl.class);
 
-    @Value("${ayos.client_id:8bdecc99-302f-4f2a-ad92-09625534b531}")
+    @Value("${PAYOS_CLIENT_ID:8bdecc99-302f-4f2a-ad92-09625534b531}")
     private String defaultClientId;
 
-    @Value("${ayos.api_key:78a93170-6fd5-47ab-bc73-1cbf387c3237}")
+    @Value("${PAYOS_API_KEY:78a93170-6fd5-47ab-bc73-1cbf387c3237}")
     private String defaultApiKey;
 
-    @Value("${ayos.checksum_key:b1ac247e87fbe9f4a0f2b46ed3f2c549c699d4015c310b4b7eb7fbdc0947d25d}")
+    @Value("${PAYOS_CHECKSUM_KEY:b1ac247e87fbe9f4a0f2b46ed3f2c549c699d4015c310b4b7eb7fbdc0947d25d}")
     private String defaultChecksumKey;
 
     @Value("${app.frontend.url:http://localhost:3000}")

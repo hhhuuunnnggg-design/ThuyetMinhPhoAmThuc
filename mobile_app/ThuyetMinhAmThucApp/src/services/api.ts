@@ -1,6 +1,8 @@
 import axios, { AxiosInstance } from "axios";
 import { getApiBaseUrl } from "../utils/apiUrl";
+import { unwrapEntityResponse } from "../utils/apiResponse";
 import { deviceService } from "./device";
+import type { Payment } from "../types";
 
 const BASE_URL = getApiBaseUrl();
 
@@ -167,12 +169,12 @@ export const createPayment = async (data: {
   description?: string;
 }) => {
   const res = await api.post("/api/v1/app/payment/create", data);
-  return res.data;
+  return unwrapEntityResponse<Payment>(res.data) as Payment;
 };
 
 export const getPayment = async (id: number) => {
   const res = await api.get(`/api/v1/app/payment/${id}`);
-  return res.data;
+  return unwrapEntityResponse<Payment>(res.data) as Payment;
 };
 
 // ============ Audio Streaming ============

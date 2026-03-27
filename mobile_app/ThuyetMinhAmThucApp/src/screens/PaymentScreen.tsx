@@ -10,20 +10,38 @@ import {
   Linking,
 } from "react-native";
 import { RouteProp, useRoute } from "@react-navigation/native";
+import QRCode from "react-native-qrcode-svg";
 import { createPayment } from "../services/api";
 import { deviceService } from "../services/device";
 import { POI, Payment } from "../types";
 
 type PaymentRoute = RouteProp<{ Payment: { poi: POI; amount: number } }, "Payment">;
 
-/** Chuẩn hóa chuỗi QR PayOS (thường là base64 hoặc data URL) để hiển thị Image. */
+/**
+ * PayOS API trả `qrCode` là chuỗi payload VietQR/EMV (vd. bắt đầu 000201...),
+ * không phải ảnh PNG base64 — phải vẽ QR từ chuỗi đó.
+ * @see https://payos.vn/docs/api/
+ */
+function isRenderableAsQrMatrix(qr: string | null | undefined): boolean {
+  if (!qr || !String(qr).trim()) return false;
+  const s = String(qr).trim();
+  if (s.startsWith("data:") || s.startsWith("http://") || s.startsWith("https://")) return false;
+  // PNG/JPEG base64 thường có prefix này
+  if (s.startsWith("iVBOR") || s.startsWith("/9j/")) return false;
+  return true;
+}
+
+/** Chuỗi là URL ảnh hoặc data URL — dùng Image. */
 function qrCodeToImageUri(qr: string | null | undefined): string | null {
   if (!qr || !String(qr).trim()) return null;
   const s = String(qr).trim();
   if (s.startsWith("data:") || s.startsWith("http://") || s.startsWith("https://")) {
     return s;
   }
-  return `data:image/png;base64,${s}`;
+  if (s.startsWith("iVBOR") || s.startsWith("/9j/")) {
+    return `data:image/png;base64,${s}`;
+  }
+  return null;
 }
 
 const PaymentScreen: React.FC = () => {
@@ -60,7 +78,9 @@ const PaymentScreen: React.FC = () => {
     };
   }, [poi.id, amount, poi.foodName]);
 
-  const qrUri = payment ? qrCodeToImageUri(payment.payosQrCode) : null;
+  const qrPayload = payment?.payosQrCode;
+  const showMatrixQr = qrPayload && isRenderableAsQrMatrix(qrPayload);
+  const qrImageUri = qrPayload ? qrCodeToImageUri(qrPayload) : null;
   const isMockLink = payment?.payosPaymentLink?.includes("/mock/");
 
   return (
@@ -94,15 +114,22 @@ const PaymentScreen: React.FC = () => {
             </View>
           )}
 
-          {qrUri ? (
+          {showMatrixQr && qrPayload ? (
             <View style={styles.qrWrap}>
               <Text style={styles.label}>Mã QR VietQR (PayOS)</Text>
-              <Image source={{ uri: qrUri }} style={styles.qrImage} resizeMode="contain" />
+              <View style={styles.qrSvgBox}>
+                <QRCode value={qrPayload} size={240} backgroundColor="#fff" color="#000" />
+              </View>
+            </View>
+          ) : qrImageUri ? (
+            <View style={styles.qrWrap}>
+              <Text style={styles.label}>Mã QR thanh toán</Text>
+              <Image source={{ uri: qrImageUri }} style={styles.qrImage} resizeMode="contain" />
             </View>
           ) : (
             <View style={styles.boxInfo}>
               <Text style={styles.infoText}>
-                PayOS không trả ảnh QR trong response — mở trang thanh toán bên dưới để quét QR trên trang PayOS.
+                PayOS không trả mã QR trong response — mở trang thanh toán bên dưới để quét QR trên trang PayOS.
               </Text>
             </View>
           )}
@@ -152,6 +179,11 @@ const styles = StyleSheet.create({
   },
   infoText: { fontSize: 13, color: "#0369a1", lineHeight: 20 },
   qrWrap: { alignItems: "center", marginBottom: 20 },
+  qrSvgBox: {
+    padding: 12,
+    backgroundColor: "#fafafa",
+    borderRadius: 12,
+  },
   label: { fontSize: 15, fontWeight: "600", color: "#333", marginBottom: 10 },
   qrImage: { width: 260, height: 260, backgroundColor: "#fafafa" },
   primaryBtn: {
