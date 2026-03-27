@@ -13,6 +13,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Haptics from "expo-haptics";
 import api from "../services/api";
 import { unwrapEntityResponse } from "../utils/apiResponse";
+import { extractPoiQrFromScan } from "../utils/qrScan";
 import { POI } from "../types";
 
 type RootStackParamList = {
@@ -39,19 +40,20 @@ const QRScannerScreen: React.FC = () => {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     try {
-      // data có thể là POI ID hoặc QR code string
+      const code = extractPoiQrFromScan(data);
+      // code có thể là mã QR POI (UUID) hoặc số ID
       let poi: any = null;
 
       // Thử tìm theo QR code
       try {
-        const res: any = await api.get(`/api/v1/app/pois/qr/${data}`);
+        const res: any = await api.get(`/api/v1/app/pois/qr/${encodeURIComponent(code)}`);
         poi = unwrapEntityResponse<POI>(res.data);
       } catch {}
 
       // Thử tìm theo ID
       if (!poi) {
         try {
-          const id = parseInt(data);
+          const id = parseInt(code, 10);
           if (!isNaN(id)) {
             const res: any = await api.get(`/api/v1/app/pois/${id}`);
             poi = unwrapEntityResponse<POI>(res.data);
@@ -64,7 +66,7 @@ const QRScannerScreen: React.FC = () => {
       } else {
         Alert.alert(
           "Không tìm thấy",
-          `Không tìm thấy POI với mã: ${data}`,
+          `Không tìm thấy POI với mã: ${code}`,
           [
             {
               text: "Quét lại",

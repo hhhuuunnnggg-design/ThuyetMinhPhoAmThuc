@@ -34,6 +34,7 @@ import UsersPage from "./pages/admin/User/UserTable";
 import AdminPaymentsPage from "./pages/admin/Payment/AdminPaymentsPage";
 import PaymentSuccessPage from "./pages/client/payment/PaymentSuccessPage";
 import PaymentCancelPage from "./pages/client/payment/PaymentCancelPage";
+import OpenPoiPage from "./pages/public/OpenPoiPage";
 import "./styles/global.scss";
 
 const router = createBrowserRouter([
@@ -107,6 +108,11 @@ const router = createBrowserRouter([
   {
     path: ROUTES.PAYMENT.CANCEL,
     element: <PaymentCancelPage />,
+    errorElement: <Error500 />,
+  },
+  {
+    path: ROUTES.OPEN_POI,
+    element: <OpenPoiPage />,
     errorElement: <Error500 />,
   },
   {

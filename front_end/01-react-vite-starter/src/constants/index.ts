@@ -115,5 +115,7 @@ export const ROUTES = {
     SUCCESS: "/payment/success",
     CANCEL: "/payment/cancel",
   },
+  /** QR địa điểm (mở bằng camera → trang hướng dẫn / app) */
+  OPEN_POI: "/open-poi",
   TTS: "/tts",
 } as const;
