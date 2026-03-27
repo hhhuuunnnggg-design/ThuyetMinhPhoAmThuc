@@ -173,7 +173,14 @@ const UpsertPOIModal = ({ open, onCancel, onSuccess, editingId }: Props) => {
     }
   };
 
-  const restaurantOptions = restaurants.map((r) => {
+  /** Một nhà hàng chỉ gắn một POI: ẩn nhà hàng đã có POI khác; khi sửa vẫn giữ option đang gắn với POI này */
+  const restaurantsForSelect = restaurants.filter((r) => {
+    if (r.poiId == null) return true;
+    if (editingId != null && r.poiId === editingId) return true;
+    return false;
+  });
+
+  const restaurantOptions = restaurantsForSelect.map((r) => {
     const label =
       [r.ownerName, r.ownerEmail].filter(Boolean).join(" — ") || `Nhà hàng #${r.id}`;
     return { value: r.id, label };
@@ -330,7 +337,13 @@ const UpsertPOIModal = ({ open, onCancel, onSuccess, editingId }: Props) => {
             options={restaurantOptions}
             showSearch
             optionFilterProp="label"
-            notFoundContent={restaurantOptions.length === 0 ? "Chưa có nhà hàng — tạo ở menu Nhà hàng" : undefined}
+            notFoundContent={
+              restaurants.length === 0
+                ? "Chưa có nhà hàng — tạo ở menu Nhà hàng"
+                : restaurantOptions.length === 0
+                  ? "Tất cả nhà hàng đã gắn POI — hủy liên kết ở POI khác hoặc tạo nhà hàng mới"
+                  : undefined
+            }
           />
         </Form.Item>
 

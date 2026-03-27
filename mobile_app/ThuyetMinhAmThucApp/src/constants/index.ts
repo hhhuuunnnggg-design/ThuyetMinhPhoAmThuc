@@ -34,22 +34,26 @@ export const API_ENDPOINTS = {
 
 export const APP_CONFIG = {
   // Minimum config for offline mode
-  MIN_RAM_MB: 4096,
-  MIN_STORAGE_MB: 500,
+  MIN_RAM_MB: 4096,           // Máy phải có RAM >= 4GB mới bật chế độ Offline
+  MIN_STORAGE_MB: 500,        // Máy phải có ổ còn trống >= 500MB
 
   // Cooldown before playing same POI again (ms)
-  COOLDOWN_MS: 5 * 60 * 1000,
+  COOLDOWN_MS: 5 * 60 * 1000, // Sau khi phát xong, chờ 5 phút mới phát lại POI đó (tránh lặp)
 
   // Polling intervals
-  ACTIVE_NARRATION_POLL_MS: 5000,
-  LOCATION_UPDATE_MS: 3000,
+  ACTIVE_NARRATION_POLL_MS: 5000,  // App kiểm tra "có ai đang nghe không" mỗi 5 giây
+  LOCATION_UPDATE_MS: 3000,         // App cập nhật vị trí máy mỗi 3 giây
 
   // Audio
-  DEFAULT_LANGUAGE: "vi",
-  AUDIO_FORMAT: 3, // 3 = mp3
+  DEFAULT_LANGUAGE: "vi",    // Ngôn ngữ mặc định khi phát thuyết minh = Tiếng Việt
+  AUDIO_FORMAT: 3,           // Định dạng audio = 3 (tức MP3)
 
   // Geofence
+  // Bán kính KÍCH HOẠT: khi máy ĐI VÀO trong vòng 50m quanh POI → TỰ ĐỘNG phát thuyết minh
+  //                       khi máy ĐI RA KHỎI 50m                              → DỪNG phát
   DEFAULT_RADIUS_METERS: 50,
+  // Bán kính HIỂN THỊ: POI chỉ HIỆN trong danh sách khi nằm trong vòng 2km từ vị trí máy
+  //                    POI ở XA HƠN 2km → KHÔNG hiện trong danh sách
   NEARBY_RADIUS_KM: 2.0,
 } as const;
 

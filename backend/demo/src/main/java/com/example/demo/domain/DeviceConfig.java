@@ -45,7 +45,7 @@ public class DeviceConfig {
     @Column(unique = true, nullable = false, length = 100)
     String deviceId;
 
-    @Column(length = 20)
+    @Column(length = 100)
     String osVersion;
 
     @Column(length = 20)
