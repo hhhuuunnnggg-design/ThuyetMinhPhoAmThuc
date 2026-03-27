@@ -189,7 +189,7 @@ const TTSAudioGroupsPage = () => {
               />
             </Tooltip>
           ))}
-          <Tooltip title="Tạo/make audio đa ngôn ngữ">
+          {/* <Tooltip title="Tạo/make audio đa ngôn ngữ">
             <Button
               type="default"
               icon={<GlobalOutlined />}
@@ -197,7 +197,7 @@ const TTSAudioGroupsPage = () => {
               loading={generatingGroupId === record.id}
               onClick={() => handleGenerateMultilingual(record.id)}
             />
-          </Tooltip>
+          </Tooltip> */}
           <Tooltip title="Sửa text/giọng nhóm (thông tin ẩm thực ở POI)">
             <Button
               type="default"

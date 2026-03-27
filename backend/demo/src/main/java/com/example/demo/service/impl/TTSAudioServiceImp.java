@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -153,6 +154,8 @@ public class TTSAudioServiceImp implements TTSAudioService {
                 .orElseThrow(() -> new IdInvalidException("Không tìm thấy group: " + id));
         assertShopOwnerOrAdminAccessGroup(group);
 
+        boolean needRegenerate = isOriginalTtsSettingsChanged(group, req);
+
         group.setOriginalText(req.getOriginalText());
         group.setOriginalVoice(req.getOriginalVoice());
         group.setOriginalSpeed(req.getOriginalSpeed());
@@ -161,7 +164,40 @@ public class TTSAudioServiceImp implements TTSAudioService {
         group.setUpdatedAt(Instant.now());
 
         group = ttsAudioGroupRepository.save(group);
+
+        if (needRegenerate) {
+            if (group.getAudioMap() == null) {
+                group.setAudioMap(new HashMap<>());
+            }
+            try {
+                generateAudiosForGroup(group, req.getOriginalText(), req.getOriginalVoice(),
+                        req.getOriginalSpeed(), req.getOriginalFormat(), req.getOriginalWithoutFilter());
+            } catch (IOException e) {
+                throw new IdInvalidException("Không tạo lại audio: " + e.getMessage());
+            }
+            group = ttsAudioGroupRepository.save(group);
+        }
+
         return toGroupDTO(group);
+    }
+
+    /** So sánh trước khi ghi đè field — tránh gọi TTS khi không đổi. */
+    private static boolean isOriginalTtsSettingsChanged(TTSAudioGroup g, ReqUpdateTTSAudioGroupDTO req) {
+        if (!Objects.equals(g.getOriginalText(), req.getOriginalText())) {
+            return true;
+        }
+        if (!Objects.equals(g.getOriginalVoice(), req.getOriginalVoice())) {
+            return true;
+        }
+        if (!Objects.equals(g.getOriginalSpeed(), req.getOriginalSpeed())) {
+            return true;
+        }
+        if (!Objects.equals(g.getOriginalFormat(), req.getOriginalFormat())) {
+            return true;
+        }
+        boolean oldF = Boolean.TRUE.equals(g.getOriginalWithoutFilter());
+        boolean newF = Boolean.TRUE.equals(req.getOriginalWithoutFilter());
+        return oldF != newF;
     }
 
     @Override
@@ -342,7 +378,7 @@ public class TTSAudioServiceImp implements TTSAudioService {
                 continue;
             }
 
-            saveAudioRecord(group, lang, textForLang, audio);
+            saveOrUpdateAudioRecord(group, lang, textForLang, audio);
             group.getAudioMap().put(lang, audio.toAudioData());
         }
     }
@@ -388,7 +424,42 @@ public class TTSAudioServiceImp implements TTSAudioService {
     }
 
     /**
-     * Lưu TTSAudio record vào DB + log.
+     * Tạo mới hoặc cập nhật bản ghi TTSAudio (giữ id để không gãy FK narration_logs).
+     */
+    private void saveOrUpdateAudioRecord(TTSAudioGroup group, String lang, String textForLang, AudioResult audio) {
+        Optional<TTSAudio> existingOpt = ttsAudioRepository.findByGroupIdAndLanguageCode(group.getId(), lang);
+        if (existingOpt.isPresent()) {
+            TTSAudio t = existingOpt.get();
+            String oldFile = t.getFileName();
+            if (oldFile != null && !oldFile.equals(audio.fileName())) {
+                try {
+                    localStorageService.deleteFile(oldFile);
+                } catch (Exception e) {
+                    System.err.println("⚠️ Không xóa được file cũ: " + oldFile + " — " + e.getMessage());
+                }
+            }
+            t.setText(textForLang);
+            t.setTranslatedText(textForLang);
+            t.setVoice(lang.equals(SupportedLanguage.VI)
+                    ? group.getOriginalVoice()
+                    : SupportedLanguage.getVoice(lang));
+            t.setSpeed(group.getOriginalSpeed() != null ? group.getOriginalSpeed() : 1.0f);
+            t.setFormat(group.getOriginalFormat() != null ? group.getOriginalFormat() : 3);
+            t.setWithoutFilter(group.getOriginalWithoutFilter());
+            t.setFileName(audio.fileName());
+            t.setS3Url(audio.s3Url());
+            t.setFileSize((long) audio.fileSize());
+            t.setMimeType(audio.mimeType());
+            t.setUpdatedAt(Instant.now());
+            ttsAudioRepository.save(t);
+            System.out.println("✅ Cập nhật audio " + SupportedLanguage.getName(lang) + ": " + audio.s3Url());
+        } else {
+            saveAudioRecord(group, lang, textForLang, audio);
+        }
+    }
+
+    /**
+     * Lưu TTSAudio record mới (tạo nhóm).
      */
     private void saveAudioRecord(TTSAudioGroup group, String lang, String textForLang, AudioResult audio) {
         TTSAudio ttsAudio = TTSAudio.builder()

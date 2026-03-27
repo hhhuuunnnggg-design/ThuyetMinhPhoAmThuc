@@ -7,7 +7,6 @@ import {
   type Voice,
 } from "@/api/tts.api";
 import { logger } from "@/utils/logger";
-import { UploadOutlined } from "@ant-design/icons";
 import { Button, Form, Input, Modal, Select, Slider, Space, Switch, message } from "antd";
 import { useEffect, useState } from "react";
 
@@ -119,7 +118,9 @@ const EditTTSAudioGroupModal = ({ open, groupId, onCancel, onSuccess }: EditTTSA
         originalWithoutFilter: values.originalWithoutFilter,
       };
       await updateTTSGroupAPI(groupId, body);
-      message.success("Cập nhật nhóm audio thành công!");
+      message.success(
+        "Đã lưu. Nếu bạn đổi nội dung hoặc giọng/tốc độ, hệ thống đã tổng hợp lại file audio (có thể mất vài giây)."
+      );
       onSuccess();
     } catch (e: unknown) {
       message.error("Cập nhật nhóm thất bại");

@@ -193,7 +193,7 @@ public class TTSController {
     }
 
     @PutMapping("/groups/{id}")
-    @ApiMessage("Cập nhật metadata nhóm audio TTS (món ăn, GPS, text/voice gốc)")
+    @ApiMessage("Cập nhật text/giọng gốc — tự tổng hợp lại file audio đa ngôn ngữ khi có thay đổi")
     public ResponseEntity<ResTTSAudioGroupDTO> updateGroup(
             @PathVariable Long id,
             @Valid @RequestBody ReqUpdateTTSAudioGroupDTO request) throws IdInvalidException {
