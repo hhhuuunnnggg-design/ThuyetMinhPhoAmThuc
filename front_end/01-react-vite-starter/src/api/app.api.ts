@@ -211,6 +211,11 @@ export const getActiveNarrationsAPI = () => {
   return axios.get<IBackendRes<ActiveNarration[]>>(API_ENDPOINTS.APP.DASHBOARD_ACTIVE);
 };
 
+/** Dashboard admin — SUPER_ADMIN xem hết; SHOP_OWNER chỉ thấy POI do mình tạo (JWT). */
+export const getAdminActiveNarrationsAPI = () => {
+  return axios.get<IBackendRes<ActiveNarration[]>>(API_ENDPOINTS.ADMIN.DASHBOARD_ACTIVE_NARRATIONS);
+};
+
 export interface TopPOI {
   poiId: number;
   poiName: string;

@@ -212,4 +212,15 @@ public class SecurityUtil {
         }
         return Optional.of(raw.toLowerCase());
     }
+
+    /**
+     * Dashboard / Top POI theo chủ quán: JWT có nhưng không phải full admin → chỉ dữ liệu POI do
+     * {@code user_id} trong token tạo (SHOP_OWNER). Full admin hoặc không có JWT → {@code null} (không lọc).
+     */
+    public static Long getPoiOwnerScopeUserIdOrNull() {
+        return getCurrentJwt()
+                .filter(jwt -> !isFullAdminJwt(jwt))
+                .flatMap(j -> getCurrentUserId())
+                .orElse(null);
+    }
 }

@@ -316,8 +316,15 @@ public class AppClientServiceImpl implements AppClientService {
     // ============ Dashboard ============
 
     @Override
+    @Transactional(readOnly = true)
     public List<ResActiveNarrationDTO> getActiveNarrations() {
-        return activeNarrationRepository.findByStatus(NarrationStatus.PLAYING)
+        return getActiveNarrationsScoped(null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ResActiveNarrationDTO> getActiveNarrationsScoped(Long poiOwnerUserId) {
+        return activeNarrationRepository.findPlayingWithPoiAndAudio(poiOwnerUserId)
                 .stream()
                 .map(this::buildActiveNarrationDTO)
                 .collect(Collectors.toList());

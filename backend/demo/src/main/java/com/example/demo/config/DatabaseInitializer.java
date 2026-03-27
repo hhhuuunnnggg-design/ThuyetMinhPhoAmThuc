@@ -172,7 +172,7 @@ public class DatabaseInitializer implements CommandLineRunner {
             this.userRepository.save(adminUser);
         }
 
-        // Tài khoản SHOP_OWNER mặc định
+        // Tài khoản SHOP_OWNER mặc định (A)
         if (this.userRepository.findByEmail("shop@gmail.com").isEmpty()) {
             User shopUser = new User();
             shopUser.setEmail("shop@gmail.com");
@@ -184,6 +184,20 @@ public class DatabaseInitializer implements CommandLineRunner {
             shopUser.setIs_admin(false);
             shopUser.setRole(shopOwnerRole);
             this.userRepository.save(shopUser);
+        }
+
+        // SHOP_OWNER thứ hai (B) — dashboard Top POI / real-time chỉ thấy POI do chính user này tạo
+        if (this.userRepository.findByEmail("shop2@gmail.com").isEmpty()) {
+            User shopB = new User();
+            shopB.setEmail("shop2@gmail.com");
+            shopB.setAvatar("https://wellavn.com/wp-content/uploads/2025/07/anh-gai-xinh-2k-12.jpg");
+            shopB.setFirstName("Chủ");
+            shopB.setLastName("Quán Bánh Cuốn");
+            shopB.setGender(genderEnum.FEMALE);
+            shopB.setPassword(this.passwordEncoder.encode("123456"));
+            shopB.setIs_admin(false);
+            shopB.setRole(shopOwnerRole);
+            this.userRepository.save(shopB);
         }
 
         System.out.println(">>> END INIT DATABASE");

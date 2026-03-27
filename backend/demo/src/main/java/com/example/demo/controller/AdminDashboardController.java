@@ -17,6 +17,7 @@ import com.example.demo.domain.response.admin.ResDashboardDTO;
 import com.example.demo.domain.response.admin.ResLoadTestResultDTO;
 import com.example.demo.domain.response.admin.ResTopPOIDTO;
 import com.example.demo.domain.response.admin.ResTranslationStatsDTO;
+import com.example.demo.domain.response.app.ResActiveNarrationDTO;
 import com.example.demo.service.AdminDashboardService;
 import com.example.demo.util.annotation.ApiMessage;
 
@@ -42,6 +43,12 @@ public class AdminDashboardController {
     @ApiMessage("Queue POI real-time")
     public ResponseEntity<List<ResDashboardDTO.POIQueueCount>> getPOIQueueCounts() {
         return ResponseEntity.ok(adminDashboardService.getPOIQueueCounts());
+    }
+
+    @GetMapping("/dashboard/active-narrations")
+    @ApiMessage("Đang phát (admin / chủ quán theo POI của họ)")
+    public ResponseEntity<List<ResActiveNarrationDTO>> getActiveNarrationsForAdmin() {
+        return ResponseEntity.ok(adminDashboardService.getActiveNarrationsForAdmin());
     }
 
     /**

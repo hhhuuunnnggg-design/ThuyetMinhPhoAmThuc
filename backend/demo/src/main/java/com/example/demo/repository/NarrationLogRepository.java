@@ -45,11 +45,13 @@ public interface NarrationLogRepository extends JpaRepository<NarrationLog, Long
            "WHERE n.playedAt >= :from " +
            "AND n.playedAt < :toExclusive " +
            "AND (n.status IS NULL OR n.status IN ('COMPLETED','SKIPPED')) " +
+           "AND (:ownerUserId IS NULL OR p.user.id = :ownerUserId) " +
            "GROUP BY p.id " +
            "ORDER BY cnt DESC")
     List<Object[]> findTopPOIsByNarrationCount(
             @Param("from") Instant from,
             @Param("toExclusive") Instant toExclusive,
+            @Param("ownerUserId") Long ownerUserId,
             org.springframework.data.domain.Pageable pageable);
 }
 

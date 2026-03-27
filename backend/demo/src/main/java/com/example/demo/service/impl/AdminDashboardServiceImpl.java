@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.example.demo.domain.POI;
@@ -26,6 +27,7 @@ import com.example.demo.domain.response.admin.ResLoadTestResultDTO;
 import com.example.demo.domain.response.admin.ResLoadTestResultDTO.PhaseLatency;
 import com.example.demo.domain.response.admin.ResTopPOIDTO;
 import com.example.demo.domain.response.admin.ResTranslationStatsDTO;
+import com.example.demo.domain.response.app.ResActiveNarrationDTO;
 import com.example.demo.repository.ActiveNarrationRepository;
 import com.example.demo.repository.DeviceConfigRepository;
 import com.example.demo.repository.NarrationLogRepository;
@@ -34,6 +36,8 @@ import com.example.demo.repository.PaymentRepository;
 import com.example.demo.repository.QueueSessionRepository;
 import com.example.demo.repository.TranslationTrainingRepository;
 import com.example.demo.service.AdminDashboardService;
+import com.example.demo.service.AppClientService;
+import com.example.demo.util.SecurityUtil;
 
 @Service
 public class AdminDashboardServiceImpl implements AdminDashboardService {
@@ -45,6 +49,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     private final PaymentRepository paymentRepository;
     private final NarrationLogRepository narrationLogRepository;
     private final TranslationTrainingRepository translationTrainingRepository;
+    private final AppClientService appClientService;
 
     public AdminDashboardServiceImpl(
             POIRepository poiRepository,
@@ -53,7 +58,8 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
             QueueSessionRepository queueSessionRepository,
             PaymentRepository paymentRepository,
             NarrationLogRepository narrationLogRepository,
-            TranslationTrainingRepository translationTrainingRepository) {
+            TranslationTrainingRepository translationTrainingRepository,
+            AppClientService appClientService) {
         this.poiRepository = poiRepository;
         this.deviceConfigRepository = deviceConfigRepository;
         this.activeNarrationRepository = activeNarrationRepository;
@@ -61,6 +67,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         this.paymentRepository = paymentRepository;
         this.narrationLogRepository = narrationLogRepository;
         this.translationTrainingRepository = translationTrainingRepository;
+        this.appClientService = appClientService;
     }
 
     @Override
@@ -110,7 +117,10 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     public List<POIQueueCount> getPOIQueueCounts() {
         List<Object[]> activeCounts = activeNarrationRepository.countPlayingByPoi();
 
-        List<POI> allPOIs = poiRepository.findAll();
+        Long ownerScope = SecurityUtil.getPoiOwnerScopeUserIdOrNull();
+        List<POI> allPOIs = ownerScope != null
+                ? poiRepository.findPageForAdminByOwnerUserId(ownerScope, Pageable.unpaged()).getContent()
+                : poiRepository.findAll();
         Instant todayStart = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant();
 
         return allPOIs.stream().map(poi -> {
@@ -131,6 +141,12 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                     .todayRevenue(revenue != null ? revenue : 0L)
                     .build();
         }).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ResActiveNarrationDTO> getActiveNarrationsForAdmin() {
+        Long ownerScope = SecurityUtil.getPoiOwnerScopeUserIdOrNull();
+        return appClientService.getActiveNarrationsScoped(ownerScope);
     }
 
     @Override
@@ -155,8 +171,9 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         Instant toExclusive = toDate.plusDays(1).atStartOfDay(z).toInstant();
         int topLimit = (limit != null && limit > 0) ? limit : 10;
 
+        Long ownerScope = SecurityUtil.getPoiOwnerScopeUserIdOrNull();
         List<Object[]> topRows = narrationLogRepository.findTopPOIsByNarrationCount(
-                fromInst, toExclusive, PageRequest.of(0, topLimit));
+                fromInst, toExclusive, ownerScope, PageRequest.of(0, topLimit));
 
         Instant todayStart = today.atStartOfDay(z).toInstant();
 

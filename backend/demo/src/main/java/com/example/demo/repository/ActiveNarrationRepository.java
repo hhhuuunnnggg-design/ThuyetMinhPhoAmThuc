@@ -37,4 +37,12 @@ public interface ActiveNarrationRepository extends JpaRepository<ActiveNarration
 
     @Query("SELECT COUNT(a) FROM ActiveNarration a WHERE a.status = 'PLAYING' AND a.poi.id = :poiId")
     int getActiveCountByPoiId(@Param("poiId") Long poiId);
+
+    /**
+     * Đang phát — JOIN FETCH để map DTO. {@code ownerUserId} null = mọi POI; non-null = chỉ POI do user đó tạo.
+     */
+    @Query("SELECT a FROM ActiveNarration a JOIN FETCH a.poi p JOIN FETCH a.audio "
+            + "WHERE a.status = 'PLAYING' "
+            + "AND (:ownerUserId IS NULL OR p.user.id = :ownerUserId)")
+    List<ActiveNarration> findPlayingWithPoiAndAudio(@Param("ownerUserId") Long ownerUserId);
 }

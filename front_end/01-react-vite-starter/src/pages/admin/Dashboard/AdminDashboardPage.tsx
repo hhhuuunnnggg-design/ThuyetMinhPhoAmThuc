@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getActiveNarrationsAPI, type ActiveNarration } from "@/api/app.api";
+import { getAdminActiveNarrationsAPI, type ActiveNarration } from "@/api/app.api";
 import { logger } from "@/utils/logger";
 import { Badge, Card, Col, Progress, Row, Statistic, Table, Tag, Tooltip } from "antd";
 import { ReloadOutlined } from "@ant-design/icons";
@@ -20,7 +20,7 @@ const AdminDashboardPage = () => {
 
   const fetchActive = useCallback(async () => {
     try {
-      const res: any = await getActiveNarrationsAPI();
+      const res: any = await getAdminActiveNarrationsAPI();
       if (res?.data) {
         const data = Array.isArray(res.data) ? res.data : res.data.result || [];
         setActiveNarrations(data);

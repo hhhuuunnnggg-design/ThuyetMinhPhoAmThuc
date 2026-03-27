@@ -77,6 +77,7 @@ export const API_ENDPOINTS = {
     NARRATION_LOGS: "/api/v1/admin/narration-logs",
     DASHBOARD: "/api/v1/admin/dashboard",
     DASHBOARD_POI_QUEUE: "/api/v1/admin/dashboard/poi-queue",
+    DASHBOARD_ACTIVE_NARRATIONS: "/api/v1/admin/dashboard/active-narrations",
     DASHBOARD_TOP_POIS: "/api/v1/admin/dashboard/top-pois",
     POIS: "/api/v1/admin/pois",
     POI_BY_ID: (id: number) => `/api/v1/admin/pois/${id}`,

@@ -52,6 +52,11 @@ public interface AppClientService {
     // ============ Dashboard ============
     List<ResActiveNarrationDTO> getActiveNarrations();
 
+    /**
+     * Đang phát; {@code poiOwnerUserId} null = mọi POI. Non-null = chỉ POI do user đó tạo (admin scoped).
+     */
+    List<ResActiveNarrationDTO> getActiveNarrationsScoped(Long poiOwnerUserId);
+
     long getActiveCountNearby(double lat, double lng, double radiusKm);
 
     // ============ Payment ============

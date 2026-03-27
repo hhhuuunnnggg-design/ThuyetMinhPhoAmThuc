@@ -3,6 +3,7 @@ package com.example.demo.service;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.example.demo.domain.response.app.ResActiveNarrationDTO;
 import com.example.demo.domain.response.admin.ResDashboardDTO;
 import com.example.demo.domain.response.admin.ResLoadTestResultDTO;
 import com.example.demo.domain.response.admin.ResTopPOIDTO;
@@ -19,6 +20,11 @@ public interface AdminDashboardService {
      * Danh sách POI + số người đang nghe (cho admin theo dõi real-time).
      */
     List<ResDashboardDTO.POIQueueCount> getPOIQueueCounts();
+
+    /**
+     * Đang phát — SUPER_ADMIN / is_admin xem hết; SHOP_OWNER chỉ bản ghi thuộc POI do họ tạo.
+     */
+    List<ResActiveNarrationDTO> getActiveNarrationsForAdmin();
 
     /**
      * Top POIs được nghe nhiều nhất (theo calendar ngày, timezone server).
