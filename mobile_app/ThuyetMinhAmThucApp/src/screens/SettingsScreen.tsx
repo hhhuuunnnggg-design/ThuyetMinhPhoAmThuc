@@ -35,18 +35,22 @@ const SettingsScreen: React.FC = () => {
   const [syncLoading, setSyncLoading] = useState(false);
 
   const load = useCallback(async () => {
-    const [l, o] = await Promise.all([
-      storageService.getPreferredLanguage(),
-      storageService.isOfflineModeEnabled(),
-    ]);
-    setLang(l);
-    setOffline(o);
+    const l = await storageService.getPreferredLanguage();
+    let o = await storageService.isOfflineModeEnabled();
 
-    // Kiểm tra khả năng offline
     const info = await deviceService.getDeviceInfo();
     const capable =
       info.ramMB >= APP_CONFIG.MIN_RAM_MB &&
       info.storageFreeMB >= APP_CONFIG.MIN_STORAGE_MB;
+
+    // Không đủ RAM/storage → không được coi là offline: tránh sync/ghi SQLite
+    if (o && !capable) {
+      await storageService.setOfflineModeEnabled(false);
+      o = false;
+    }
+
+    setLang(l);
+    setOffline(o);
 
     const [poiCount, lastSync] = await Promise.all([
       offlineDbService.getPoiCount(),
@@ -123,6 +127,13 @@ const SettingsScreen: React.FC = () => {
   };
 
   const onSync = async () => {
+    if (!capability?.capable) {
+      Alert.alert(
+        "Không thể đồng bộ offline",
+        "Thiết bị không đủ điều kiện — chỉ dùng dữ liệu qua mạng từ server, không ghi SQLite."
+      );
+      return;
+    }
     setSyncLoading(true);
     const preferredLang = await storageService.getPreferredLanguage();
     // fullSync đã tự xóa cache trước khi đồng bộ

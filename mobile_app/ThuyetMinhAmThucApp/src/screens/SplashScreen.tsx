@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
 import * as Haptics from "expo-haptics";
 import { deviceService } from "../services/device";
 import { storageService } from "../services/storage";
+import { offlineSyncService } from "../services/offlineSync";
 import api from "../services/api";
 import { APP_CONFIG } from "../constants";
 
@@ -18,6 +19,7 @@ interface Props {
 
 const SplashScreen: React.FC<Props> = ({ onReady }) => {
   const initialized = useRef(false);
+  const [loadingText, setLoadingText] = useState("Đang khởi động...");
 
   useEffect(() => {
     if (initialized.current) return;
@@ -28,6 +30,7 @@ const SplashScreen: React.FC<Props> = ({ onReady }) => {
         // 1. Get/create device ID
         const deviceId = await deviceService.getDeviceId();
         const deviceInfo = await deviceService.getDeviceInfo();
+        const offlineCapable = await deviceService.isCapableOfOffline();
         const runningMode = deviceService.determineRunningMode(deviceInfo);
 
         // 2. Register device with backend
@@ -41,23 +44,38 @@ const SplashScreen: React.FC<Props> = ({ onReady }) => {
             networkType: deviceInfo.networkType,
           });
         } catch (e) {
-          // Continue even if backend is unreachable
           console.log("Device registration failed:", e);
         }
 
-        // 3. Save config locally
+        // 3. Nếu offline mode đang bật → kiểm tra năng lực thiết bị
+        const offlineEnabled = await storageService.isOfflineModeEnabled();
+        if (offlineEnabled && offlineCapable) {
+          // Đủ điều kiện → tự đồng bộ ngay
+          setLoadingText("Đang đồng bộ dữ liệu offline...");
+          const preferredLang = await storageService.getPreferredLanguage();
+          const result = await offlineSyncService.fullSync(preferredLang);
+          if (result.error) {
+            console.warn("Auto sync failed:", result.error);
+          } else {
+            console.log(`Auto sync done: ${result.poiCount} POI, ${result.audioCount} audio`);
+          }
+        } else if (offlineEnabled && !offlineCapable) {
+          // Đã bật offline nhưng không đủ điều kiện → tắt offline
+          await storageService.setOfflineModeEnabled(false);
+          setLoadingText("Thiết bị không đủ điều kiện offline...");
+        }
+
+        // 4. Save config locally
         await storageService.setDeviceConfig({
           deviceId,
           runningMode,
           deviceInfo,
         });
 
-        // Haptic feedback
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch (error) {
         console.error("Splash init error:", error);
       } finally {
-        // Minimum splash display time
         setTimeout(onReady, 1500);
       }
     };
@@ -75,7 +93,7 @@ const SplashScreen: React.FC<Props> = ({ onReady }) => {
 
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#ff6b35" />
-        <Text style={styles.loadingText}>Đang khởi động...</Text>
+        <Text style={styles.loadingText}>{loadingText}</Text>
       </View>
 
       <View style={styles.footer}>

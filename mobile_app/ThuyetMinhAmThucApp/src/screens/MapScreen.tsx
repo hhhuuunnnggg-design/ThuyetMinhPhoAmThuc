@@ -671,10 +671,18 @@ const MapScreen: React.FC<MapScreenProps> = ({
     async (poi: NearbyPOI, lang: string) => {
       try {
         setLoadingAudio(true);
+        const offlineCapable = await deviceService.isCapableOfOffline();
         let poiUse: NearbyPOI = poi;
         try {
           poiUse = await fetchPOIWithAudios(poi);
         } catch {
+          if (!offlineCapable) {
+            Alert.alert(
+              "Không tải được dữ liệu",
+              "Không có mạng. Thiết bị không đủ điều kiện lưu offline — cần kết nối mạng để tải từ server."
+            );
+            return;
+          }
           const cached = await offlineDbService.getPOIById(poi.id);
           const audios = cached ? await offlineDbService.getAllAudiosForPOI(poi.id) : {};
           if (!cached || Object.keys(audios).length === 0) {
@@ -733,12 +741,14 @@ const MapScreen: React.FC<MapScreenProps> = ({
 
         const streamUrl = getAudioStreamUrl(poiUse.groupKey, langFinal);
         let uri = streamUrl;
-        const sqliteAudio = await offlineDbService.getAudioForPOI(poiUse.id, langFinal);
-        if (sqliteAudio?.localPath) {
-          uri = sqliteAudio.localPath;
-        } else {
-          const legacyPath = await storageService.getLocalAudioPath(poiUse.id, langFinal);
-          if (legacyPath) uri = legacyPath;
+        if (offlineCapable) {
+          const sqliteAudio = await offlineDbService.getAudioForPOI(poiUse.id, langFinal);
+          if (sqliteAudio?.localPath) {
+            uri = sqliteAudio.localPath;
+          } else {
+            const legacyPath = await storageService.getLocalAudioPath(poiUse.id, langFinal);
+            if (legacyPath) uri = legacyPath;
+          }
         }
 
         const { sound } = await Audio.Sound.createAsync({ uri });

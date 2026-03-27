@@ -41,10 +41,12 @@ const HomeScreen: React.FC = () => {
   const loadPOIs = useCallback(async (lat?: number, lng?: number) => {
     try {
       const offlineEnabled = await storageService.isOfflineModeEnabled();
+      const offlineCapable = await deviceService.isCapableOfOffline();
+      const useOfflineSqlite = offlineEnabled && offlineCapable;
       let nearbyPois: NearbyPOI[] = [];
 
-      if (offlineEnabled) {
-        // Ưu tiên SQLite, fallback server
+      if (useOfflineSqlite) {
+        // Ưu tiên SQLite, fallback server (chỉ khi thiết bị đủ điều kiện offline)
         const cachedPOIs = await offlineDbService.getAllPOIs();
         if (cachedPOIs.length > 0) {
           nearbyPois = cachedPOIs as NearbyPOI[];
@@ -74,9 +76,12 @@ const HomeScreen: React.FC = () => {
 
       setPois(nearbyPois);
     } catch (error) {
-      // API lỗi → thử đọc từ SQLite
+      // API lỗi → chỉ fallback SQLite nếu bật offline và thiết bị đủ điều kiện
       console.error("Load POIs error:", error);
       try {
+        const offlineEnabled = await storageService.isOfflineModeEnabled();
+        const offlineCapable = await deviceService.isCapableOfOffline();
+        if (!(offlineEnabled && offlineCapable)) return;
         const cachedPOIs = await offlineDbService.getAllPOIs();
         if (cachedPOIs.length > 0) {
           setPois(cachedPOIs as NearbyPOI[]);
@@ -215,6 +220,9 @@ const HomeScreen: React.FC = () => {
                 : "📡 Online"}
             </Text>
           </View>
+          <Text style={styles.wifiHint}>
+            {runningMode === "OFFLINE" ? "Không cần wifi" : "Cần sử dụng wifi"}
+          </Text>
           {deviceConfig?.runningMode === "OFFLINE" && poiSource === "cache" && (
             <Text style={styles.cacheHint}>Dữ liệu từ SQLite</Text>
           )}
@@ -285,6 +293,12 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     alignItems: "flex-end",
+  },
+  wifiHint: {
+    fontSize: 10,
+    color: "#666",
+    marginTop: 4,
+    textAlign: "right",
   },
   cacheHint: {
     fontSize: 10,

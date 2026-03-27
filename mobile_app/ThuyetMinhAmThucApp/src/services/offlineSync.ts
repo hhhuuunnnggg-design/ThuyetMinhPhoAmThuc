@@ -15,6 +15,7 @@
 
 import * as FileSystem from "expo-file-system/legacy";
 import api from "./api";
+import { deviceService } from "./device";
 import { offlineDbService, OfflinePOI, normalizePoiId } from "./offlineDb";
 import { POI, NearbyPOI } from "../types";
 import { unwrapListResponse } from "../utils/apiResponse";
@@ -101,6 +102,13 @@ class OfflineSyncService {
   async fullSync(preferredLang: string): Promise<SyncResult> {
     if (this.syncing) {
       return { poiCount: 0, audioCount: 0, error: "Sync đang chạy" };
+    }
+    if (!(await deviceService.isCapableOfOffline())) {
+      return {
+        poiCount: 0,
+        audioCount: 0,
+        error: "Thiết bị không đủ điều kiện — không ghi SQLite, chỉ dùng dữ liệu từ server",
+      };
     }
     this.syncing = true;
 
@@ -191,6 +199,9 @@ class OfflineSyncService {
    */
   async deltaSync(preferredLang: string): Promise<SyncResult> {
     if (this.syncing) return { poiCount: 0, audioCount: 0 };
+    if (!(await deviceService.isCapableOfOffline())) {
+      return { poiCount: 0, audioCount: 0 };
+    }
 
     const lastSync = await offlineDbService.getLastSyncTime();
     if (!lastSync) {
