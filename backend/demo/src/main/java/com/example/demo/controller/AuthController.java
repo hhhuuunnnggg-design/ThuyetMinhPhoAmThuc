@@ -84,8 +84,8 @@ public class AuthController {
         Authentication authentication = authenticateUser(loginDto.getEmail(), loginDto.getPassword());
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        // Get and validate user
-        User user = userService.handleGetUserByUsername(loginDto.getEmail());
+        // Get and validate user (kèm permissions cho frontend Restricted / menu)
+        User user = loadUserWithRolePermissions(loginDto.getEmail());
         validateUserNotBlocked(user);
 
         // Build response with tokens
@@ -105,7 +105,7 @@ public class AuthController {
         String email = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new IdInvalidException("Người dùng chưa đăng nhập"));
 
-        User user = userService.handleGetUserByUsername(email);
+        User user = loadUserWithRolePermissions(email);
         ResLoginDTO.UserGetAccount response = new ResLoginDTO.UserGetAccount();
 
         if (user != null) {
@@ -134,8 +134,13 @@ public class AuthController {
             throw new IdInvalidException("Refresh Token không hợp lệ");
         }
 
+        User userForToken = loadUserWithRolePermissions(email);
+        if (userForToken == null) {
+            userForToken = user;
+        }
+
         // Build response and generate new tokens
-        ResLoginDTO response = buildLoginResponse(user, email);
+        ResLoginDTO response = buildLoginResponse(userForToken, email);
         String newRefreshToken = securityUtil.createRefreshToken(email, response);
         userService.updateUserToken(newRefreshToken, email);
 
@@ -216,6 +221,10 @@ public class AuthController {
 
         // Create or update user
         User user = createOrUpdateOAuthUser(oauthUserInfo);
+        User userWithPerms = userService.handleGetUserWithRolePermissions(oauthUserInfo.email());
+        if (userWithPerms != null) {
+            user = userWithPerms;
+        }
 
         // Build response and generate tokens
         ResLoginDTO response = buildLoginResponse(user, oauthUserInfo.email());
@@ -232,6 +241,12 @@ public class AuthController {
     }
 
     // ==================== Helper Methods ====================
+
+    private User loadUserWithRolePermissions(String email) {
+        User u = userService.handleGetUserWithRolePermissions(email);
+        return u != null ? u : userService.handleGetUserByUsername(email);
+    }
+
 
     /**
      * Authenticate user with email and password

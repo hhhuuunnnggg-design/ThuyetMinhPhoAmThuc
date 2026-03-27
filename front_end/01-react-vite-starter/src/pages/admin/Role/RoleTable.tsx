@@ -1,11 +1,13 @@
 import { deleteRoleAPI } from "@/api";
 import axios from "@/api/axios";
 import Restricted from "@/components/common/restricted";
+import { ROUTES } from "@/constants";
 import { logger } from "@/utils/logger";
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import ProTable from "@ant-design/pro-table";
-import { Button, message, Popconfirm, Space } from "antd";
+import { Button, message, Popconfirm, Result, Space } from "antd";
 import { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AddRoleModal from "./AddRoleModal";
 import EditRoleModal from "./EditRoleModel";
 
@@ -27,8 +29,7 @@ interface IRoleData {
 }
 
 const RolePage = () => {
-  //const { user } = useCurrentApp();
-  //const navigate = useNavigate();
+  const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<IRoleData | null>(null);
@@ -133,6 +134,22 @@ const RolePage = () => {
   };
 
   return (
+    <Restricted
+      permission="/api/v1/roles/fetch-all"
+      method="GET"
+      fallback={
+        <Result
+          status="403"
+          title="Không có quyền"
+          subTitle="Vai trò của bạn không được quản lý vai trò hệ thống."
+          extra={
+            <Button type="primary" onClick={() => navigate(ROUTES.ADMIN.BASE)}>
+              Về Dashboard
+            </Button>
+          }
+        />
+      }
+    >
     <div style={{ padding: 24 }}>
       <ProTable<IRoleData>
         actionRef={actionRef}
@@ -218,6 +235,7 @@ const RolePage = () => {
         onSuccess={handleModalSuccess}
       />
     </div>
+    </Restricted>
   );
 };
 

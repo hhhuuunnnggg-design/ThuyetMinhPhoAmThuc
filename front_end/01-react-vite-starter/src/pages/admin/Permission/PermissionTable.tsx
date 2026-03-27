@@ -1,10 +1,13 @@
 import { deletePermissionAPI, fetchAllMethod } from "@/api";
 import axios from "@/api/axios";
+import Restricted from "@/components/common/restricted";
+import { ROUTES } from "@/constants";
 import { logger } from "@/utils/logger";
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import ProTable from "@ant-design/pro-table";
-import { Button, message, Popconfirm, Space } from "antd";
+import { Button, message, Popconfirm, Result, Space } from "antd";
 import { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AddPermissionModal from "./AddPermissionModal";
 import EditPermissionModal from "./EditPermissionModal";
 
@@ -18,6 +21,7 @@ interface IPermission {
 }
 
 const PermissionPage = () => {
+  const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingPermission, setEditingPermission] =
@@ -124,6 +128,22 @@ const PermissionPage = () => {
   };
 
   return (
+    <Restricted
+      permission="/api/v1/permissions/fetch-all"
+      method="GET"
+      fallback={
+        <Result
+          status="403"
+          title="Không có quyền"
+          subTitle="Vai trò của bạn không được quản lý quyền API."
+          extra={
+            <Button type="primary" onClick={() => navigate(ROUTES.ADMIN.BASE)}>
+              Về Dashboard
+            </Button>
+          }
+        />
+      }
+    >
     <div style={{ padding: 24 }}>
       <ProTable<IPermission>
         actionRef={actionRef}
@@ -232,6 +252,7 @@ const PermissionPage = () => {
         onSuccess={handleModalSuccess}
       />
     </div>
+    </Restricted>
   );
 };
 

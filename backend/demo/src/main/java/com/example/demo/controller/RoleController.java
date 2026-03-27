@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.domain.Role;
 import com.example.demo.domain.dto.ResultPaginationDTO;
 import com.example.demo.domain.request.Role.UpsertRoleDTO;
+import com.example.demo.service.ApiPermissionService;
 import com.example.demo.service.RoleService;
 import com.example.demo.util.annotation.ApiMessage;
 import com.example.demo.util.error.IdInvalidException;
@@ -33,9 +34,11 @@ import jakarta.validation.Valid;
 public class RoleController {
 
     private final RoleService roleService;
+    private final ApiPermissionService apiPermissionService;
 
-    public RoleController(RoleService roleService) {
+    public RoleController(RoleService roleService, ApiPermissionService apiPermissionService) {
         this.roleService = roleService;
+        this.apiPermissionService = apiPermissionService;
     }
 
     @PostMapping("/create")
@@ -68,6 +71,8 @@ public class RoleController {
             @Filter Specification<Role> spec,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "100") int size) {
+
+        apiPermissionService.assertHasPermission("/api/v1/roles/fetch-all", "GET");
 
         // Convert one-based page to zero-based for Spring Boot
         Pageable pageable = PageRequest.of(page - 1, size);

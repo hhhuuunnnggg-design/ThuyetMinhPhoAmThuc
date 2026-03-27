@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.domain.Role;
 import com.example.demo.domain.User;
@@ -55,6 +56,12 @@ public class UserServicesImpl implements UserServices {
     @Override
     public User handleGetUserByUsername(String username) {
         return this.userServiceRepository.findByEmail(username).orElse(null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public User handleGetUserWithRolePermissions(String email) {
+        return this.userServiceRepository.findByEmailWithRolePermissions(email).orElse(null);
     }
 
     @Override

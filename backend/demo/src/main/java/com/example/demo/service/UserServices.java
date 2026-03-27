@@ -17,6 +17,11 @@ public interface UserServices {
 
     User handleGetUserByUsername(String username);
 
+    /**
+     * User kèm role + permissions (JOIN FETCH) — dùng cho login/account và kiểm tra quyền.
+     */
+    User handleGetUserWithRolePermissions(String email);
+
     void updateUserToken(String token, String email);
 
     User getUserByRefreshTokenAndEmail(String token, String email);

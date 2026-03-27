@@ -1,11 +1,13 @@
 import { changeUserActivityAPI, deleteUserAPI } from "@/api";
 import axios from "@/api/axios";
 import Restricted from "@/components/common/restricted";
+import { ROUTES } from "@/constants";
 import { logger } from "@/utils/logger";
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import ProTable from "@ant-design/pro-table";
-import { Avatar, Button, Grid, Image, Popconfirm, Space, Tag, message } from "antd";
+import { Avatar, Button, Grid, Image, Popconfirm, Result, Space, Tag, message } from "antd";
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 import AddUserModal from "./AddUserModal";
@@ -36,6 +38,7 @@ interface IUserData {
 
 const UsersPage = () => {
   const screens = Grid.useBreakpoint();
+  const navigate = useNavigate();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -266,6 +269,22 @@ const UsersPage = () => {
   };
 
   return (
+    <Restricted
+      permission="/api/v1/users/fetch-all"
+      method="GET"
+      fallback={
+        <Result
+          status="403"
+          title="Không có quyền"
+          subTitle="Vai trò của bạn không được xem danh sách người dùng."
+          extra={
+            <Button type="primary" onClick={() => navigate(ROUTES.ADMIN.BASE)}>
+              Về Dashboard
+            </Button>
+          }
+        />
+      }
+    >
     <div
       className="users-page"
       style={{
@@ -376,6 +395,7 @@ const UsersPage = () => {
         editingUser={editingUser}
       />
     </div>
+    </Restricted>
   );
 };
 

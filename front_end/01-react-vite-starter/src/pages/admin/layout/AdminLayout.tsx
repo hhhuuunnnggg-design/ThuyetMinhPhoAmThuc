@@ -6,19 +6,19 @@ import {
   DashboardOutlined,
   DollarCircleOutlined,
   EnvironmentOutlined,
-  ExceptionOutlined,
   FileTextOutlined,
   GlobalOutlined,
   HeartTwoTone,
+  LockOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   SoundOutlined,
+  TagsOutlined,
   TeamOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Avatar, Dropdown, Layout, Menu, Space, message } from "antd";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 
 type MenuItem = Required<MenuProps>["items"][number];
@@ -51,6 +51,64 @@ const AdminLayout = () => {
     );
   };
 
+  const manageChildren: MenuItem[] = useMemo(() => {
+    const children: MenuItem[] = [];
+    if (hasPermission("/api/v1/users/fetch-all", "GET")) {
+      children.push({
+        label: <Link to={ROUTES.ADMIN.USER}>Người dùng</Link>,
+        key: "crud",
+        icon: <TeamOutlined />,
+      });
+    }
+    if (hasPermission("/api/v1/roles/fetch-all", "GET")) {
+      children.push({
+        label: <Link to={ROUTES.ADMIN.ROLE}>Vai trò</Link>,
+        key: "roles",
+        icon: <TagsOutlined />,
+      });
+    }
+    if (hasPermission("/api/v1/permissions/fetch-all", "GET")) {
+      children.push({
+        label: <Link to={ROUTES.ADMIN.PERMISSION}>Quyền</Link>,
+        key: "permissions",
+        icon: <LockOutlined />,
+      });
+    }
+    children.push(
+      {
+        label: <Link to={ROUTES.ADMIN.POIS}>Điểm POI (địa điểm / QR)</Link>,
+        key: "pois",
+        icon: <EnvironmentOutlined />,
+      },
+      {
+        label: <Link to={ROUTES.ADMIN.RESTAURANTS}>Nhà hàng</Link>,
+        key: "restaurants",
+        icon: <EnvironmentOutlined />,
+      },
+      {
+        label: <Link to={ROUTES.ADMIN.TTS_AUDIO}>Danh sách Audios</Link>,
+        key: "tts-audio",
+        icon: <SoundOutlined />,
+      },
+      {
+        label: <Link to={ROUTES.ADMIN.TTS_GROUPS}>Nhóm thuyết minh TTS</Link>,
+        key: "tts-groups",
+        icon: <GlobalOutlined />,
+      },
+      {
+        label: <Link to={ROUTES.ADMIN.NARRATION_LOGS}>Narration Logs</Link>,
+        key: "narration-logs",
+        icon: <FileTextOutlined />,
+      },
+      {
+        label: <Link to={ROUTES.ADMIN.PAYMENTS}>Thanh toán</Link>,
+        key: "payments",
+        icon: <DollarCircleOutlined />,
+      }
+    );
+    return children;
+  }, [user]);
+
   const items: MenuItem[] = [
     {
       label: <Link to={ROUTES.ADMIN.BASE}>Dashboard</Link>,
@@ -66,43 +124,7 @@ const AdminLayout = () => {
       label: <span>Quản lý</span>,
       key: "manage",
       icon: <GlobalOutlined />,
-      children: [
-        {
-          label: <Link to={ROUTES.ADMIN.USER}>Người dùng</Link>,
-          key: "crud",
-          icon: <TeamOutlined />,
-        },
-        {
-          label: <Link to={ROUTES.ADMIN.POIS}>Điểm POI (địa điểm / QR)</Link>,
-          key: "pois",
-          icon: <EnvironmentOutlined />,
-        },
-        {
-          label: <Link to={ROUTES.ADMIN.RESTAURANTS}>Nhà hàng</Link>,
-          key: "restaurants",
-          icon: <EnvironmentOutlined />,
-        },
-        {
-          label: <Link to={ROUTES.ADMIN.TTS_AUDIO}>Danh sách Audios</Link>,
-          key: "tts-audio",
-          icon: <SoundOutlined />,
-        },
-        {
-          label: <Link to={ROUTES.ADMIN.TTS_GROUPS}>Nhóm thuyết minh TTS</Link>,
-          key: "tts-groups",
-          icon: <GlobalOutlined />,
-        },
-        {
-          label: <Link to={ROUTES.ADMIN.NARRATION_LOGS}>Narration Logs</Link>,
-          key: "narration-logs",
-          icon: <FileTextOutlined />,
-        },
-        {
-          label: <Link to={ROUTES.ADMIN.PAYMENTS}>Thanh toán</Link>,
-          key: "payments",
-          icon: <DollarCircleOutlined />,
-        },
-      ],
+      children: manageChildren,
     },
   ];
 

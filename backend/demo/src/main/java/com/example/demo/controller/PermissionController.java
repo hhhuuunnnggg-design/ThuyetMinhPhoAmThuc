@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.domain.Permission;
 import com.example.demo.domain.dto.ResultPaginationDTO;
 import com.example.demo.domain.request.Permission.UpsertPermissionDTO;
+import com.example.demo.service.ApiPermissionService;
 import com.example.demo.service.PermissionService;
 import com.example.demo.util.annotation.ApiMessage;
 import com.example.demo.util.error.IdInvalidException;
@@ -33,9 +34,11 @@ import jakarta.validation.Valid;
 public class PermissionController {
 
     private final PermissionService permissionService;
+    private final ApiPermissionService apiPermissionService;
 
-    public PermissionController(PermissionService permissionService) {
+    public PermissionController(PermissionService permissionService, ApiPermissionService apiPermissionService) {
         this.permissionService = permissionService;
+        this.apiPermissionService = apiPermissionService;
     }
 
     @PostMapping("/create")
@@ -71,6 +74,8 @@ public class PermissionController {
             @Filter Specification<Permission> spec,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "100") int size) {
+
+        apiPermissionService.assertHasPermission("/api/v1/permissions/fetch-all", "GET");
 
         // Convert one-based page to zero-based for Spring Boot
         Pageable pageable = PageRequest.of(page - 1, size);

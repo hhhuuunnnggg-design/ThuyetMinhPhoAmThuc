@@ -32,6 +32,7 @@ import com.example.demo.domain.request.User.UpsertAdminDTO;
 import com.example.demo.domain.response.ResCreateUserDTO;
 import com.example.demo.domain.response.ResUpdateUserDTO;
 import com.example.demo.domain.response.ResUserDTO;
+import com.example.demo.service.ApiPermissionService;
 import com.example.demo.service.UserServices;
 import com.example.demo.util.annotation.ApiMessage;
 import com.example.demo.util.error.IdInvalidException;
@@ -50,6 +51,7 @@ public class UserController {
 
     private UserServices userService;
     private PasswordEncoder passwordEncoder;
+    private ApiPermissionService apiPermissionService;
 
     @PostMapping("/add-user")
     @ApiMessage("Create a new user")
@@ -194,6 +196,8 @@ public class UserController {
             @Filter Specification<User> spec,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "100") int size) {
+
+        apiPermissionService.assertHasPermission("/api/v1/users/fetch-all", "GET");
 
         // Convert one-based page to zero-based for Spring Boot
         Pageable pageable = PageRequest.of(page - 1, size);
