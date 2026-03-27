@@ -19,9 +19,11 @@ import * as Haptics from "expo-haptics";
 import api, { getAudioStreamUrl } from "../services/api";
 import { deviceService } from "../services/device";
 import { storageService } from "../services/storage";
+import { offlineDbService } from "../services/offlineDb";
 import { useGeofence } from "../hooks/useGeofence";
 import { LANGUAGE_LABELS, LANGUAGE_COLORS } from "../constants";
-import { NearbyPOI, ActiveNarration, POI } from "../types";
+import { NearbyPOI, ActiveNarration, POI, AudioInfo } from "../types";
+import type { OfflinePOI } from "../services/offlineDb";
 import { formatDistance, haversineDistance } from "../utils/geo";
 import { unwrapEntityResponse, unwrapListResponse } from "../utils/apiResponse";
 import { POIGeofence } from "../utils/geoEngine";
@@ -37,6 +39,46 @@ function pickAudioInfo(poi: NearbyPOI, lang: string): { lang: string; info: any 
   if (audios.vi) return { lang: "vi", info: audios.vi };
   const k = keys[0];
   return { lang: k, info: audios[k] };
+}
+
+function mergeNearbyFromOfflineCache(
+  base: NearbyPOI,
+  row: OfflinePOI,
+  audios: Record<string, AudioInfo>
+): NearbyPOI {
+  return {
+    id: row.id,
+    groupId: row.groupId,
+    groupKey: row.groupKey,
+    foodName: row.foodName,
+    price: row.price,
+    description: row.description,
+    imageUrl: row.imageUrl,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    accuracy: row.accuracy,
+    triggerRadiusMeters: row.triggerRadiusMeters,
+    priority: row.priority,
+    originalText: row.originalText,
+    originalVoice: row.originalVoice,
+    address: row.address,
+    category: row.category,
+    openHours: row.openHours,
+    phone: row.phone,
+    isActive: row.isActive,
+    viewCount: row.viewCount,
+    likeCount: row.likeCount,
+    qrCode: row.qrCode,
+    version: row.version,
+    restaurantName: row.restaurantName,
+    restaurantVerified: row.restaurantVerified,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    audios,
+    distanceMeters: base.distanceMeters,
+    activeListenerCount: base.activeListenerCount,
+    downloadedOffline: base.downloadedOffline,
+  };
 }
 
 /** Bản đồ dùng list/nearby có thể thiếu audios — bổ sung từ GET /pois/:id (cùng buildPOIDTO với web). */
@@ -539,7 +581,21 @@ const MapScreen: React.FC<MapScreenProps> = ({
     async (poi: NearbyPOI, lang: string) => {
       try {
         setLoadingAudio(true);
-        const poiUse = await fetchPOIWithAudios(poi);
+        let poiUse: NearbyPOI = poi;
+        try {
+          poiUse = await fetchPOIWithAudios(poi);
+        } catch {
+          const cached = await offlineDbService.getPOIById(poi.id);
+          const audios = cached ? await offlineDbService.getAllAudiosForPOI(poi.id) : {};
+          if (!cached || Object.keys(audios).length === 0) {
+            Alert.alert(
+              "Không tải được dữ liệu",
+              "Không có mạng và chưa có bản cache offline cho địa điểm này. Bật mạng hoặc vào Cài đặt → chế độ ngoại tuyến → Đồng bộ."
+            );
+            return;
+          }
+          poiUse = mergeNearbyFromOfflineCache(poi, cached, audios);
+        }
         setCurrentPOI((prev) => (prev?.id === poiUse.id ? poiUse : prev));
 
         const picked = pickAudioInfo(poiUse, lang);
@@ -565,8 +621,17 @@ const MapScreen: React.FC<MapScreenProps> = ({
           audioRef.current = null;
         }
 
-        const audioUrl = getAudioStreamUrl(poiUse.groupKey, langFinal);
-        const { sound } = await Audio.Sound.createAsync({ uri: audioUrl });
+        const streamUrl = getAudioStreamUrl(poiUse.groupKey, langFinal);
+        let uri = streamUrl;
+        const sqliteAudio = await offlineDbService.getAudioForPOI(poiUse.id, langFinal);
+        if (sqliteAudio?.localPath) {
+          uri = sqliteAudio.localPath;
+        } else {
+          const legacyPath = await storageService.getLocalAudioPath(poiUse.id, langFinal);
+          if (legacyPath) uri = legacyPath;
+        }
+
+        const { sound } = await Audio.Sound.createAsync({ uri });
         audioRef.current = sound;
         setPlayingLang(langFinal);
         await sound.playAsync();
@@ -598,10 +663,18 @@ const MapScreen: React.FC<MapScreenProps> = ({
         });
       } catch (err: any) {
         console.warn("playAudio failed:", err);
-        Alert.alert(
-          "Không phát được audio",
-          err?.message || "Kiểm tra backend đang chạy và CORS cho file âm thanh (trình duyệt)."
-        );
+        const m = String(err?.message || err || "");
+        if (m.includes("-1009") || m.includes("NSURLErrorDomain")) {
+          Alert.alert(
+            "Không phát được audio",
+            "Không có mạng hoặc file MP3 chưa được tải về. Khi còn Wi‑Fi: Cài đặt → chế độ ngoại tuyến → Đồng bộ lại."
+          );
+        } else {
+          Alert.alert(
+            "Không phát được audio",
+            err?.message || "Kiểm tra backend đang chạy và CORS cho file âm thanh (trình duyệt)."
+          );
+        }
       } finally {
         setLoadingAudio(false);
       }

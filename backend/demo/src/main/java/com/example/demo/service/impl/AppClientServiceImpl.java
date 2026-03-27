@@ -152,6 +152,7 @@ public class AppClientServiceImpl implements AppClientService {
     // ============ POI ============
 
     @Override
+    @Transactional(readOnly = true)
     public List<ResPOIDTO> getAllPOIs() throws IdInvalidException {
         return poiRepository.findByIsActiveTrue(org.springframework.data.domain.Pageable.unpaged())
                 .getContent().stream()
@@ -160,6 +161,7 @@ public class AppClientServiceImpl implements AppClientService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ResPOIDTO getPOIById(Long poiId) throws IdInvalidException {
         POI poi = poiRepository.findById(poiId)
                 .orElseThrow(() -> new IdInvalidException("Không tìm thấy POI: " + poiId));
@@ -167,6 +169,7 @@ public class AppClientServiceImpl implements AppClientService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ResPOIDTO getPOIByQrCode(String qrCode) throws IdInvalidException {
         POI poi = poiRepository.findByQrCode(qrCode)
                 .orElseThrow(() -> new IdInvalidException("Không tìm thấy POI với QR: " + qrCode));
@@ -174,6 +177,7 @@ public class AppClientServiceImpl implements AppClientService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ResNearbyPOIDTO> getNearbyPOIs(double lat, double lng, double radiusKm) {
         List<POI> nearbyPOIs = poiRepository.findNearby(lat, lng, radiusKm);
         Map<Long, Integer> activeCounts = activeNarrationRepository.countPlayingByPoi().stream()
@@ -363,6 +367,25 @@ public class AppClientServiceImpl implements AppClientService {
                 .build();
     }
 
+    /**
+     * URL để app tải file offline. Ưu tiên {@code s3Url} trên bản ghi TTSAudio (thường là {@code /uploads/...}).
+     * Nếu trống hoặc còn link S3/AWS cũ (file đã chuyển về local), fallback endpoint stream theo groupKey —
+     * cùng logic {@link com.example.demo.service.impl.TTSAudioServiceImp#getAudioResource}.
+     */
+    private String resolveAppAudioUrl(TTSAudioGroup group, TTSAudio a) {
+        String raw = a.getS3Url();
+        if (raw != null && !raw.isBlank() && !isStaleCloudStorageUrl(raw)) {
+            return raw;
+        }
+        String lang = a.getLanguageCode();
+        return "/api/v1/tts/groups/" + group.getGroupKey() + "/audio/" + lang;
+    }
+
+    private static boolean isStaleCloudStorageUrl(String url) {
+        String u = url.toLowerCase();
+        return u.contains("amazonaws.com") || u.startsWith("s3://");
+    }
+
     private ResPOIDTO buildPOIDTO(POI poi) {
         // Lấy tất cả TTSAudioGroup thuộc về POI này
         List<TTSAudioGroup> groups = ttsAudioGroupRepository.findByPoiId(poi.getId());
@@ -381,7 +404,7 @@ public class AppClientServiceImpl implements AppClientService {
                         .speed(a.getSpeed())
                         .format(a.getFormat())
                         .withoutFilter(a.getWithoutFilter())
-                        .s3Url(a.getS3Url())
+                        .s3Url(resolveAppAudioUrl(g, a))
                         .fileSize(a.getFileSize())
                         .mimeType(a.getMimeType())
                         .build());

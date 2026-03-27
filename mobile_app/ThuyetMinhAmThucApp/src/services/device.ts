@@ -23,50 +23,81 @@ class DeviceService {
     return this.deviceId;
   }
 
+  /**
+   * Lấy tổng RAM (MB).
+   * Ưu tiên: Device.totalMemory (bytes) từ expo-device.
+   * Fallback: estimate dựa trên model name.
+   */
+  private async getTotalRamMB(): Promise<number> {
+    try {
+      // expo-device exposes totalMemory (bytes) on supported platforms
+      const total = (Device as any).totalMemory;
+      if (total && total > 0) {
+        return Math.round(total / (1024 * 1024));
+      }
+    } catch {}
+
+    // Fallback: ước lượng dựa trên model name
+    return this.estimateRamFromModel();
+  }
+
+  /** Fallback: estimate RAM từ model name (rough heuristic). */
+  private estimateRamFromModel(): number {
+    const model = (Device.modelName || "").toUpperCase();
+    if (/RAM (6|8|12|16)GB/i.test(model)) {
+      if (/16GB/i.test(model)) return 16384;
+      if (/12GB/i.test(model)) return 12288;
+      if (/8GB/i.test(model)) return 8192;
+      if (/6GB/i.test(model)) return 6144;
+    }
+    if (/RAM (4|3)GB/i.test(model)) {
+      if (/4GB/i.test(model)) return 4096;
+      if (/3GB/i.test(model)) return 3072;
+    }
+    // Mặc định: giả định thiết bị tầm trung
+    return 3072;
+  }
+
   async getDeviceInfo(): Promise<DeviceInfo> {
     const deviceId = await this.getDeviceId();
 
-    // Get storage info
+    // Storage
     let storageFreeMB = 0;
     try {
       const fsInfo = await FileSystem.getFreeDiskStorageAsync();
       storageFreeMB = Math.round(fsInfo / (1024 * 1024));
     } catch {}
 
-    // Get OS version
-    const osVersion = Device.deviceName || "unknown";
     const osBuildId = Device.osVersion || "unknown";
-
-    // Estimate RAM (expo-device doesn't expose RAM directly, use platform info)
-    const platformData = Device.platformApiLevel;
     const modelName = Device.modelName || "unknown";
 
-    // Determine network type (simplified - would need NetInfo in production)
+    const ramMB = await this.getTotalRamMB();
+
+    // Network type — expo-device exposes some info
     let networkType: DeviceInfo["networkType"] = "CELLULAR_4G";
 
     return {
       deviceId,
       osVersion: `${modelName} (Android ${osBuildId})`,
       appVersion: Constants.expoConfig?.version || "1.0.0",
-      ramMB: 4096, // Default estimate
+      ramMB,
       storageFreeMB,
       networkType,
     };
   }
 
   /**
-   * Determine running mode based on device capabilities.
-   * OFFLINE: RAM >= 4GB, Storage >= 500MB
+   * OFFLINE: RAM >= MIN_RAM_MB && Storage >= MIN_STORAGE_MB
    * STREAMING: otherwise
    */
   determineRunningMode(deviceInfo: DeviceInfo): "OFFLINE" | "STREAMING" {
     if (
-      deviceInfo.ramMB >= APP_CONFIG.MIN_RAM_MB &&       // RAM >= 4GB
-      deviceInfo.storageFreeMB >= APP_CONFIG.MIN_STORAGE_MB // Ổ trống >= 500MB
+      deviceInfo.ramMB >= APP_CONFIG.MIN_RAM_MB &&
+      deviceInfo.storageFreeMB >= APP_CONFIG.MIN_STORAGE_MB
     ) {
-      return "OFFLINE";    // ✅ Đủ → tải audio về máy, chơi offline
+      return "OFFLINE";
     }
-    return "STREAMING";   // ❌ Không đủ → chơi audio TRỰC TIẾP từ server mỗi lần
+    return "STREAMING";
   }
 
   async isCapableOfOffline(): Promise<boolean> {

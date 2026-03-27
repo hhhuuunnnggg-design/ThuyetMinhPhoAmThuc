@@ -16,6 +16,7 @@ import * as Haptics from "expo-haptics";
 import api, { getAudioStreamUrl } from "../services/api";
 import { storageService } from "../services/storage";
 import { deviceService } from "../services/device";
+import { offlineDbService } from "../services/offlineDb";
 import { APP_CONFIG, LANGUAGE_LABELS, LANGUAGE_COLORS } from "../constants";
 import { resolveMediaUrl } from "../utils/mediaUrl";
 import { POI, AudioInfo, DeviceConfig } from "../types";
@@ -83,18 +84,25 @@ const POIDetailScreen: React.FC = () => {
       setLoadingAudio(true);
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      // Unload previous
       await unloadAudio();
 
-      // Get audio URL
-      const audioUrl = getAudioStreamUrl(poi.groupKey, audio.languageCode);
+      // Ưu tiên: SQLite → file cũ (storage) → streaming
+      let uri = getAudioStreamUrl(poi.groupKey, audio.languageCode);
 
-      // Check for local audio first (offline mode)
-      let uri = audioUrl;
       if (deviceConfig?.runningMode === "OFFLINE") {
-        const localPath = await storageService.getLocalAudioPath(poi.id, audio.languageCode);
-        if (localPath) {
-          uri = localPath;
+        // 1. Thử lấy từ SQLite (audio đã sync)
+        const sqliteAudio = await offlineDbService.getAudioForPOI(poi.id, audio.languageCode);
+        if (sqliteAudio?.localPath) {
+          uri = sqliteAudio.localPath;
+        } else {
+          // 2. Thử lấy từ file cũ (legacy)
+          const legacyPath = await storageService.getLocalAudioPath(poi.id, audio.languageCode);
+          if (legacyPath) {
+            uri = legacyPath;
+          } else {
+            // 3. Không có local → streaming (vẫn phát được)
+            uri = getAudioStreamUrl(poi.groupKey, audio.languageCode);
+          }
         }
       }
 
@@ -103,10 +111,9 @@ const POIDetailScreen: React.FC = () => {
       setSound(newSound);
       setPlayingAudioId(audio.languageCode);
 
-      // Play
       await newSound.playAsync();
 
-      // Notify backend
+      // Notify backend (chỉ khi online)
       try {
         const deviceId = await deviceService.getDeviceId();
         await api.post("/api/v1/app/narration/start", {
@@ -117,7 +124,6 @@ const POIDetailScreen: React.FC = () => {
         });
       } catch {}
 
-      // Listen for end
       newSound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
           setPlayingAudioId(null);

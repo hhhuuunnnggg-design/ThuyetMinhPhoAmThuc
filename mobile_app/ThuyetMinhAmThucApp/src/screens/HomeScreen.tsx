@@ -17,6 +17,8 @@ import { unwrapListResponse } from "../utils/apiResponse";
 import { resolveMediaUrl } from "../utils/mediaUrl";
 import { deviceService } from "../services/device";
 import { storageService } from "../services/storage";
+import { offlineDbService } from "../services/offlineDb";
+import { offlineSyncService } from "../services/offlineSync";
 import { APP_CONFIG, LANGUAGE_COLORS } from "../constants";
 import { POI, NearbyPOI, DeviceConfig } from "../types";
 
@@ -34,24 +36,53 @@ const HomeScreen: React.FC = () => {
   const [deviceConfig, setDeviceConfig] = useState<DeviceConfig | null>(null);
   const [deviceLocation, setDeviceLocation] = useState<Location.LocationObject | null>(null);
   const [runningMode, setRunningMode] = useState<"OFFLINE" | "STREAMING">("STREAMING");
+  const [poiSource, setPoiSource] = useState<"server" | "cache">("server");
 
   const loadPOIs = useCallback(async (lat?: number, lng?: number) => {
     try {
+      const offlineEnabled = await storageService.isOfflineModeEnabled();
       let nearbyPois: NearbyPOI[] = [];
 
-      if (lat != null && lng != null) {
-        const res: any = await api.get(
-          `/api/v1/app/pois/nearby?lat=${lat}&lng=${lng}&radiusKm=${APP_CONFIG.NEARBY_RADIUS_KM}`
-        );
-        nearbyPois = unwrapListResponse<NearbyPOI>(res.data);
+      if (offlineEnabled) {
+        // Ưu tiên SQLite, fallback server
+        const cachedPOIs = await offlineDbService.getAllPOIs();
+        if (cachedPOIs.length > 0) {
+          nearbyPois = cachedPOIs as NearbyPOI[];
+          setPoiSource("cache");
+        } else {
+          // Cache rỗng → gọi server + sync
+          const res: any = await api.get("/api/v1/app/pois");
+          nearbyPois = unwrapListResponse<NearbyPOI>(res.data);
+          setPoiSource("server");
+          // Background sync
+          const preferredLang = await storageService.getPreferredLanguage();
+          offlineSyncService.deltaSync(preferredLang);
+        }
       } else {
-        const res: any = await api.get("/api/v1/app/pois");
-        nearbyPois = unwrapListResponse<NearbyPOI>(res.data);
+        // Online mode — luôn gọi server
+        if (lat != null && lng != null) {
+          const res: any = await api.get(
+            `/api/v1/app/pois/nearby?lat=${lat}&lng=${lng}&radiusKm=${APP_CONFIG.NEARBY_RADIUS_KM}`
+          );
+          nearbyPois = unwrapListResponse<NearbyPOI>(res.data);
+        } else {
+          const res: any = await api.get("/api/v1/app/pois");
+          nearbyPois = unwrapListResponse<NearbyPOI>(res.data);
+        }
+        setPoiSource("server");
       }
 
       setPois(nearbyPois);
     } catch (error) {
+      // API lỗi → thử đọc từ SQLite
       console.error("Load POIs error:", error);
+      try {
+        const cachedPOIs = await offlineDbService.getAllPOIs();
+        if (cachedPOIs.length > 0) {
+          setPois(cachedPOIs as NearbyPOI[]);
+          setPoiSource("cache");
+        }
+      } catch {}
     }
   }, []);
 
@@ -177,9 +208,16 @@ const HomeScreen: React.FC = () => {
         <View style={styles.headerRight}>
           <View style={[styles.modeBadge, runningMode === "OFFLINE" && styles.modeBadgeOffline]}>
             <Text style={[styles.modeBadgeText, runningMode === "OFFLINE" && styles.modeBadgeTextOffline]}>
-              {runningMode === "OFFLINE" ? "📥 Offline" : "📡 Online"}
+              {runningMode === "OFFLINE"
+                ? poiSource === "cache"
+                  ? "📥 Offline (cache)"
+                  : "📥 Offline"
+                : "📡 Online"}
             </Text>
           </View>
+          {deviceConfig?.runningMode === "OFFLINE" && poiSource === "cache" && (
+            <Text style={styles.cacheHint}>Dữ liệu từ SQLite</Text>
+          )}
         </View>
       </View>
 
@@ -247,6 +285,11 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     alignItems: "flex-end",
+  },
+  cacheHint: {
+    fontSize: 10,
+    color: "#888",
+    marginTop: 4,
   },
   modeBadge: {
     paddingHorizontal: 10,
