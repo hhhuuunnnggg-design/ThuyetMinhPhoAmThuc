@@ -192,4 +192,24 @@ public class SecurityUtil {
         Object role = jwt.getClaim("user_role_name");
         return role != null && "SUPER_ADMIN".equalsIgnoreCase(String.valueOf(role));
     }
+
+    /**
+     * Email đăng nhập từ JWT ({@code user_email} hoặc subject), chuẩn hóa để so khớp {@code owner_email} nhà hàng.
+     */
+    public static Optional<String> getCurrentUserEmailNormalized() {
+        Optional<Jwt> jwtOpt = getCurrentJwt();
+        if (jwtOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        Jwt jwt = jwtOpt.get();
+        Object claim = jwt.getClaim("user_email");
+        String raw = claim != null ? String.valueOf(claim).trim() : "";
+        if (raw.isBlank() && jwt.getSubject() != null) {
+            raw = jwt.getSubject().trim();
+        }
+        if (raw.isBlank()) {
+            return Optional.empty();
+        }
+        return Optional.of(raw.toLowerCase());
+    }
 }

@@ -4,23 +4,24 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.domain.AudioData;
 import com.example.demo.domain.POI;
 import com.example.demo.domain.TTSAudio;
-import com.example.demo.domain.User;
 import com.example.demo.domain.TTSAudioGroup;
 import com.example.demo.domain.dto.SupportedLanguage;
 import com.example.demo.domain.request.tts.ReqTTSDTO;
@@ -31,12 +32,12 @@ import com.example.demo.domain.response.tts.ResTTSAudioGroupDTO;
 import com.example.demo.repository.POIRepository;
 import com.example.demo.repository.TTSAudioGroupRepository;
 import com.example.demo.repository.TTSAudioRepository;
-import com.example.demo.repository.UserServiceRepository;
 import com.example.demo.service.GoogleCloudTTSService;
 import com.example.demo.service.LocalStorageService;
 import com.example.demo.service.TTSAudioService;
 import com.example.demo.service.TTSService;
 import com.example.demo.service.TranslationService;
+import com.example.demo.util.SecurityUtil;
 import com.example.demo.util.error.IdInvalidException;
 
 @Service
@@ -45,7 +46,6 @@ public class TTSAudioServiceImp implements TTSAudioService {
     @Autowired private TTSAudioRepository ttsAudioRepository;
     @Autowired private TTSAudioGroupRepository ttsAudioGroupRepository;
     @Autowired private POIRepository poiRepository;
-    @Autowired private UserServiceRepository userServiceRepository;
     @Autowired private LocalStorageService localStorageService;
     @Autowired(required = false) private GoogleCloudTTSService googleCloudTTSService;
     @Autowired(required = false) private TranslationService translationService;
@@ -55,14 +55,29 @@ public class TTSAudioServiceImp implements TTSAudioService {
 
     @Override
     public ResTTSAudioDTO getTTSAudioById(Long id) throws IdInvalidException {
-        TTSAudio ttsAudio = ttsAudioRepository.findById(id)
+        TTSAudio ttsAudio = ttsAudioRepository.findByIdWithGroupPoiUser(id)
                 .orElseThrow(() -> new IdInvalidException("Không tìm thấy TTS audio: " + id));
+        assertShopOwnerOrAdminAccessGroup(ttsAudio.getGroup());
         return toTTSAudioDTO(ttsAudio);
     }
 
     @Override
     public Page<ResTTSAudioDTO> getAllTTSAudios(Pageable pageable) {
-        return ttsAudioRepository.findAll(pageable).map(this::toTTSAudioDTO);
+        return resolveAdminAudiosPage(pageable);
+    }
+
+    private Page<ResTTSAudioDTO> resolveAdminAudiosPage(Pageable pageable) {
+        return SecurityUtil.getCurrentJwt()
+                .map(jwt -> {
+                    if (SecurityUtil.isFullAdminJwt(jwt)) {
+                        return ttsAudioRepository.findAll(pageable).map(this::toTTSAudioDTO);
+                    }
+                    return SecurityUtil.getCurrentUserId()
+                            .map(uid -> ttsAudioRepository.findPageByPoiOwnerUserId(uid, pageable)
+                                    .map(this::toTTSAudioDTO))
+                            .orElseGet(() -> new PageImpl<>(Collections.emptyList(), pageable, 0));
+                })
+                .orElseGet(() -> ttsAudioRepository.findAll(pageable).map(this::toTTSAudioDTO));
     }
 
     // ============= Group CRUD =============
@@ -70,11 +85,11 @@ public class TTSAudioServiceImp implements TTSAudioService {
     @Override
     @Transactional
     public ResTTSAudioGroupDTO createGroup(ReqTTSDTO req) throws IOException, IdInvalidException {
-        POI poi = poiRepository.findById(req.getPoiId())
+        POI poi = poiRepository.findDetailForAdmin(req.getPoiId())
                 .orElseThrow(() -> new IdInvalidException("Không tìm thấy POI: " + req.getPoiId()));
+        assertShopOwnerOrAdminAccessPoi(poi);
 
         String createdBy = req.getCreatedBy() != null ? req.getCreatedBy() : "anonymous";
-        User user = userServiceRepository.findByEmail(createdBy).orElse(null);
 
         TTSAudioGroup group = TTSAudioGroup.builder()
                 .groupKey(UUID.randomUUID().toString())
@@ -100,6 +115,7 @@ public class TTSAudioServiceImp implements TTSAudioService {
     public ResTTSAudioGroupDTO getGroupById(Long id) throws IdInvalidException {
         TTSAudioGroup group = ttsAudioGroupRepository.findById(id)
                 .orElseThrow(() -> new IdInvalidException("Không tìm thấy group: " + id));
+        assertShopOwnerOrAdminAccessGroup(group);
         return toGroupDTO(group);
     }
 
@@ -107,12 +123,27 @@ public class TTSAudioServiceImp implements TTSAudioService {
     public ResTTSAudioGroupDTO getGroupByKey(String groupKey) throws IdInvalidException {
         TTSAudioGroup group = ttsAudioGroupRepository.findByGroupKey(groupKey)
                 .orElseThrow(() -> new IdInvalidException("Không tìm thấy group: " + groupKey));
+        assertShopOwnerOrAdminAccessGroup(group);
         return toGroupDTO(group);
     }
 
     @Override
     public Page<ResTTSAudioGroupDTO> getAllGroups(Pageable pageable) {
-        return ttsAudioGroupRepository.findAllOrderByCreatedAtDesc(pageable).map(this::toGroupDTO);
+        return resolveAdminGroupsPage(pageable);
+    }
+
+    private Page<ResTTSAudioGroupDTO> resolveAdminGroupsPage(Pageable pageable) {
+        return SecurityUtil.getCurrentJwt()
+                .map(jwt -> {
+                    if (SecurityUtil.isFullAdminJwt(jwt)) {
+                        return ttsAudioGroupRepository.findAllOrderByCreatedAtDesc(pageable).map(this::toGroupDTO);
+                    }
+                    return SecurityUtil.getCurrentUserId()
+                            .map(uid -> ttsAudioGroupRepository.findPageByPoiOwnerUserId(uid, pageable)
+                                    .map(this::toGroupDTO))
+                            .orElseGet(() -> new PageImpl<>(Collections.emptyList(), pageable, 0));
+                })
+                .orElseGet(() -> ttsAudioGroupRepository.findAllOrderByCreatedAtDesc(pageable).map(this::toGroupDTO));
     }
 
     @Override
@@ -120,6 +151,7 @@ public class TTSAudioServiceImp implements TTSAudioService {
     public ResTTSAudioGroupDTO updateGroup(Long id, ReqUpdateTTSAudioGroupDTO req) throws IdInvalidException {
         TTSAudioGroup group = ttsAudioGroupRepository.findById(id)
                 .orElseThrow(() -> new IdInvalidException("Không tìm thấy group: " + id));
+        assertShopOwnerOrAdminAccessGroup(group);
 
         group.setOriginalText(req.getOriginalText());
         group.setOriginalVoice(req.getOriginalVoice());
@@ -137,6 +169,7 @@ public class TTSAudioServiceImp implements TTSAudioService {
     public void deleteGroup(Long id) throws IOException, IdInvalidException {
         TTSAudioGroup group = ttsAudioGroupRepository.findById(id)
                 .orElseThrow(() -> new IdInvalidException("Không tìm thấy group: " + id));
+        assertShopOwnerOrAdminAccessGroup(group);
 
         // Xóa file trong storage
         if (group.getAudioMap() != null) {
@@ -166,6 +199,7 @@ public class TTSAudioServiceImp implements TTSAudioService {
     public Map<String, ResAudioDataDTO> generateMultilingualAudio(Long groupId) throws IOException, IdInvalidException {
         TTSAudioGroup group = ttsAudioGroupRepository.findById(groupId)
                 .orElseThrow(() -> new IdInvalidException("Không tìm thấy group: " + groupId));
+        assertShopOwnerOrAdminAccessGroup(group);
 
         String text = group.getOriginalText();
         float speed = group.getOriginalSpeed() != null ? group.getOriginalSpeed() : 1.0f;
@@ -257,6 +291,29 @@ public class TTSAudioServiceImp implements TTSAudioService {
     }
 
     // ============= Private Helpers =============
+
+    /** Giống POIServiceImpl: không JWT → bỏ qua; full admin → OK; còn lại phải là chủ POI. */
+    private void assertShopOwnerOrAdminAccessPoi(POI poi) throws IdInvalidException {
+        Optional<Jwt> jwtOpt = SecurityUtil.getCurrentJwt();
+        if (jwtOpt.isEmpty()) {
+            return;
+        }
+        Jwt jwt = jwtOpt.get();
+        if (SecurityUtil.isFullAdminJwt(jwt)) {
+            return;
+        }
+        Long uid = SecurityUtil.getCurrentUserId().orElse(null);
+        if (uid == null) {
+            throw new IdInvalidException("Không có quyền truy cập");
+        }
+        if (poi == null || poi.getUser() == null || !uid.equals(poi.getUser().getId())) {
+            throw new IdInvalidException("Bạn chỉ được thao tác dữ liệu gắn POI do chính mình tạo");
+        }
+    }
+
+    private void assertShopOwnerOrAdminAccessGroup(TTSAudioGroup group) throws IdInvalidException {
+        assertShopOwnerOrAdminAccessPoi(group != null ? group.getPoi() : null);
+    }
 
     /**
      * Tạo audio cho tất cả ngôn ngữ khi create group.

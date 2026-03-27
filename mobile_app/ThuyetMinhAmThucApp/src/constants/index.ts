@@ -34,7 +34,7 @@ export const API_ENDPOINTS = {
 
 export const APP_CONFIG = {
   // Minimum config for offline mode (4096 là có  4 ram) (7168 là có 7 ram)
-  MIN_RAM_MB: 7168,           // Máy phải có RAM >= 4GB mới bật chế độ Offline
+  MIN_RAM_MB: 4096,           // Máy phải có RAM >= 4GB mới bật chế độ Offline
   MIN_STORAGE_MB: 500,        // Máy phải có ổ còn trống >= 500MB
 
   // Cooldown before playing same POI again (ms)
