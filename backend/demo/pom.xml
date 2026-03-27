@@ -153,6 +153,18 @@
             <version>2.0.1</version>
         </dependency>
 
+        <!-- ZXing: sinh ảnh QR code cho POI -->
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.5.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>javase</artifactId>
+            <version>3.5.3</version>
+        </dependency>
+
         <!-- dotenv dùng để cấu hình file .env -->
         <dependency>
             <groupId>io.github.cdimascio</groupId>

@@ -4,6 +4,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +21,7 @@ import com.example.demo.domain.dto.ResultPaginationDTO;
 import com.example.demo.domain.request.admin.ReqUpsertPOIDTO;
 import com.example.demo.domain.response.admin.ResAdminPOIDTO;
 import com.example.demo.service.POIService;
+import com.example.demo.service.QRCodeService;
 import com.example.demo.util.annotation.ApiMessage;
 import com.example.demo.util.error.IdInvalidException;
 
@@ -29,9 +32,11 @@ import jakarta.validation.Valid;
 public class POIController {
 
     private final POIService poiService;
+    private final QRCodeService qrCodeService;
 
-    public POIController(POIService poiService) {
+    public POIController(POIService poiService, QRCodeService qrCodeService) {
         this.poiService = poiService;
+        this.qrCodeService = qrCodeService;
     }
 
     @GetMapping
@@ -65,6 +70,39 @@ public class POIController {
     public ResponseEntity<ResAdminPOIDTO> getPOIById(@PathVariable Long id) throws IdInvalidException {
         ResAdminPOIDTO poi = poiService.getPOIById(id);
         return ResponseEntity.ok(poi);
+    }
+
+    /**
+     * Tải ảnh QR của POI (PNG).
+     * Nội dung QR = POI.qrCode (UUID) — app quét để nhảy vào chi tiết POI.
+     * Admin dùng endpoint này để in/dán QR lên bàn / quán.
+     *
+     * @param id       POI id
+     * @param sizePx   kích thước QR (px), mặc định 300
+     */
+    @GetMapping("/{id}/qr")
+    @ApiMessage("Tải ảnh QR của POI")
+    public ResponseEntity<byte[]> getPOIQRCode(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "300") int sizePx) throws IdInvalidException {
+
+        ResAdminPOIDTO poi = poiService.getPOIById(id);
+
+        if (poi.getQrCode() == null || poi.getQrCode().isBlank()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        byte[] qrImage = qrCodeService.generateQRImage(poi.getQrCode(), sizePx);
+
+        String safeName = poi.getFoodName() != null
+                ? poi.getFoodName().replaceAll("[^a-zA-Z0-9À-ÿ\\s]", "").trim()
+                : "poi";
+        String filename = "qr_poi_" + poi.getId() + "_" + safeName + ".png";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.IMAGE_PNG)
+                .body(qrImage);
     }
 
     @PostMapping

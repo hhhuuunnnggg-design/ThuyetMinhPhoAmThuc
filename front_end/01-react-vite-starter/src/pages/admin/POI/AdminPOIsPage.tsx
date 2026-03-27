@@ -17,7 +17,8 @@ import {
 } from "@ant-design/icons";
 import ProTable from "@ant-design/pro-table";
 import { Alert, Button, message, Popconfirm, Space, Spin, Tag, Tooltip, Image } from "antd";
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeCanvas } from "qrcode.react";
+import { saveAs } from "file-saver";
 import { useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import UpsertPOIModal from "./UpsertPOIModal";
@@ -154,7 +155,7 @@ const AdminPOIsPage = () => {
           {
             title: "QR",
             dataIndex: "qrCode",
-            width: 108,
+            width: 130,
             align: "center",
             render: (_: unknown, r: AdminPOI) => {
               const qr = r.qrCode;
@@ -199,43 +200,76 @@ const AdminPOIsPage = () => {
                 }
               };
 
+              const downloadQR = async (e: React.MouseEvent) => {
+                e.stopPropagation();
+                const canvas = document.querySelector<HTMLCanvasElement>(
+                  `#poi-qr-canvas-${r.id} canvas`
+                );
+                if (!canvas) return;
+                canvas.toBlob((blob) => {
+                  if (!blob) return;
+                  const name = r.foodName
+                    ? r.foodName.replace(/[^a-zA-Z0-9À-ÿ\s]/g, "").trim()
+                    : "poi";
+                  saveAs(blob, `qr_poi_${r.id}_${name}.png`);
+                }, "image/png");
+              };
+
               return (
-                <Tooltip
-                  title={
-                    <>
-                      <div>
-                        <strong>Quét</strong>: mã địa điểm (camera / app).
-                      </div>
-                      <div style={{ marginTop: 4 }}>
-                        <strong>Click</strong>: mở PayOS (ủng hộ), giống app.
-                      </div>
-                    </>
-                  }
-                >
-                  <button
-                    type="button"
-                    onClick={openPayOS}
-                    disabled={paying}
-                    style={{
-                      display: "inline-flex",
-                      padding: 4,
-                      background: "#fff",
-                      borderRadius: 6,
-                      border: "1px solid #e2e8f0",
-                      lineHeight: 0,
-                      cursor: paying ? "wait" : "pointer",
-                    }}
-                    aria-label="Quét QR địa điểm hoặc click để thanh toán PayOS"
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                  {/* Canvas nền để render QR (ẩn, dùng để tải PNG) */}
+                  <div id={`poi-qr-canvas-${r.id}`} style={{ display: "none" }}>
+                    <QRCodeCanvas
+                      value={payload}
+                      size={300}
+                      level="H"
+                      margin={3}
+                      bgColor="#ffffff"
+                      fgColor="#000000"
+                    />
+                  </div>
+                  <Tooltip
+                    title={
+                      <>
+                        <div><strong>Quét</strong>: mã địa điểm (camera / app).</div>
+                        <div style={{ marginTop: 4 }}><strong>Click QR</strong>: mở PayOS (ủng hộ).</div>
+                        <div style={{ marginTop: 4 }}><strong>Tải PNG</strong>: in QR ra bàn / quán.</div>
+                      </>
+                    }
                   >
-                    {paying ? (
-                      <span style={{ width: 56, height: 56, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                        <Spin size="small" />
-                      </span>
-                    ) : (
-                      <QRCodeSVG value={payload} size={56} level="M" marginSize={0} />
-                    )}
-                  </button>
-                </Tooltip>
+                    <button
+                      type="button"
+                      onClick={openPayOS}
+                      disabled={paying}
+                      style={{
+                        display: "inline-flex",
+                        padding: 4,
+                        background: "#fff",
+                        borderRadius: 6,
+                        border: "1px solid #e2e8f0",
+                        lineHeight: 0,
+                        cursor: paying ? "wait" : "pointer",
+                      }}
+                      aria-label="Quét QR địa điểm hoặc click để thanh toán PayOS"
+                    >
+                      {paying ? (
+                        <span style={{ width: 56, height: 56, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                          <Spin size="small" />
+                        </span>
+                      ) : (
+                        <QRCodeSVG value={payload} size={56} level="M" marginSize={0} />
+                      )}
+                    </button>
+                  </Tooltip>
+                  <Button
+                    type="link"
+                    size="small"
+                    onClick={downloadQR}
+                    style={{ padding: 0, height: "auto", fontSize: 11 }}
+                  >
+                    Tải PNG
+                  </Button>
+                </div>
               );
             },
           },
