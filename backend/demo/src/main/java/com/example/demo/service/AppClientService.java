@@ -40,6 +40,12 @@ public interface AppClientService {
 
     void endNarration(Long activeNarrationId, Integer durationSeconds, String status) throws IdInvalidException;
 
+    /**
+     * Kết thúc phiên thuyết minh đang PLAYING của thiết bị (dashboard real-time).
+     * Dùng khi app không lưu {@code activeNarrationId} hoặc rời vùng POI.
+     */
+    void endCurrentPlayingForDevice(String deviceId, String status);
+
     /** Ghi log phát thuyết minh (PLAYING/COMPLETED/SKIPPED) — dùng cho Narration Logs & analytics. */
     void logNarration(ReqNarrationLogDTO req) throws IdInvalidException;
 

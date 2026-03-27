@@ -12,7 +12,8 @@ interface UseGeofenceProps {
   mockLng: number | null;
   autoGuide: boolean;
   onPOIEnter?: (geofence: POIGeofence) => void;
-  onPOIExit?: (poiId: number) => void;
+  /** Rời POI: {@code toPoiId} là POI đích khi chuyển thẳng sang POI khác; null nếu không còn trong vùng nào. */
+  onPOIExit?: (fromPoiId: number, toPoiId: number | null) => void;
 }
 
 export interface GeofenceState {
@@ -50,9 +51,9 @@ export const useGeofence = ({
         const prevPoiId = prev.currentPOI?.poi.id ?? null;
         const newPoiId = closest?.poi.id ?? null;
 
-        // POI Exit
+        // POI Exit (kèm POI đích để tránh gọi stop server khi chuyển A→B — start sẽ thay phiên)
         if (prevPoiId !== null && prevPoiId !== newPoiId) {
-          onPOIExit?.(prevPoiId);
+          onPOIExit?.(prevPoiId, newPoiId);
         }
 
         // POI Enter

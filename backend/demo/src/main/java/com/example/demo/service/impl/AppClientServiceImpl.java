@@ -259,6 +259,33 @@ public class AppClientServiceImpl implements AppClientService {
 
     @Override
     @Transactional
+    public void endCurrentPlayingForDevice(String deviceId, String status) {
+        if (deviceId == null || deviceId.isBlank()) {
+            return;
+        }
+        activeNarrationRepository.findByDeviceIdAndStatus(deviceId, NarrationStatus.PLAYING)
+                .ifPresent(an -> {
+                    applyEndStatus(an, status);
+                    activeNarrationRepository.save(an);
+                });
+    }
+
+    private void applyEndStatus(ActiveNarration an, String status) {
+        if (status == null || status.isBlank()) {
+            an.expire();
+            return;
+        }
+        if ("COMPLETED".equalsIgnoreCase(status)) {
+            an.complete();
+        } else if ("SKIPPED".equalsIgnoreCase(status)) {
+            an.skip();
+        } else {
+            an.expire();
+        }
+    }
+
+    @Override
+    @Transactional
     public void logNarration(ReqNarrationLogDTO req) throws IdInvalidException {
         TTSAudio audio = ttsAudioRepository.findById(req.getTtsAudioId())
                 .orElseThrow(() -> new IdInvalidException("Không tìm thấy audio: " + req.getTtsAudioId()));
@@ -281,13 +308,7 @@ public class AppClientServiceImpl implements AppClientService {
         ActiveNarration active = activeNarrationRepository.findById(activeNarrationId)
                 .orElseThrow(() -> new IdInvalidException("Không tìm thấy active narration: " + activeNarrationId));
 
-        if ("COMPLETED".equalsIgnoreCase(status)) {
-            active.complete();
-        } else if ("SKIPPED".equalsIgnoreCase(status)) {
-            active.skip();
-        } else {
-            active.expire();
-        }
+        applyEndStatus(active, status);
 
         activeNarrationRepository.save(active);
     }

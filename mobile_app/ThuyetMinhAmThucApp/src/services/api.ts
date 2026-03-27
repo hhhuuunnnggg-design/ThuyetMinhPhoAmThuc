@@ -20,6 +20,7 @@ api.interceptors.request.use(
     const narrationEndpoints = [
       "/narration/start",
       "/narration/end",
+      "/narration/stop",
       "/narration/log",
       "/narration/check",
     ];
@@ -132,6 +133,12 @@ export const endNarration = async (data: {
   status: string;
 }) => {
   const res = await api.post("/api/v1/app/narration/end", data);
+  return res.data;
+};
+
+/** Kết thúc phiên PLAYING hiện tại của thiết bị (header X-Device-Id) — dashboard real-time. */
+export const stopCurrentNarration = async (status: "COMPLETED" | "SKIPPED" | "EXPIRED" = "EXPIRED") => {
+  const res = await api.post("/api/v1/app/narration/stop", { status });
   return res.data;
 };
 

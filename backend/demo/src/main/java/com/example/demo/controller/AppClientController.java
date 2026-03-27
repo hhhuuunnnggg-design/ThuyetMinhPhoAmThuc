@@ -18,6 +18,7 @@ import com.example.demo.domain.request.app.ReqDeviceSyncDTO;
 import com.example.demo.domain.request.app.ReqNarrationEndDTO;
 import com.example.demo.domain.request.app.ReqNarrationLogDTO;
 import com.example.demo.domain.request.app.ReqNarrationStartDTO;
+import com.example.demo.domain.request.app.ReqNarrationStopDTO;
 import com.example.demo.domain.request.app.ReqPaymentCreateDTO;
 import com.example.demo.domain.response.app.ResActiveNarrationDTO;
 import com.example.demo.domain.response.app.ResDeviceConfigDTO;
@@ -168,6 +169,21 @@ public class AppClientController {
                 req.getActiveNarrationId(),
                 req.getActualDurationSeconds(),
                 req.getStatus());
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Dừng phiên đang PLAYING của thiết bị (theo {@code X-Device-Id}) — rời vùng POI / nút dừng / phát xong.
+     */
+    @PostMapping("/narration/stop")
+    @ApiMessage("Dừng thuyết minh theo thiết bị")
+    public ResponseEntity<Void> stopCurrentNarration(
+            @RequestHeader("X-Device-Id") String deviceIdHeader,
+            @RequestBody(required = false) ReqNarrationStopDTO req) {
+        String status = req != null && req.getStatus() != null && !req.getStatus().isBlank()
+                ? req.getStatus()
+                : "EXPIRED";
+        appClientService.endCurrentPlayingForDevice(deviceIdHeader, status);
         return ResponseEntity.ok().build();
     }
 

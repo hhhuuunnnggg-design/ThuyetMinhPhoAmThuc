@@ -21,7 +21,7 @@ import { Audio } from "expo-av";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Haptics from "expo-haptics";
-import api, { getAudioStreamUrl } from "../services/api";
+import api, { getAudioStreamUrl, stopCurrentNarration } from "../services/api";
 import { deviceService } from "../services/device";
 import { storageService } from "../services/storage";
 import { offlineDbService } from "../services/offlineDb";
@@ -739,6 +739,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
 
         sound.setOnPlaybackStatusUpdate((status: any) => {
           if (status.isLoaded && status.didJustFinish) {
+            void stopCurrentNarration("COMPLETED").catch(() => {});
             setPlayingLang(null);
             storageService.addToNarrationHistory({
               poiId: poiUse.id,
@@ -785,7 +786,24 @@ const MapScreen: React.FC<MapScreenProps> = ({
     [autoGuide, preferredLang, playAudio]
   );
 
-  const handlePOIExit = useCallback(() => {}, []);
+  const handlePOIExit = useCallback((_fromPoiId: number, toPoiId: number | null) => {
+    void (async () => {
+      try {
+        if (audioRef.current) {
+          await audioRef.current.stopAsync();
+          await audioRef.current.unloadAsync();
+          audioRef.current = null;
+        }
+      } catch {
+        /* ignore */
+      }
+      setPlayingLang(null);
+      setShowPlayerBar(false);
+      if (toPoiId == null) {
+        void stopCurrentNarration("EXPIRED").catch(() => {});
+      }
+    })();
+  }, []);
 
   const { currentPOI: inRangePOI } = useGeofence({
     pois,
@@ -798,9 +816,18 @@ const MapScreen: React.FC<MapScreenProps> = ({
   });
 
   const stopAudio = useCallback(async () => {
+    try {
+      await stopCurrentNarration("SKIPPED");
+    } catch {
+      /* vẫn dừng local */
+    }
     if (audioRef.current) {
-      await audioRef.current.stopAsync();
-      await audioRef.current.unloadAsync();
+      try {
+        await audioRef.current.stopAsync();
+        await audioRef.current.unloadAsync();
+      } catch {
+        /* ignore */
+      }
       audioRef.current = null;
     }
     setPlayingLang(null);
