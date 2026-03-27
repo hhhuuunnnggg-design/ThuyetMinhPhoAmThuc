@@ -98,9 +98,34 @@ const SettingsScreen: React.FC = () => {
     }
   };
 
+  const onClearCache = async () => {
+    Alert.alert(
+      "Xóa cache",
+      "Xóa toàn bộ dữ liệu offline (POI, audio đã tải)? Hành động này không thể hoàn tác.",
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Xóa",
+          style: "destructive",
+          onPress: async () => {
+            setSyncLoading(true);
+            try {
+              await offlineDbService.clearAll();
+              await load();
+              Alert.alert("Đã xóa", "Cache offline đã được xóa. Vào lại dữ liệu mới khi bật đồng bộ.");
+            } finally {
+              setSyncLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const onSync = async () => {
     setSyncLoading(true);
     const preferredLang = await storageService.getPreferredLanguage();
+    // fullSync đã tự xóa cache trước khi đồng bộ
     const result = await offlineSyncService.fullSync(preferredLang);
     setSyncLoading(false);
     if (result.error) {
@@ -186,18 +211,29 @@ const SettingsScreen: React.FC = () => {
 
       {/* Sync button — chỉ hiện khi offline bật */}
       {offline && (
-        <TouchableOpacity
-          style={[styles.syncButton, syncLoading && styles.syncButtonDisabled]}
-          onPress={onSync}
-          disabled={syncLoading}
-          activeOpacity={0.7}
-        >
-          {syncLoading ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.syncButtonText}>🔄 Đồng bộ lại dữ liệu</Text>
-          )}
-        </TouchableOpacity>
+        <>
+          <TouchableOpacity
+            style={[styles.syncButton, syncLoading && styles.syncButtonDisabled]}
+            onPress={onSync}
+            disabled={syncLoading}
+            activeOpacity={0.7}
+          >
+            {syncLoading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.syncButtonText}>🔄 Đồng bộ lại dữ liệu</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.clearButton, syncLoading && styles.clearButtonDisabled]}
+            onPress={onClearCache}
+            disabled={syncLoading}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.clearButtonText}>🗑 Xóa cache offline</Text>
+          </TouchableOpacity>
+        </>
       )}
 
       {__DEV__ && (
@@ -268,6 +304,17 @@ const styles = StyleSheet.create({
   },
   syncButtonDisabled: { opacity: 0.6 },
   syncButtonText: { color: "#fff", fontSize: 15, fontWeight: "600" },
+  clearButton: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 14,
+    alignItems: "center",
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#e53935",
+  },
+  clearButtonDisabled: { opacity: 0.5 },
+  clearButtonText: { color: "#e53935", fontSize: 15, fontWeight: "600" },
   debug: { marginTop: 24, fontSize: 11, color: "#aaa", fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" },
 });
 

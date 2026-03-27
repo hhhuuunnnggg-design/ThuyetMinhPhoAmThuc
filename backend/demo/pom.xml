@@ -146,6 +146,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- PayOS — tạo link thanh toán / QR (theo SDK chính thức, giống mẫu main/java/com/springboot/payos) -->
+        <dependency>
+            <groupId>vn.payos</groupId>
+            <artifactId>payos-java</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+
         <!-- dotenv dùng để cấu hình file .env -->
         <dependency>
             <groupId>io.github.cdimascio</groupId>

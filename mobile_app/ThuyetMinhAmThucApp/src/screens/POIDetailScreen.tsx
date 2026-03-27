@@ -332,12 +332,13 @@ const POIDetailScreen: React.FC = () => {
         <Text style={styles.payButtonText}>💳 Ủng hộ / Thanh toán</Text>
       </TouchableOpacity>
 
-      {/* QR Code */}
+      {/* QR định danh POI (quét để mở địa điểm) — khác với QR VietQR PayOS ở màn Thanh toán */}
       {poi.qrCode && (
         <View style={styles.qrSection}>
-          <Text style={styles.sectionTitle}>Mã QR</Text>
+          <Text style={styles.sectionTitle}>Mã QR địa điểm</Text>
+          <Text style={styles.qrHint}>Dùng để quét / mở POI — không phải mã thanh toán ngân hàng.</Text>
           <View style={styles.qrPlaceholder}>
-            <Text style={styles.qrText}>QR: {poi.qrCode.substring(0, 8)}...</Text>
+            <Text style={styles.qrText}>ID: {poi.qrCode.substring(0, 8)}…</Text>
           </View>
         </View>
       )}
@@ -524,6 +525,13 @@ const styles = StyleSheet.create({
   qrSection: {
     padding: 20,
     alignItems: "center",
+  },
+  qrHint: {
+    fontSize: 12,
+    color: "#888",
+    textAlign: "center",
+    marginBottom: 10,
+    paddingHorizontal: 8,
   },
   qrPlaceholder: {
     padding: 20,

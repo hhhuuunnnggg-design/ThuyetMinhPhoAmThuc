@@ -105,6 +105,18 @@ class OfflineSyncService {
     this.syncing = true;
 
     try {
+      // 0. Xóa cache cũ trước khi sync (tránh dữ liệu thừa từ lần trước)
+      await offlineDbService.clearAll();
+      // Xóa file audio đã tải về máy
+      const audioDir = `${FileSystem.documentDirectory ?? ""}offline/audio/`;
+      try {
+        const dirInfo = await FileSystem.getInfoAsync(audioDir);
+        if (dirInfo.exists) {
+          await FileSystem.deleteAsync(audioDir, { idempotent: true });
+        }
+      } catch {}
+      await FileSystem.makeDirectoryAsync(audioDir, { intermediates: true }).catch(() => {});
+
       // 1. Fetch POIs
       const res = await api.get("/api/v1/app/pois");
       const pois = unwrapListResponse<POI>(res.data);

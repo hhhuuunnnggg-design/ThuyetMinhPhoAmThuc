@@ -1,6 +1,5 @@
 package com.example.demo.service;
 
-import java.io.IOException;
 import java.util.Map;
 
 import com.example.demo.domain.Payment;
@@ -12,11 +11,11 @@ import com.example.demo.domain.Payment;
 public interface PayOSService {
 
     /**
-     * Tạo payment link trên PayOS.
-     * @param payment Đối tượng payment đã lưu trong DB
-     * @return Map chứa paymentLink, qrCode, transactionId
+     * Tạo payment link trên PayOS (SDK chính thức).
+     * @param payment Đối tượng payment đã lưu trong DB (cần có {@code id} làm {@code orderCode})
+     * @return Map: paymentLink, qrCode, transactionId, paymentLinkId, mock, error, credentialSource
      */
-    Map<String, String> createPaymentLink(Payment payment) throws IOException;
+    Map<String, String> createPaymentLink(Payment payment);
 
     /**
      * Xác minh webhook signature từ PayOS.

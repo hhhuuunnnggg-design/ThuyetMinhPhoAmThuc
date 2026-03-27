@@ -36,6 +36,7 @@ import com.example.demo.repository.TTSAudioRepository;
 import com.example.demo.service.AppClientService;
 import com.example.demo.service.GeofenceService;
 import com.example.demo.service.NarrationService;
+import com.example.demo.service.PayOSService;
 import com.example.demo.util.error.IdInvalidException;
 
 @Service
@@ -49,6 +50,7 @@ public class AppClientServiceImpl implements AppClientService {
     private final TTSAudioGroupRepository ttsAudioGroupRepository;
     private final GeofenceService geofenceService;
     private final NarrationService narrationService;
+    private final PayOSService payOSService;
 
     public AppClientServiceImpl(
             POIRepository poiRepository,
@@ -58,7 +60,8 @@ public class AppClientServiceImpl implements AppClientService {
             TTSAudioRepository ttsAudioRepository,
             TTSAudioGroupRepository ttsAudioGroupRepository,
             GeofenceService geofenceService,
-            NarrationService narrationService) {
+            NarrationService narrationService,
+            PayOSService payOSService) {
         this.poiRepository = poiRepository;
         this.deviceConfigRepository = deviceConfigRepository;
         this.activeNarrationRepository = activeNarrationRepository;
@@ -67,6 +70,7 @@ public class AppClientServiceImpl implements AppClientService {
         this.ttsAudioGroupRepository = ttsAudioGroupRepository;
         this.geofenceService = geofenceService;
         this.narrationService = narrationService;
+        this.payOSService = payOSService;
     }
 
     // ============ Device ============
@@ -321,11 +325,38 @@ public class AppClientServiceImpl implements AppClientService {
                 .restaurant(poi.getRestaurant())
                 .amount(amount)
                 .status(PaymentStatus.PENDING)
-                .description(description)
+                .description(description != null ? description : "Thanh toan thuyet minh")
                 .createdAt(Instant.now())
                 .build();
 
         payment = paymentRepository.save(payment);
+
+        try {
+            Map<String, String> payos = payOSService.createPaymentLink(payment);
+            if (payos != null) {
+                String link = payos.get("paymentLink");
+                if (link != null && !link.isBlank()) {
+                    payment.setPayosPaymentLink(link);
+                }
+                String qr = payos.get("qrCode");
+                if (qr != null && !qr.isBlank()) {
+                    payment.setPayosQrCode(qr);
+                }
+                String plId = payos.get("paymentLinkId");
+                if (plId != null && !plId.isBlank()) {
+                    payment.setPayosPaymentLinkId(plId);
+                }
+                String txn = payos.get("transactionId");
+                if (txn != null && !txn.isBlank() && !Boolean.parseBoolean(payos.getOrDefault("mock", "false"))) {
+                    payment.setPayosTransactionId(txn);
+                }
+                payment.setUpdatedAt(Instant.now());
+                payment = paymentRepository.save(payment);
+            }
+        } catch (Exception e) {
+            // Vẫn trả payment PENDING; client có thể thử lại hoặc mở link sau
+        }
+
         return buildPaymentDTO(payment);
     }
 

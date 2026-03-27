@@ -11,6 +11,7 @@ import HistoryScreen from "../screens/HistoryScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import POIDetailScreen from "../screens/POIDetailScreen";
 import QRScannerScreen from "../screens/QRScannerScreen";
+import PaymentScreen from "../screens/PaymentScreen";
 import api from "../services/api";
 import { unwrapListResponse } from "../utils/apiResponse";
 import { storageService } from "../services/storage";
@@ -96,14 +97,6 @@ const MapScreenWrapper: React.FC = () => {
   );
 };
 
-const PaymentPlaceholder: React.FC = () => (
-  <View style={styles.placeholder}>
-    <Text style={styles.placeholderEmoji}>💳</Text>
-    <Text style={styles.placeholderText}>Thanh toán</Text>
-    <Text style={styles.placeholderSubtext}>Tích hợp PayOS - đang phát triển</Text>
-  </View>
-);
-
 const HomeTabs: React.FC = () => (
   <Tab.Navigator
     screenOptions={{
@@ -182,7 +175,7 @@ const AppNavigator: React.FC = () => (
       />
       <Stack.Screen
         name="Payment"
-        component={PaymentPlaceholder}
+        component={PaymentScreen}
         options={{ title: "Thanh toán" }}
       />
     </Stack.Navigator>
@@ -202,28 +195,6 @@ const styles = StyleSheet.create({
   },
   tabIconText: {
     fontSize: 16,
-  },
-  placeholder: {
-    flex: 1,
-    backgroundColor: "#f8f9fa",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 40,
-  },
-  placeholderEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  placeholderText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 8,
-  },
-  placeholderSubtext: {
-    fontSize: 14,
-    color: "#888",
-    textAlign: "center",
   },
 });
 
