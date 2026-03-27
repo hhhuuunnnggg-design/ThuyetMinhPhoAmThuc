@@ -1,5 +1,5 @@
 import * as Device from "expo-device";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import Constants from "expo-constants";
 import { APP_CONFIG } from "../constants";
 import { DeviceInfo } from "../types";

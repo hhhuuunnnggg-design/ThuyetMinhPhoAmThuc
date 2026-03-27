@@ -1,7 +1,8 @@
 import axios, { AxiosInstance } from "axios";
-import Constants from "expo-constants";
+import { getApiBaseUrl } from "../utils/apiUrl";
+import { deviceService } from "./device";
 
-const BASE_URL = Constants.expoConfig?.extra?.apiBaseUrl || "http://10.0.2.2:8080";
+const BASE_URL = getApiBaseUrl();
 
 const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,
@@ -11,10 +12,19 @@ const api: AxiosInstance = axios.create({
   },
 });
 
-// Request interceptor
+// Request interceptor – thêm X-Device-Id bắt buộc cho narration endpoints
 api.interceptors.request.use(
-  (config) => {
-    // Could add auth token here if needed
+  async (config) => {
+    const narrationEndpoints = [
+      "/narration/start",
+      "/narration/end",
+      "/narration/log",
+      "/narration/check",
+    ];
+    if (narrationEndpoints.some((ep) => config.url?.includes(ep))) {
+      const deviceId = await deviceService.getDeviceId();
+      config.headers["X-Device-Id"] = deviceId;
+    }
     return config;
   },
   (error) => Promise.reject(error)

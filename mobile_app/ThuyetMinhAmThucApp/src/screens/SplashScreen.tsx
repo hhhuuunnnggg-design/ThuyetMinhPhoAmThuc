@@ -9,7 +9,7 @@ import {
 import * as Haptics from "expo-haptics";
 import { deviceService } from "../services/device";
 import { storageService } from "../services/storage";
-import { api } from "../services/api";
+import api from "../services/api";
 import { APP_CONFIG } from "../constants";
 
 interface Props {

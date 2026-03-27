@@ -17,8 +17,14 @@ public class CorsConfig {
 
         // cho phép các URL nào có thể kết nối tới backend
         configuration.setAllowedOrigins(
-                Arrays.asList("http://localhost:3000", "http://localhost:4173", "http://localhost:5173",
-                        "http://localhost:3001"));
+                Arrays.asList(
+                        "http://localhost:3000",
+                        "http://localhost:4173",
+                        "http://localhost:5173",
+                        "http://localhost:3001",
+                        // Expo web (npx expo start --web), mặc định cổng 8081
+                        "http://localhost:8081",
+                        "http://127.0.0.1:8081"));
 
         // các method nào đc kết nối
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));

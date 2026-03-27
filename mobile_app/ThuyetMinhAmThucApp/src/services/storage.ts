@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 
 const STORAGE_KEYS = {
   DEVICE_ID: "device_id",
@@ -52,21 +52,20 @@ class StorageService {
 
   // ============ Offline Bundles ============
 
-  async getOfflineBundlePath(poiId: number): string {
-    return `${FileSystem.documentDirectory}offline/${poiId}/`;
+  private offlineDir(): string {
+    return `${FileSystem.documentDirectory ?? ""}offline/`;
+  }
+
+  async getOfflineBundlePath(poiId: number): Promise<string> {
+    return `${this.offlineDir()}${poiId}/`;
   }
 
   async saveAudioOffline(poiId: number, lang: string, audioData: string): Promise<string> {
     const dir = await this.getOfflineBundlePath(poiId);
     const filePath = `${dir}${lang}.mp3`;
 
-    // Ensure directory exists
-    const dirInfo = await FileSystem.getInfoAsync(dir);
-    if (!dirInfo.exists) {
-      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
-    }
+    await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
 
-    // Save audio file
     await FileSystem.writeAsStringAsync(filePath, audioData, {
       encoding: FileSystem.EncodingType.Base64,
     });
@@ -89,7 +88,7 @@ class StorageService {
   }
 
   async getTotalOfflineSize(): Promise<number> {
-    const dir = `${FileSystem.documentDirectory}offline/`;
+    const dir = this.offlineDir();
     const info = await FileSystem.getInfoAsync(dir);
     if (!info.exists) return 0;
 
@@ -97,8 +96,8 @@ class StorageService {
     let totalSize = 0;
     for (const file of files) {
       const fileInfo = await FileSystem.getInfoAsync(`${dir}${file}`);
-      if (fileInfo.exists && "size" in fileInfo) {
-        totalSize += (fileInfo as any).size || 0;
+      if (fileInfo.exists && "size" in fileInfo && fileInfo.size != null) {
+        totalSize += fileInfo.size;
       }
     }
     return Math.round(totalSize / (1024 * 1024)); // MB
@@ -137,7 +136,6 @@ class StorageService {
   async addToNarrationHistory(entry: any): Promise<void> {
     const history = await this.getNarrationHistory();
     history.unshift({ ...entry, playedAt: new Date().toISOString() });
-    // Keep only last 100 entries
     const trimmed = history.slice(0, 100);
     return AsyncStorage.setItem(
       STORAGE_KEYS.NARRATION_HISTORY,

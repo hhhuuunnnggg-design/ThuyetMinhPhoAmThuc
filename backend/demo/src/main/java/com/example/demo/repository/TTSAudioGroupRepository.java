@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.example.demo.domain.TTSAudioGroup;
@@ -20,7 +21,9 @@ public interface TTSAudioGroupRepository extends JpaRepository<TTSAudioGroup, Lo
     @EntityGraph(attributePaths = { "poi" })
     Optional<TTSAudioGroup> findById(Long id);
 
-    List<TTSAudioGroup> findByPoiId(Long poiId);
+    /** Rõ ràng theo khóa ngoại POI — tránh sai lệch khi Spring parse tên method derived. */
+    @Query("SELECT g FROM TTSAudioGroup g WHERE g.poi.id = :poiId")
+    List<TTSAudioGroup> findByPoiId(@Param("poiId") Long poiId);
 
     List<TTSAudioGroup> findByFoodNameContainingIgnoreCase(String foodName);
 

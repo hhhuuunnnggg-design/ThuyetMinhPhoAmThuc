@@ -12,7 +12,9 @@ import {
 import * as Location from "expo-location";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { api } from "../services/api";
+import api from "../services/api";
+import { unwrapListResponse } from "../utils/apiResponse";
+import { resolveMediaUrl } from "../utils/mediaUrl";
 import { deviceService } from "../services/device";
 import { storageService } from "../services/storage";
 import { APP_CONFIG, LANGUAGE_COLORS } from "../constants";
@@ -41,10 +43,10 @@ const HomeScreen: React.FC = () => {
         const res: any = await api.get(
           `/api/v1/app/pois/nearby?lat=${lat}&lng=${lng}&radiusKm=${APP_CONFIG.NEARBY_RADIUS_KM}`
         );
-        nearbyPois = res.data?.data || res.data?.result || [];
+        nearbyPois = unwrapListResponse<NearbyPOI>(res.data);
       } else {
         const res: any = await api.get("/api/v1/app/pois");
-        nearbyPois = res.data?.data || res.data?.result || [];
+        nearbyPois = unwrapListResponse<NearbyPOI>(res.data);
       }
 
       setPois(nearbyPois);
@@ -116,8 +118,12 @@ const HomeScreen: React.FC = () => {
       onPress={() => handlePOIPress(item)}
       activeOpacity={0.7}
     >
-      {item.imageUrl ? (
-        <Image source={{ uri: item.imageUrl }} style={styles.poiImage} />
+      {resolveMediaUrl(item.imageUrl) ? (
+        <Image
+          source={{ uri: resolveMediaUrl(item.imageUrl)! }}
+          style={styles.poiImage}
+          resizeMode="cover"
+        />
       ) : (
         <View style={[styles.poiImage, styles.poiImagePlaceholder]}>
           <Text style={styles.poiImagePlaceholderText}>🍜</Text>

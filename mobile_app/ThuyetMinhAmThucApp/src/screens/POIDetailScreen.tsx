@@ -13,10 +13,11 @@ import { RouteProp, useRoute, useNavigation } from "@react-navigation/native";
 import { Audio } from "expo-av";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Haptics from "expo-haptics";
-import { api, getAudioStreamUrl } from "../services/api";
+import api, { getAudioStreamUrl } from "../services/api";
 import { storageService } from "../services/storage";
 import { deviceService } from "../services/device";
 import { APP_CONFIG, LANGUAGE_LABELS, LANGUAGE_COLORS } from "../constants";
+import { resolveMediaUrl } from "../utils/mediaUrl";
 import { POI, AudioInfo, DeviceConfig } from "../types";
 
 type RootStackParamList = {
@@ -42,6 +43,18 @@ const POIDetailScreen: React.FC = () => {
   useEffect(() => {
     loadPreferences();
     checkRunningMode();
+    const setupAudio = async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        });
+      } catch {}
+    };
+    setupAudio();
     return () => {
       unloadAudio();
     };
@@ -166,8 +179,12 @@ const POIDetailScreen: React.FC = () => {
   return (
     <ScrollView style={styles.container}>
       {/* Header Image */}
-      {poi.imageUrl ? (
-        <Image source={{ uri: poi.imageUrl }} style={styles.headerImage} />
+      {resolveMediaUrl(poi.imageUrl) ? (
+        <Image
+          source={{ uri: resolveMediaUrl(poi.imageUrl)! }}
+          style={styles.headerImage}
+          resizeMode="cover"
+        />
       ) : (
         <View style={[styles.headerImage, styles.headerImagePlaceholder]}>
           <Text style={styles.headerImagePlaceholderText}>🍜</Text>

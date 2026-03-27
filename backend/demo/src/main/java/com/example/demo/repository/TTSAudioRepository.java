@@ -15,4 +15,6 @@ public interface TTSAudioRepository extends JpaRepository<TTSAudio, Long>, JpaSp
     List<TTSAudio> findAllByOrderByCreatedAtDesc();
 
     Optional<TTSAudio> findByGroupIdAndLanguageCode(Long groupId, String languageCode);
+
+    List<TTSAudio> findByGroup_Id(Long groupId);
 }

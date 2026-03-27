@@ -1,13 +1,21 @@
-import React from "react";
-import { NavigationContainer } from "@react-navigation/native";
+import React, { useState, useEffect, useCallback } from "react";
+import { NavigationContainer, useFocusEffect } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Text, View, StyleSheet } from "react-native";
+import * as Location from "expo-location";
 
 import HomeScreen from "../screens/HomeScreen";
+import MapScreen from "../screens/MapScreen";
+import HistoryScreen from "../screens/HistoryScreen";
+import SettingsScreen from "../screens/SettingsScreen";
 import POIDetailScreen from "../screens/POIDetailScreen";
 import QRScannerScreen from "../screens/QRScannerScreen";
-import { POI } from "../types";
+import api from "../services/api";
+import { unwrapListResponse } from "../utils/apiResponse";
+import { storageService } from "../services/storage";
+import { APP_CONFIG } from "../constants";
+import { POI, NearbyPOI } from "../types";
 
 export type RootStackParamList = {
   HomeTabs: undefined;
@@ -18,6 +26,7 @@ export type RootStackParamList = {
 
 export type TabParamList = {
   Home: undefined;
+  Map: undefined;
   History: undefined;
   Profile: undefined;
 };
@@ -31,21 +40,61 @@ const TabIcon = ({ name, focused }: { name: string; focused: boolean }) => (
   </View>
 );
 
-const HistoryPlaceholder: React.FC = () => (
-  <View style={styles.placeholder}>
-    <Text style={styles.placeholderEmoji}>📜</Text>
-    <Text style={styles.placeholderText}>Lịch sử nghe</Text>
-    <Text style={styles.placeholderSubtext}>Chưa có audio nào được phát</Text>
-  </View>
-);
+// MapScreenWrapper: load POIs 1 lần → chia sẻ cho HomeScreen + MapScreen
+// Tránh load 2 lần khi chuyển tab
+const MapScreenWrapper: React.FC = () => {
+  const [pois, setPois] = useState<NearbyPOI[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [preferredLang, setPreferredLang] = useState("vi");
 
-const ProfilePlaceholder: React.FC = () => (
-  <View style={styles.placeholder}>
-    <Text style={styles.placeholderEmoji}>⚙️</Text>
-    <Text style={styles.placeholderText}>Cài đặt</Text>
-    <Text style={styles.placeholderSubtext}>Ngôn ngữ, chế độ offline</Text>
-  </View>
-);
+  useEffect(() => {
+    storageService.getPreferredLanguage().then(setPreferredLang);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      storageService.getPreferredLanguage().then(setPreferredLang);
+    }, [])
+  );
+
+  const loadPOIs = useCallback(async () => {
+    setLoading(true);
+    try {
+      let nearbyPois: NearbyPOI[] = [];
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === "granted") {
+          const loc = await Location.getCurrentPositionAsync({});
+          const res: any = await api.get(
+            `/api/v1/app/pois/nearby?lat=${loc.coords.latitude}&lng=${loc.coords.longitude}&radiusKm=${APP_CONFIG.NEARBY_RADIUS_KM}`
+          );
+          nearbyPois = unwrapListResponse<NearbyPOI>(res.data);
+        }
+      } catch {}
+
+      if (nearbyPois.length === 0) {
+        const res: any = await api.get("/api/v1/app/pois");
+        nearbyPois = unwrapListResponse<NearbyPOI>(res.data);
+      }
+      setPois(nearbyPois);
+    } catch {} finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPOIs();
+  }, [loadPOIs]);
+
+  return (
+    <MapScreen
+      pois={pois}
+      loading={loading}
+      preferredLang={preferredLang}
+      onPreferredLangChange={setPreferredLang}
+    />
+  );
+};
 
 const PaymentPlaceholder: React.FC = () => (
   <View style={styles.placeholder}>
@@ -77,8 +126,17 @@ const HomeTabs: React.FC = () => (
       }}
     />
     <Tab.Screen
+      name="Map"
+      options={{
+        tabBarLabel: "Bản đồ",
+        tabBarIcon: ({ focused }) => <TabIcon name="🗺️" focused={focused} />,
+      }}
+    >
+      {() => <MapScreenWrapper />}
+    </Tab.Screen>
+    <Tab.Screen
       name="History"
-      component={HistoryPlaceholder}
+      component={HistoryScreen}
       options={{
         tabBarLabel: "Lịch sử",
         tabBarIcon: ({ focused }) => <TabIcon name="📜" focused={focused} />,
@@ -86,7 +144,7 @@ const HomeTabs: React.FC = () => (
     />
     <Tab.Screen
       name="Profile"
-      component={ProfilePlaceholder}
+      component={SettingsScreen}
       options={{
         tabBarLabel: "Cài đặt",
         tabBarIcon: ({ focused }) => <TabIcon name="⚙️" focused={focused} />,

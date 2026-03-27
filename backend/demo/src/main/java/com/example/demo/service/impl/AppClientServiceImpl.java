@@ -185,17 +185,21 @@ public class AppClientServiceImpl implements AppClientService {
             double dist = geofenceService.haversineDistance(
                     lat, lng,
                     poi.getLatitude(), poi.getLongitude());
+            ResPOIDTO full = buildPOIDTO(poi);
             return ResNearbyPOIDTO.builder()
-                    .id(poi.getId())
-                    .foodName(poi.getFoodName())
-                    .imageUrl(poi.getImageUrl())
-                    .latitude(poi.getLatitude())
-                    .longitude(poi.getLongitude())
-                    .triggerRadiusMeters(poi.getTriggerRadiusMeters())
-                    .priority(poi.getPriority())
-                    .price(poi.getPrice())
-                    .category(poi.getCategory())
-                    .address(poi.getAddress())
+                    .id(full.getId())
+                    .groupId(full.getGroupId())
+                    .groupKey(full.getGroupKey())
+                    .foodName(full.getFoodName())
+                    .imageUrl(full.getImageUrl())
+                    .latitude(full.getLatitude())
+                    .longitude(full.getLongitude())
+                    .triggerRadiusMeters(full.getTriggerRadiusMeters())
+                    .priority(full.getPriority())
+                    .price(full.getPrice())
+                    .category(full.getCategory())
+                    .address(full.getAddress())
+                    .audios(full.getAudios())
                     .distanceMeters((double) Math.round(dist))
                     .activeListenerCount(activeCounts.getOrDefault(poi.getId(), 0))
                     .downloadedOffline(false)
@@ -366,16 +370,21 @@ public class AppClientServiceImpl implements AppClientService {
 
         Map<String, ResPOIDTO.ResAudioInfoDTO> audioMap = new HashMap<>();
         for (TTSAudioGroup g : groups) {
-            if (g.getAudioMap() != null) {
-                g.getAudioMap().forEach((lang, audioData) -> {
-                    audioMap.putIfAbsent(lang, ResPOIDTO.ResAudioInfoDTO.builder()
-                            .languageCode(lang)
-                            .languageName(SupportedLanguage.getName(lang))
-                            .s3Url(audioData.getS3Url())
-                            .fileSize(audioData.getFileSize())
-                            .mimeType(audioData.getMimeType())
-                            .build());
-                });
+            List<TTSAudio> groupAudios = ttsAudioRepository.findByGroup_Id(g.getId());
+            for (TTSAudio a : groupAudios) {
+                String lang = a.getLanguageCode();
+                audioMap.putIfAbsent(lang, ResPOIDTO.ResAudioInfoDTO.builder()
+                        .audioId(a.getId())
+                        .languageCode(lang)
+                        .languageName(SupportedLanguage.getName(lang))
+                        .voice(a.getVoice())
+                        .speed(a.getSpeed())
+                        .format(a.getFormat())
+                        .withoutFilter(a.getWithoutFilter())
+                        .s3Url(a.getS3Url())
+                        .fileSize(a.getFileSize())
+                        .mimeType(a.getMimeType())
+                        .build());
             }
         }
 

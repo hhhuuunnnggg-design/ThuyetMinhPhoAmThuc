@@ -20,7 +20,10 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Ứng dụng cần vị trí để phát thuyết minh khi bạn đến gần quán ăn",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Ứng dụng cần vị trí để phát thuyết minh khi bạn đến gần quán ăn",
-        "NSCameraUsageDescription": "Ứng dụng cần camera để quét mã QR"
+        "NSCameraUsageDescription": "Ứng dụng cần camera để quét mã QR",
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
       }
     },
     "android": {
@@ -52,7 +55,7 @@
       "expo-asset"
     ],
     "extra": {
-      "apiBaseUrl": "http://10.0.2.2:8080"
+      "apiBaseUrl": ""
     }
   }
 }

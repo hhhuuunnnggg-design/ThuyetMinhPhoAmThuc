@@ -11,7 +11,8 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Haptics from "expo-haptics";
-import { api } from "../services/api";
+import api from "../services/api";
+import { unwrapEntityResponse } from "../utils/apiResponse";
 import { POI } from "../types";
 
 type RootStackParamList = {
@@ -44,7 +45,7 @@ const QRScannerScreen: React.FC = () => {
       // Thử tìm theo QR code
       try {
         const res: any = await api.get(`/api/v1/app/pois/qr/${data}`);
-        poi = res.data?.data || res.data?.result;
+        poi = unwrapEntityResponse<POI>(res.data);
       } catch {}
 
       // Thử tìm theo ID
@@ -53,7 +54,7 @@ const QRScannerScreen: React.FC = () => {
           const id = parseInt(data);
           if (!isNaN(id)) {
             const res: any = await api.get(`/api/v1/app/pois/${id}`);
-            poi = res.data?.data || res.data?.result;
+            poi = unwrapEntityResponse<POI>(res.data);
           }
         } catch {}
       }

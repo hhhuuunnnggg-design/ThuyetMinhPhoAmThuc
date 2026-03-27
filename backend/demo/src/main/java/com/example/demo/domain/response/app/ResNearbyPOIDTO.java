@@ -2,6 +2,7 @@ package com.example.demo.domain.response.app;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Map;
 
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -14,8 +15,16 @@ import lombok.experimental.FieldDefaults;
 public class ResNearbyPOIDTO {
 
     Long id;
+    Long groupId;
+    String groupKey;
     String foodName;
     String imageUrl;
+
+    /**
+     * Cùng cấu trúc với {@link ResPOIDTO#getAudios()} — app cần để phát TTS / narration/start.
+     */
+    Map<String, ResPOIDTO.ResAudioInfoDTO> audios;
+
     Double latitude;
     Double longitude;
     Float triggerRadiusMeters;
