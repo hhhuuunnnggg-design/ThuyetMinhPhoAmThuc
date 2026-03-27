@@ -211,6 +211,20 @@ export const getActiveNarrationsAPI = () => {
   return axios.get<IBackendRes<ActiveNarration[]>>(API_ENDPOINTS.APP.DASHBOARD_ACTIVE);
 };
 
+export interface TopPOI {
+  poiId: number;
+  poiName: string;
+  address: string | null;
+  totalListens: number;
+  todayListens: number;
+  rank: number;
+}
+
+export const getTopPOIsAPI = (from: string, to: string, limit: number = 10) => {
+  const q = new URLSearchParams({ from, to, limit: String(limit) });
+  return axios.get<IBackendRes<TopPOI[]>>(`${API_ENDPOINTS.ADMIN.DASHBOARD_TOP_POIS}?${q.toString()}`);
+};
+
 export const getActiveCountNearbyAPI = (lat: number, lng: number, radiusKm = 2) => {
   return axios.get<IBackendRes<number>>(
     `${API_ENDPOINTS.APP.DASHBOARD_ACTIVE_COUNT}?lat=${lat}&lng=${lng}&radiusKm=${radiusKm}`

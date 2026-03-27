@@ -13,7 +13,7 @@ import { RouteProp, useRoute, useNavigation } from "@react-navigation/native";
 import { Audio } from "expo-av";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Haptics from "expo-haptics";
-import api, { getAudioStreamUrl } from "../services/api";
+import api, { getAudioStreamUrl, logNarration } from "../services/api";
 import { storageService } from "../services/storage";
 import { deviceService } from "../services/device";
 import { offlineDbService } from "../services/offlineDb";
@@ -40,6 +40,8 @@ const POIDetailScreen: React.FC = () => {
   const [deviceConfig, setDeviceConfig] = useState<DeviceConfig | null>(null);
   const [isInRange, setIsInRange] = useState(false);
   const audioRef = useRef<Audio.Sound | null>(null);
+  const narrLogStartMsRef = useRef<number | null>(null);
+  const narrLogAudioIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     loadPreferences();
@@ -113,6 +115,10 @@ const POIDetailScreen: React.FC = () => {
 
       await newSound.playAsync();
 
+      const t0 = Date.now();
+      narrLogStartMsRef.current = t0;
+      narrLogAudioIdRef.current = audio.audioId;
+
       // Notify backend (chỉ khi online)
       try {
         const deviceId = await deviceService.getDeviceId();
@@ -126,8 +132,34 @@ const POIDetailScreen: React.FC = () => {
 
       newSound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
+          const startMs = narrLogStartMsRef.current;
+          const aid = narrLogAudioIdRef.current;
+          narrLogStartMsRef.current = null;
+          narrLogAudioIdRef.current = null;
+          let durSec: number | undefined;
+          if (typeof status.durationMillis === "number") {
+            durSec = Math.round(status.durationMillis / 1000);
+          } else if (startMs != null) {
+            durSec = Math.round((Date.now() - startMs) / 1000);
+          }
+          if (startMs != null && aid != null) {
+            void (async () => {
+              try {
+                const deviceId = await deviceService.getDeviceId();
+                await logNarration({
+                  deviceId,
+                  ttsAudioId: aid,
+                  playedAt: startMs,
+                  durationSeconds: durSec,
+                  status: "COMPLETED",
+                });
+              } catch {
+                /* ignore */
+              }
+            })();
+          }
           setPlayingAudioId(null);
-          handleAudioEnd(audio);
+          void handleAudioEnd(audio);
         }
       });
     } catch (error: any) {
@@ -147,6 +179,24 @@ const POIDetailScreen: React.FC = () => {
   };
 
   const unloadAudio = async () => {
+    const startMs = narrLogStartMsRef.current;
+    const aid = narrLogAudioIdRef.current;
+    narrLogStartMsRef.current = null;
+    narrLogAudioIdRef.current = null;
+    if (startMs != null && aid != null) {
+      try {
+        const deviceId = await deviceService.getDeviceId();
+        await logNarration({
+          deviceId,
+          ttsAudioId: aid,
+          playedAt: startMs,
+          durationSeconds: Math.round((Date.now() - startMs) / 1000),
+          status: "SKIPPED",
+        });
+      } catch {
+        /* ignore */
+      }
+    }
     if (audioRef.current) {
       try {
         await audioRef.current.unloadAsync();

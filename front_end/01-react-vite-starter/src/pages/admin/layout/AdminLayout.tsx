@@ -8,6 +8,7 @@ import {
   EnvironmentOutlined,
   FileTextOutlined,
   GlobalOutlined,
+  CrownOutlined,
   HeartTwoTone,
   LockOutlined,
   MenuFoldOutlined,
@@ -119,6 +120,11 @@ const AdminLayout = () => {
       label: <Link to={ROUTES.ADMIN.DASHBOARD_REALTIME}>Dashboard Real-time</Link>,
       key: "dashboard-realtime",
       icon: <DashboardOutlined />,
+    },
+    {
+      label: <Link to={ROUTES.ADMIN.TOP_POIS}>Top Địa Điểm Nghe Nhiều</Link>,
+      key: "top-pois",
+      icon: <CrownOutlined style={{ color: "#faad14" }} />,
     },
     {
       label: <span>Quản lý</span>,

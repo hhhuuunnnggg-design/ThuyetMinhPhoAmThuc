@@ -1,9 +1,11 @@
 package com.example.demo.service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import com.example.demo.domain.response.admin.ResDashboardDTO;
 import com.example.demo.domain.response.admin.ResLoadTestResultDTO;
+import com.example.demo.domain.response.admin.ResTopPOIDTO;
 import com.example.demo.domain.response.admin.ResTranslationStatsDTO;
 
 public interface AdminDashboardService {
@@ -17,6 +19,15 @@ public interface AdminDashboardService {
      * Danh sách POI + số người đang nghe (cho admin theo dõi real-time).
      */
     List<ResDashboardDTO.POIQueueCount> getPOIQueueCounts();
+
+    /**
+     * Top POIs được nghe nhiều nhất (theo calendar ngày, timezone server).
+     *
+     * @param from  ngày bắt đầu (inclusive); nếu cả {@code from} và {@code to} đều null thì mặc định 7 ngày gần nhất
+     * @param to    ngày kết thúc (inclusive)
+     * @param limit số lượng kết quả trả về (mặc định 10)
+     */
+    List<ResTopPOIDTO> getTopPOIsByNarration(LocalDate from, LocalDate to, Integer limit);
 
     /**
      * Thống kê dịch thuật.

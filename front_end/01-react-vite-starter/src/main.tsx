@@ -24,6 +24,7 @@ import TTSAudioGroupsPage from "./pages/admin/TTSAudioGroup/TTSAudioGroupsPage";
 import AdminPOIsPage from "./pages/admin/POI/AdminPOIsPage";
 import AdminRestaurantsPage from "./pages/admin/Restaurant/AdminRestaurantsPage";
 import AdminDashboardPage from "./pages/admin/Dashboard/AdminDashboardPage";
+import AdminTopPOIsPage from "./pages/admin/Dashboard/AdminTopPOIsPage";
 
 import { ROUTES, STORAGE_KEYS } from "@/constants";
 import { fetchAccountThunk } from "@/redux/slice/auth.slice";
@@ -85,6 +86,10 @@ const router = createBrowserRouter([
       {
         path: "dashboard-realtime",
         element: <AdminDashboardPage />,
+      },
+      {
+        path: "top-pois",
+        element: <AdminTopPOIsPage />,
       },
       {
         path: "pois",

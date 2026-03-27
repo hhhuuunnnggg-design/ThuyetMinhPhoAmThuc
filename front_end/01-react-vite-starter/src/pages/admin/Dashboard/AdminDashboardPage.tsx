@@ -31,8 +31,8 @@ const AdminDashboardPage = () => {
   }, []);
 
   useEffect(() => {
-    fetchActive();
-    pollingRef.current = setInterval(fetchActive, 5000);
+    void fetchActive();
+    pollingRef.current = setInterval(() => void fetchActive(), 5000);
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
@@ -86,8 +86,8 @@ const AdminDashboardPage = () => {
           s === "PLAYING"
             ? "processing"
             : s === "COMPLETED"
-            ? "success"
-            : "warning";
+              ? "success"
+              : "warning";
         return <Tag color={color}>{s}</Tag>;
       },
     },
@@ -106,7 +106,6 @@ const AdminDashboardPage = () => {
     },
   ];
 
-  // Group by POI for summary
   const byPOI = activeNarrations.reduce<Record<string, ActiveNarration[]>>(
     (acc, n) => {
       (acc[n.poiName] ||= []).push(n);
@@ -128,14 +127,16 @@ const AdminDashboardPage = () => {
         <h2 style={{ margin: 0 }}>Dashboard Real-time</h2>
         <Tooltip title="Làm mới">
           <ReloadOutlined
-            onClick={fetchActive}
+            onClick={() => {
+              setLoading(true);
+              void fetchActive().finally(() => setLoading(false));
+            }}
             style={{ fontSize: 18, cursor: "pointer" }}
             spin={loading}
           />
         </Tooltip>
       </div>
 
-      {/* Summary cards */}
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={6}>
           <Card>
@@ -169,24 +170,19 @@ const AdminDashboardPage = () => {
           <Card>
             <Statistic
               title="Ngôn ngữ đang phát"
-              value={[
-                ...new Set(activeNarrations.map((n) => n.languageCode)),
-              ].length}
+              value={[...new Set(activeNarrations.map((n) => n.languageCode))].length}
               suffix="ngôn ngữ"
             />
           </Card>
         </Col>
       </Row>
 
-      {/* POI summary */}
       <Row gutter={16} style={{ marginBottom: 24 }}>
         {Object.entries(byPOI).map(([poiName, narrations]) => (
           <Col span={6} key={poiName}>
             <Card
               size="small"
-              title={
-                <span style={{ fontWeight: 600 }}>{poiName}</span>
-              }
+              title={<span style={{ fontWeight: 600 }}>{poiName}</span>}
               extra={
                 <Badge
                   status="processing"
@@ -226,7 +222,6 @@ const AdminDashboardPage = () => {
         ))}
       </Row>
 
-      {/* Live table */}
       <Card title="Danh sách người đang nghe (auto-refresh 5s)">
         <Table
           dataSource={activeNarrations.filter((n) => n.status === "PLAYING")}

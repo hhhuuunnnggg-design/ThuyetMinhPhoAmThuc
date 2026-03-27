@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import com.example.demo.domain.POI;
@@ -23,6 +24,7 @@ import com.example.demo.domain.response.admin.ResDashboardDTO;
 import com.example.demo.domain.response.admin.ResDashboardDTO.POIQueueCount;
 import com.example.demo.domain.response.admin.ResLoadTestResultDTO;
 import com.example.demo.domain.response.admin.ResLoadTestResultDTO.PhaseLatency;
+import com.example.demo.domain.response.admin.ResTopPOIDTO;
 import com.example.demo.domain.response.admin.ResTranslationStatsDTO;
 import com.example.demo.repository.ActiveNarrationRepository;
 import com.example.demo.repository.DeviceConfigRepository;
@@ -128,6 +130,53 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                     .todayCount(todayCount)
                     .todayRevenue(revenue != null ? revenue : 0L)
                     .build();
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ResTopPOIDTO> getTopPOIsByNarration(LocalDate fromDate, LocalDate toDate, Integer limit) {
+        ZoneId z = ZoneId.systemDefault();
+        LocalDate today = LocalDate.now(z);
+        if (fromDate == null && toDate == null) {
+            fromDate = today.minusDays(6);
+            toDate = today;
+        } else if (fromDate == null) {
+            fromDate = toDate;
+        } else if (toDate == null) {
+            toDate = today;
+        }
+        if (toDate.isBefore(fromDate)) {
+            LocalDate tmp = fromDate;
+            fromDate = toDate;
+            toDate = tmp;
+        }
+
+        Instant fromInst = fromDate.atStartOfDay(z).toInstant();
+        Instant toExclusive = toDate.plusDays(1).atStartOfDay(z).toInstant();
+        int topLimit = (limit != null && limit > 0) ? limit : 10;
+
+        List<Object[]> topRows = narrationLogRepository.findTopPOIsByNarrationCount(
+                fromInst, toExclusive, PageRequest.of(0, topLimit));
+
+        Instant todayStart = today.atStartOfDay(z).toInstant();
+
+        int[] rank = { 1 };
+        return topRows.stream().map(row -> {
+            Long poiId = ((Number) row[0]).longValue();
+            Long cnt = ((Number) row[1]).longValue();
+            POI poi = poiRepository.findById(poiId).orElse(null);
+            long todayCount = poiId != null
+                    ? narrationLogRepository.countByPoiIdSince(poiId, todayStart)
+                    : 0L;
+            ResTopPOIDTO dto = ResTopPOIDTO.of(
+                    poiId,
+                    poi != null ? poi.getFoodName() : null,
+                    poi != null ? poi.getAddress() : null,
+                    cnt,
+                    todayCount,
+                    rank[0]++
+            );
+            return dto;
         }).collect(Collectors.toList());
     }
 

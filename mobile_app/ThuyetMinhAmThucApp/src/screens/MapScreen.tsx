@@ -21,7 +21,7 @@ import { Audio } from "expo-av";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Haptics from "expo-haptics";
-import api, { getAudioStreamUrl, stopCurrentNarration } from "../services/api";
+import api, { getAudioStreamUrl, logNarration, stopCurrentNarration } from "../services/api";
 import { deviceService } from "../services/device";
 import { storageService } from "../services/storage";
 import { offlineDbService } from "../services/offlineDb";
@@ -449,6 +449,9 @@ const MapScreen: React.FC<MapScreenProps> = ({
   const webviewRef = useRef<WebView>(null);
   const iframeRef = useRef<any>(null);
   const audioRef = useRef<Audio.Sound | null>(null);
+  /** Theo dõi phiên phát để gọi narration/log — Top POI trên admin đếm từ bảng này. */
+  const narrationLogStartMsRef = useRef<number | null>(null);
+  const narrationLogAudioIdRef = useRef<number | null>(null);
 
   const [mockEnabled, setMockEnabled] = useState(true);
   const [mockLat, setMockLat] = useState<number | null>(null);
@@ -704,6 +707,26 @@ const MapScreen: React.FC<MapScreenProps> = ({
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
         if (audioRef.current) {
+          const prevStart = narrationLogStartMsRef.current;
+          const prevAid = narrationLogAudioIdRef.current;
+          narrationLogStartMsRef.current = null;
+          narrationLogAudioIdRef.current = null;
+          if (prevAid != null && prevStart != null) {
+            void (async () => {
+              try {
+                const deviceId = await deviceService.getDeviceId();
+                await logNarration({
+                  deviceId,
+                  ttsAudioId: prevAid,
+                  playedAt: prevStart,
+                  durationSeconds: Math.round((Date.now() - prevStart) / 1000),
+                  status: "SKIPPED",
+                });
+              } catch {
+                /* ignore */
+              }
+            })();
+          }
           await audioRef.current.unloadAsync();
           audioRef.current = null;
         }
@@ -737,8 +760,39 @@ const MapScreen: React.FC<MapScreenProps> = ({
           console.warn("startNarration failed:", e);
         }
 
+        const playAtMs = Date.now();
+        narrationLogStartMsRef.current = playAtMs;
+        narrationLogAudioIdRef.current = picked.info.audioId;
+        /* Không gọi log PLAYING: admin Top POI chỉ đếm COMPLETED/SKIPPED (tránh trùng với web). */
+
         sound.setOnPlaybackStatusUpdate((status: any) => {
           if (status.isLoaded && status.didJustFinish) {
+            const startMs = narrationLogStartMsRef.current;
+            const aid = narrationLogAudioIdRef.current;
+            narrationLogStartMsRef.current = null;
+            narrationLogAudioIdRef.current = null;
+            let durSec: number | undefined;
+            if (typeof status.durationMillis === "number") {
+              durSec = Math.round(status.durationMillis / 1000);
+            } else if (startMs != null) {
+              durSec = Math.round((Date.now() - startMs) / 1000);
+            }
+            if (aid != null && startMs != null) {
+              void (async () => {
+                try {
+                  const deviceId = await deviceService.getDeviceId();
+                  await logNarration({
+                    deviceId,
+                    ttsAudioId: aid,
+                    playedAt: startMs,
+                    durationSeconds: durSec,
+                    status: "COMPLETED",
+                  });
+                } catch {
+                  /* ignore */
+                }
+              })();
+            }
             void stopCurrentNarration("COMPLETED").catch(() => {});
             setPlayingLang(null);
             storageService.addToNarrationHistory({
@@ -788,6 +842,24 @@ const MapScreen: React.FC<MapScreenProps> = ({
 
   const handlePOIExit = useCallback((_fromPoiId: number, toPoiId: number | null) => {
     void (async () => {
+      const startMs = narrationLogStartMsRef.current;
+      const aid = narrationLogAudioIdRef.current;
+      narrationLogStartMsRef.current = null;
+      narrationLogAudioIdRef.current = null;
+      if (aid != null && startMs != null) {
+        try {
+          const deviceId = await deviceService.getDeviceId();
+          await logNarration({
+            deviceId,
+            ttsAudioId: aid,
+            playedAt: startMs,
+            durationSeconds: Math.round((Date.now() - startMs) / 1000),
+            status: "SKIPPED",
+          });
+        } catch {
+          /* ignore */
+        }
+      }
       try {
         if (audioRef.current) {
           await audioRef.current.stopAsync();
@@ -816,6 +888,24 @@ const MapScreen: React.FC<MapScreenProps> = ({
   });
 
   const stopAudio = useCallback(async () => {
+    const startMs = narrationLogStartMsRef.current;
+    const aid = narrationLogAudioIdRef.current;
+    narrationLogStartMsRef.current = null;
+    narrationLogAudioIdRef.current = null;
+    if (aid != null && startMs != null) {
+      try {
+        const deviceId = await deviceService.getDeviceId();
+        await logNarration({
+          deviceId,
+          ttsAudioId: aid,
+          playedAt: startMs,
+          durationSeconds: Math.round((Date.now() - startMs) / 1000),
+          status: "SKIPPED",
+        });
+      } catch {
+        /* ignore */
+      }
+    }
     try {
       await stopCurrentNarration("SKIPPED");
     } catch {
