@@ -57,7 +57,8 @@ export interface AudioInfo {
 }
 
 export interface NearbyPOI extends POI {
-  distanceMeters: number;
+  /** Khoảng cách từ vị trí người dùng (m); null/undefined nếu chưa tính được */
+  distanceMeters?: number | null;
   activeListenerCount: number;
   downloadedOffline: boolean;
 }

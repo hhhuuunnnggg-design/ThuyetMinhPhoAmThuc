@@ -19,14 +19,67 @@ import { deviceService } from "../services/device";
 import { storageService } from "../services/storage";
 import { offlineDbService } from "../services/offlineDb";
 import { offlineSyncService } from "../services/offlineSync";
-import { APP_CONFIG, LANGUAGE_COLORS } from "../constants";
+import { APP_CONFIG } from "../constants";
 import { POI, NearbyPOI, DeviceConfig } from "../types";
+import { haversineDistance, formatDistance } from "../utils/geo";
 
 type RootStackParamList = {
   Home: undefined;
   POIDetail: { poi: POI };
   QRScanner: undefined;
 };
+
+function sortPoisByDistanceFromUser(
+  list: NearbyPOI[],
+  userLat: number | undefined,
+  userLng: number | undefined
+): NearbyPOI[] {
+  if (
+    userLat == null ||
+    userLng == null ||
+    Number.isNaN(userLat) ||
+    Number.isNaN(userLng)
+  ) {
+    return [...list];
+  }
+
+  const enriched = list.map((p) => {
+    const plat = p.latitude;
+    const plng = p.longitude;
+    if (plat == null || plng == null || Number.isNaN(plat) || Number.isNaN(plng)) {
+      return { ...p, distanceMeters: null };
+    }
+    const d = haversineDistance(userLat, userLng, plat, plng);
+    return { ...p, distanceMeters: d };
+  });
+
+  enriched.sort((a, b) => {
+    const da = a.distanceMeters;
+    const db = b.distanceMeters;
+    if (da == null && db == null) return 0;
+    if (da == null) return 1;
+    if (db == null) return -1;
+    return da - db;
+  });
+
+  return enriched;
+}
+
+/**
+ * Màu khoảng cách theo nhiệt độ:
+ *   < 100m   → xanh đậm  (đang trong tầm kích hoạt)
+ *   100–500m → xanh      (rất gần)
+ *   500–1km  → cam       (khá gần)
+ *   1–2km    → đỏ-cam   (xa)
+ *   > 2km    → đỏ       (rất xa)
+ */
+function getDistanceColor(meters: number): string {
+  if (meters < 100) return "#2e7d32";
+  if (meters < 500) return "#388e3c";
+  if (meters < 1000) return "#f57c00";
+  if (meters < 2000) return "#e53935";
+  return "#b71c1c";
+}
 
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -74,7 +127,7 @@ const HomeScreen: React.FC = () => {
         setPoiSource("server");
       }
 
-      setPois(nearbyPois);
+      setPois(sortPoisByDistanceFromUser(nearbyPois, lat, lng));
     } catch (error) {
       // API lỗi → chỉ fallback SQLite nếu bật offline và thiết bị đủ điều kiện
       console.error("Load POIs error:", error);
@@ -84,7 +137,7 @@ const HomeScreen: React.FC = () => {
         if (!(offlineEnabled && offlineCapable)) return;
         const cachedPOIs = await offlineDbService.getAllPOIs();
         if (cachedPOIs.length > 0) {
-          setPois(cachedPOIs as NearbyPOI[]);
+          setPois(sortPoisByDistanceFromUser(cachedPOIs as NearbyPOI[], lat, lng));
           setPoiSource("cache");
         }
       } catch {}
@@ -143,11 +196,6 @@ const HomeScreen: React.FC = () => {
     navigation.navigate("POIDetail", { poi: poi as unknown as POI });
   };
 
-  const formatDistance = (meters: number) => {
-    if (meters < 1000) return `${Math.round(meters)}m`;
-    return `${(meters / 1000).toFixed(1)}km`;
-  };
-
   const renderPOIItem = ({ item }: { item: NearbyPOI }) => (
     <TouchableOpacity
       style={styles.poiCard}
@@ -170,11 +218,18 @@ const HomeScreen: React.FC = () => {
         <Text style={styles.poiName} numberOfLines={1}>
           {item.foodName || "POI #" + item.id}
         </Text>
-        {item.address && (
+        {item.distanceMeters != null && Number.isFinite(item.distanceMeters) ? (
+          <Text
+            style={[styles.poiDistance, { color: getDistanceColor(item.distanceMeters) }]}
+            numberOfLines={1}
+          >
+            📍 {formatDistance(item.distanceMeters)} từ bạn
+          </Text>
+        ) : item.address ? (
           <Text style={styles.poiAddress} numberOfLines={1}>
             📍 {item.address}
           </Text>
-        )}
+        ) : null}
         {item.category && (
           <View style={styles.categoryBadge}>
             <Text style={styles.categoryText}>{item.category}</Text>
@@ -183,11 +238,6 @@ const HomeScreen: React.FC = () => {
       </View>
 
       <View style={styles.poiRight}>
-        {item.distanceMeters != null && (
-          <Text style={styles.distanceText}>
-            {formatDistance(item.distanceMeters)}
-          </Text>
-        )}
         {item.activeListenerCount > 0 && (
           <View style={styles.liveBadge}>
             <Text style={styles.liveBadgeText}>🔊 {item.activeListenerCount}</Text>
@@ -376,6 +426,12 @@ const styles = StyleSheet.create({
     color: "#888",
     marginTop: 4,
   },
+  poiDistance: {
+    fontSize: 12,
+    color: "#ff6b35",
+    fontWeight: "600",
+    marginTop: 4,
+  },
   categoryBadge: {
     marginTop: 6,
     alignSelf: "flex-start",
@@ -391,11 +447,6 @@ const styles = StyleSheet.create({
   poiRight: {
     alignItems: "flex-end",
     justifyContent: "center",
-  },
-  distanceText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#ff6b35",
   },
   liveBadge: {
     marginTop: 6,
