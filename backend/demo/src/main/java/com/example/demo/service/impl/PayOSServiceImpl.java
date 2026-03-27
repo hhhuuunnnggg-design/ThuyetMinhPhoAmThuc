@@ -117,7 +117,23 @@ public class PayOSServiceImpl implements PayOSService {
             return result;
         }
 
-        long orderCode = payment.getId() != null ? payment.getId() : System.currentTimeMillis() / 1000;
+        // orderCode phải LỚN HƠN 0 và DUY NHẤT cho mỗi lần gọi PayOS.
+        // PayOS sẽ từ chối nếu orderCode đã tồn tại trong hệ thống của họ.
+        // Do mỗi Payment đại diện cho một giao dịch độc lập (bấm thanh toán → tạo payment mới),
+        // ta ghép: paymentId + nanoTime để đảm bảo không bao giờ trùng.
+        long orderCode;
+        if (payment.getId() != null) {
+            // Lấy 4 chữ số cuối của nanoTime (đủ random, không tràn long)
+            int nanoTail = (int) (System.nanoTime() % 10000);
+            if (nanoTail < 0) nanoTail = -nanoTail;
+            orderCode = (long) payment.getId() * 10000 + nanoTail;
+        } else {
+            orderCode = System.currentTimeMillis();
+        }
+        if (orderCode <= 0) {
+            orderCode = System.currentTimeMillis();
+        }
+
         String base = baseUrlNormalized();
         String returnUrl = base + "/payment/success";
         String cancelUrl = base + "/payment/cancel";
