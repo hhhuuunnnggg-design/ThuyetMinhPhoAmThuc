@@ -15,7 +15,10 @@ import { createPayment } from "../services/api";
 import { deviceService } from "../services/device";
 import { POI, Payment } from "../types";
 
-type PaymentRoute = RouteProp<{ Payment: { poi: POI; amount: number } }, "Payment">;
+type PaymentRoute = RouteProp<
+  { Payment: { poi: POI; amount: number; quantity?: number; unitAmount?: number } },
+  "Payment"
+>;
 
 /**
  * PayOS API trả `qrCode` là chuỗi payload VietQR/EMV (vd. bắt đầu 000201...),
@@ -46,7 +49,9 @@ function qrCodeToImageUri(qr: string | null | undefined): string | null {
 
 const PaymentScreen: React.FC = () => {
   const route = useRoute<PaymentRoute>();
-  const { poi, amount } = route.params;
+  const { poi, amount, quantity = 1, unitAmount } = route.params;
+  const unitDisplay =
+    quantity > 1 ? unitAmount ?? Math.round(amount / quantity) : unitAmount ?? amount;
 
   const [loading, setLoading] = useState(true);
   const [payment, setPayment] = useState<Payment | null>(null);
@@ -57,11 +62,17 @@ const PaymentScreen: React.FC = () => {
     (async () => {
       try {
         const userId = await deviceService.getDeviceId();
+        const desc =
+          poi.foodName && quantity > 1
+            ? `Ủng hộ: ${poi.foodName} (×${quantity})`
+            : poi.foodName
+              ? `Ủng hộ: ${poi.foodName}`
+              : undefined;
         const data = await createPayment({
           poiId: poi.id,
           userId,
           amount,
-          description: poi.foodName ? `Ủng hộ: ${poi.foodName}` : undefined,
+          description: desc,
         });
         if (!cancelled) {
           setPayment(data as Payment);
@@ -76,7 +87,7 @@ const PaymentScreen: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [poi.id, amount, poi.foodName]);
+  }, [poi.id, amount, poi.foodName, quantity]);
 
   const qrPayload = payment?.payosQrCode;
   const showMatrixQr = qrPayload && isRenderableAsQrMatrix(qrPayload);
@@ -85,10 +96,26 @@ const PaymentScreen: React.FC = () => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>{poi.foodName ?? "Thanh toán"}</Text>
-      <Text style={styles.amount}>
-        Số tiền: {amount.toLocaleString("vi-VN")} ₫
-      </Text>
+      <View style={styles.summaryCard}>
+        <Text style={styles.title}>{poi.foodName ?? "Thanh toán"}</Text>
+        {quantity > 1 ? (
+          <>
+            <View style={styles.summaryLine}>
+              <Text style={styles.summaryMuted}>Đơn giá</Text>
+              <Text style={styles.summaryValue}>{unitDisplay.toLocaleString("vi-VN")} ₫</Text>
+            </View>
+            <View style={styles.summaryLine}>
+              <Text style={styles.summaryMuted}>Số suất</Text>
+              <Text style={styles.summaryValue}>×{quantity}</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+          </>
+        ) : null}
+        <View style={styles.summaryLine}>
+          <Text style={styles.summaryTotalLabel}>Tổng thanh toán</Text>
+          <Text style={styles.amount}>{amount.toLocaleString("vi-VN")} ₫</Text>
+        </View>
+      </View>
 
       {loading && (
         <View style={styles.center}>
@@ -154,10 +181,32 @@ const PaymentScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: "#f5f5f5" },
   content: { padding: 20, paddingBottom: 40 },
-  title: { fontSize: 20, fontWeight: "700", color: "#222" },
-  amount: { fontSize: 16, color: "#ff6b35", marginTop: 8, marginBottom: 16 },
+  summaryCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  title: { fontSize: 20, fontWeight: "700", color: "#222", marginBottom: 14 },
+  summaryLine: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  summaryMuted: { fontSize: 14, color: "#777" },
+  summaryValue: { fontSize: 15, fontWeight: "600", color: "#333" },
+  summaryDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "#e5e5e5",
+    marginVertical: 10,
+  },
+  summaryTotalLabel: { fontSize: 15, fontWeight: "600", color: "#444" },
+  amount: { fontSize: 22, fontWeight: "800", color: "#ff6b35" },
   center: { alignItems: "center", paddingVertical: 24 },
   hint: { marginTop: 12, color: "#888", fontSize: 14 },
   boxWarn: {

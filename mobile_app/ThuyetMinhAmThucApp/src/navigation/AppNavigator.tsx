@@ -22,7 +22,7 @@ export type RootStackParamList = {
   HomeTabs: undefined;
   POIDetail: { poi: POI };
   QRScanner: undefined;
-  Payment: { poi: POI; amount: number };
+  Payment: { poi: POI; amount: number; quantity?: number; unitAmount?: number };
 };
 
 export type TabParamList = {
@@ -152,7 +152,7 @@ const AppNavigator: React.FC = () => (
       screenOptions={{
         headerStyle: { backgroundColor: "#ff6b35" },
         headerTintColor: "#fff",
-        headerTitleStyle: { fontWeight: "bold" },
+        headerTitleStyle: { fontWeight: "bold", color: "#fff" },
       }}
     >
       <Stack.Screen

@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { RouteProp, useRoute, useNavigation } from "@react-navigation/native";
+import { RouteProp, useRoute, useNavigation, useFocusEffect } from "@react-navigation/native";
 import { Audio } from "expo-av";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Haptics from "expo-haptics";
@@ -17,7 +17,7 @@ import api, { getAudioStreamUrl, logNarration } from "../services/api";
 import { storageService } from "../services/storage";
 import { deviceService } from "../services/device";
 import { offlineDbService } from "../services/offlineDb";
-import { APP_CONFIG, LANGUAGE_LABELS, LANGUAGE_COLORS } from "../constants";
+import { LANGUAGE_LABELS } from "../constants";
 import { resolveMediaUrl } from "../utils/mediaUrl";
 import { POI, AudioInfo, DeviceConfig } from "../types";
 
@@ -25,8 +25,17 @@ type RootStackParamList = {
   Home: undefined;
   POIDetail: { poi: POI };
   QRScanner: undefined;
-  Payment: { poi: POI; amount: number };
+  Payment: { poi: POI; amount: number; quantity?: number; unitAmount?: number };
 };
+
+const MAX_ORDER_QTY = 30;
+
+/** Giá POI lưu theo VND đầy đủ (form admin: "Giá (VND)"), không phải đơn vị nghìn. */
+function unitPriceVnd(poi: POI): number {
+  if (poi.price == null) return 10000;
+  const n = Number(poi.price);
+  return Number.isFinite(n) && n > 0 ? Math.round(n) : 10000;
+}
 
 const POIDetailScreen: React.FC = () => {
   const route = useRoute<RouteProp<RootStackParamList, "POIDetail">>();
@@ -38,13 +47,23 @@ const POIDetailScreen: React.FC = () => {
   const [loadingAudio, setLoadingAudio] = useState(false);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [deviceConfig, setDeviceConfig] = useState<DeviceConfig | null>(null);
-  const [isInRange, setIsInRange] = useState(false);
+  const [orderQty, setOrderQty] = useState(1);
   const audioRef = useRef<Audio.Sound | null>(null);
   const narrLogStartMsRef = useRef<number | null>(null);
   const narrLogAudioIdRef = useRef<number | null>(null);
 
+  const loadPreferences = useCallback(async () => {
+    const lang = await storageService.getPreferredLanguage();
+    setPreferredLang(lang);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadPreferences();
+    }, [loadPreferences])
+  );
+
   useEffect(() => {
-    loadPreferences();
     checkRunningMode();
     const setupAudio = async () => {
       try {
@@ -63,22 +82,12 @@ const POIDetailScreen: React.FC = () => {
     };
   }, []);
 
-  const loadPreferences = async () => {
-    const lang = await storageService.getPreferredLanguage();
-    setPreferredLang(lang);
-  };
-
   const checkRunningMode = async () => {
     try {
       const info = await deviceService.getDeviceInfo();
       const mode = deviceService.determineRunningMode(info);
       setDeviceConfig({ runningMode: mode } as DeviceConfig);
     } catch {}
-  };
-
-  const handleLangChange = async (lang: string) => {
-    setPreferredLang(lang);
-    await storageService.setPreferredLanguage(lang);
   };
 
   const playAudio = useCallback(async (audio: AudioInfo) => {
@@ -226,11 +235,24 @@ const POIDetailScreen: React.FC = () => {
   };
 
   const handlePayment = () => {
-    navigation.navigate("Payment", { poi, amount: poi.price ? Number(poi.price) * 1000 : 10000 });
+    const unit = unitPriceVnd(poi);
+    const amount = unit * orderQty;
+    navigation.navigate("Payment", { poi, amount, quantity: orderQty, unitAmount: unit });
   };
 
+  const bumpQty = (delta: number) => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setOrderQty((q) => Math.min(MAX_ORDER_QTY, Math.max(1, q + delta)));
+  };
+
+  const unitVnd = unitPriceVnd(poi);
+  const totalVnd = unitVnd * orderQty;
+
   const audioEntries = Object.entries(poi.audios || {});
-  const currentAudio = audioEntries.find(([lang]) => lang === playingAudioId)?.[1];
+  /** Đang phát: theo track hiện tại; không phát: ưu tiên ngôn ngữ trong Cài đặt, không có thì bản đầu tiên. */
+  const playbackAudio: AudioInfo | undefined = playingAudioId
+    ? audioEntries.find(([lang]) => lang === playingAudioId)?.[1]
+    : audioEntries.find(([lang]) => lang === preferredLang)?.[1] ?? audioEntries[0]?.[1];
 
   return (
     <ScrollView style={styles.container}>
@@ -251,9 +273,10 @@ const POIDetailScreen: React.FC = () => {
       <View style={styles.infoSection}>
         <Text style={styles.foodName}>{poi.foodName || "POI #" + poi.id}</Text>
 
-        {poi.price && (
+        {poi.price != null && (
           <Text style={styles.price}>
             {Number(poi.price).toLocaleString("vi-VN")}đ
+            <Text style={styles.priceUnit}> / suất</Text>
           </Text>
         )}
 
@@ -286,73 +309,33 @@ const POIDetailScreen: React.FC = () => {
         )}
       </View>
 
-      {/* Language Selector */}
-      {audioEntries.length > 0 && (
-        <View style={styles.langSection}>
-          <Text style={styles.sectionTitle}>Chọn ngôn ngữ</Text>
-          <View style={styles.langButtons}>
-            {audioEntries.map(([lang, audio]) => (
-              <TouchableOpacity
-                key={lang}
-                style={[
-                  styles.langButton,
-                  preferredLang === lang && styles.langButtonActive,
-                  playingAudioId === lang && styles.langButtonPlaying,
-                ]}
-                onPress={() => handleLangChange(lang)}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={[
-                    styles.langDot,
-                    { backgroundColor: LANGUAGE_COLORS[lang] || "#888" },
-                  ]}
-                />
-                <Text
-                  style={[
-                    styles.langButtonText,
-                    preferredLang === lang && styles.langButtonTextActive,
-                  ]}
-                >
-                  {LANGUAGE_LABELS[lang] || lang.toUpperCase()}
-                </Text>
-                {playingAudioId === lang && (
-                  <Text style={styles.playingIndicator}>🔊</Text>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      )}
-
-      {/* Player Controls */}
+      {/* Player — ngôn ngữ theo Cài đặt (hoặc bản có sẵn đầu tiên) */}
       {audioEntries.length > 0 && (
         <View style={styles.playerSection}>
           {loadingAudio ? (
             <ActivityIndicator size="large" color="#ff6b35" />
           ) : (
             <View style={styles.playerControls}>
-              {currentAudio ? (
+              {playbackAudio ? (
                 <View style={styles.currentAudioInfo}>
+                  <Text style={styles.playerSectionLabel}>Thuyết minh</Text>
                   <Text style={styles.currentAudioLang}>
-                    {LANGUAGE_LABELS[currentAudio.languageCode] || currentAudio.languageCode}
+                    {LANGUAGE_LABELS[playbackAudio.languageCode] || playbackAudio.languageCode}
                   </Text>
-                  {currentAudio.fileSize && (
+                  {playbackAudio.fileSize && (
                     <Text style={styles.currentAudioSize}>
-                      {(currentAudio.fileSize / (1024 * 1024)).toFixed(1)} MB
+                      {(playbackAudio.fileSize / (1024 * 1024)).toFixed(1)} MB
                     </Text>
                   )}
                 </View>
-              ) : (
-                <Text style={styles.selectLangText}>Chọn ngôn ngữ để phát</Text>
-              )}
+              ) : null}
 
               <View style={styles.controlButtons}>
-                {currentAudio && (
+                {playbackAudio && (
                   <>
                     <TouchableOpacity
                       style={styles.playButton}
-                      onPress={() => playAudio(currentAudio)}
+                      onPress={() => playAudio(playbackAudio)}
                       activeOpacity={0.8}
                     >
                       <Text style={styles.playButtonText}>
@@ -377,21 +360,44 @@ const POIDetailScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Payment Button */}
-      <TouchableOpacity style={styles.payButton} onPress={handlePayment} activeOpacity={0.8}>
-        <Text style={styles.payButtonText}>💳 Ủng hộ / Thanh toán</Text>
-      </TouchableOpacity>
-
-      {/* QR định danh POI (quét để mở địa điểm) — khác với QR VietQR PayOS ở màn Thanh toán */}
-      {poi.qrCode && (
-        <View style={styles.qrSection}>
-          <Text style={styles.sectionTitle}>Mã QR địa điểm</Text>
-          <Text style={styles.qrHint}>Dùng để quét / mở POI — không phải mã thanh toán ngân hàng.</Text>
-          <View style={styles.qrPlaceholder}>
-            <Text style={styles.qrText}>ID: {poi.qrCode.substring(0, 8)}…</Text>
+      {/* Số suất + thanh toán */}
+      <View style={styles.paymentBlock}>
+        <Text style={styles.paymentBlockTitle}>Thanh toán</Text>
+        <View style={styles.qtyRow}>
+          <Text style={styles.qtyLabel}>Số suất</Text>
+          <View style={styles.qtyStepper}>
+            <TouchableOpacity
+              style={[styles.qtyBtn, orderQty <= 1 && styles.qtyBtnDisabled]}
+              onPress={() => bumpQty(-1)}
+              disabled={orderQty <= 1}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.qtyBtnText}>−</Text>
+            </TouchableOpacity>
+            <Text style={styles.qtyValue}>{orderQty}</Text>
+            <TouchableOpacity
+              style={[styles.qtyBtn, orderQty >= MAX_ORDER_QTY && styles.qtyBtnDisabled]}
+              onPress={() => bumpQty(1)}
+              disabled={orderQty >= MAX_ORDER_QTY}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.qtyBtnText}>+</Text>
+            </TouchableOpacity>
           </View>
         </View>
-      )}
+        <View style={styles.totalRow}>
+          <Text style={styles.totalLabel}>Tạm tính</Text>
+          <Text style={styles.totalAmount}>{totalVnd.toLocaleString("vi-VN")} ₫</Text>
+        </View>
+        <TouchableOpacity style={styles.payButton} onPress={handlePayment} activeOpacity={0.85}>
+          <Text style={styles.payButtonText}>💳 Thanh toán PayOS</Text>
+          <Text style={styles.payButtonSub}>
+            {orderQty > 1
+              ? `${orderQty} suất × ${unitVnd.toLocaleString("vi-VN")} ₫`
+              : "Quét QR VietQR hoặc mở link PayOS"}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       <View style={{ height: 60 }} />
     </ScrollView>
@@ -429,19 +435,28 @@ const styles = StyleSheet.create({
     color: "#ff6b35",
     marginTop: 4,
   },
+  priceUnit: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#b85a2a",
+  },
   infoRow: {
     flexDirection: "row",
-    marginTop: 12,
+    marginTop: 14,
+    alignItems: "flex-start",
   },
   infoLabel: {
     fontSize: 14,
     color: "#888",
-    width: 100,
+    minWidth: 118,
+    marginRight: 12,
+    paddingTop: 1,
   },
   infoValue: {
     fontSize: 14,
     color: "#444",
     flex: 1,
+    lineHeight: 20,
   },
   descriptionSection: {
     marginTop: 20,
@@ -453,54 +468,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   description: {
-    fontSize: 15,
-    color: "#555",
-    lineHeight: 24,
-  },
-  langSection: {
-    padding: 20,
-    backgroundColor: "#f8f9fa",
-  },
-  langButtons: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  langButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: "#fff",
-    borderWidth: 2,
-    borderColor: "#e0e0e0",
-  },
-  langButtonActive: {
-    borderColor: "#ff6b35",
-    backgroundColor: "#fff3e0",
-  },
-  langButtonPlaying: {
-    borderColor: "#22c55e",
-    backgroundColor: "#e8f5e9",
-  },
-  langDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 6,
-  },
-  langButtonText: {
-    fontSize: 13,
-    color: "#555",
-  },
-  langButtonTextActive: {
-    color: "#ff6b35",
-    fontWeight: "600",
-  },
-  playingIndicator: {
-    marginLeft: 6,
-    fontSize: 14,
+    fontSize: 16,
+    color: "#444",
+    lineHeight: 26,
   },
   playerSection: {
     padding: 20,
@@ -516,6 +486,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
+  playerSectionLabel: {
+    fontSize: 13,
+    color: "#888",
+    marginBottom: 4,
+    fontWeight: "500",
+  },
   currentAudioLang: {
     fontSize: 16,
     fontWeight: "600",
@@ -525,11 +501,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#888",
     marginTop: 4,
-  },
-  selectLangText: {
-    fontSize: 14,
-    color: "#999",
-    marginBottom: 16,
   },
   controlButtons: {
     flexDirection: "row",
@@ -559,39 +530,105 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
   },
-  payButton: {
+  paymentBlock: {
     marginHorizontal: 20,
-    marginTop: 10,
-    backgroundColor: "#e3f2fd",
-    paddingVertical: 16,
-    borderRadius: 12,
+    marginTop: 8,
+    padding: 18,
+    backgroundColor: "#fafafa",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  paymentBlockTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#333",
+    marginBottom: 14,
+  },
+  qtyRow: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+  qtyLabel: {
+    fontSize: 15,
+    color: "#555",
+    fontWeight: "500",
+  },
+  qtyStepper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e5e5e5",
+    overflow: "hidden",
+  },
+  qtyBtn: {
+    width: 48,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  qtyBtnDisabled: {
+    opacity: 0.35,
+  },
+  qtyBtnText: {
+    fontSize: 22,
+    fontWeight: "600",
+    color: "#ff6b35",
+    lineHeight: 24,
+  },
+  qtyValue: {
+    minWidth: 40,
+    textAlign: "center",
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#222",
+  },
+  totalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 4,
+    paddingBottom: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#ddd",
+    marginBottom: 16,
+  },
+  totalLabel: {
+    fontSize: 14,
+    color: "#666",
+  },
+  totalAmount: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#ff6b35",
+  },
+  payButton: {
+    backgroundColor: "#ff6b35",
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    shadowColor: "#ff6b35",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
   payButtonText: {
-    color: "#1976d2",
-    fontSize: 16,
-    fontWeight: "600",
+    color: "#fff",
+    fontSize: 17,
+    fontWeight: "700",
   },
-  qrSection: {
-    padding: 20,
-    alignItems: "center",
-  },
-  qrHint: {
+  payButtonSub: {
+    color: "rgba(255,255,255,0.92)",
     fontSize: 12,
-    color: "#888",
+    marginTop: 6,
     textAlign: "center",
-    marginBottom: 10,
     paddingHorizontal: 8,
-  },
-  qrPlaceholder: {
-    padding: 20,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 12,
-  },
-  qrText: {
-    fontSize: 12,
-    color: "#999",
-    fontFamily: "monospace",
   },
 });
 

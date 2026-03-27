@@ -125,7 +125,7 @@ type RootStackParamList = {
   HomeTabs: undefined;
   POIDetail: { poi: POI };
   QRScanner: undefined;
-  Payment: { poi: POI; amount: number };
+  Payment: { poi: POI; amount: number; quantity?: number; unitAmount?: number };
 };
 
 interface MapScreenProps {

@@ -169,7 +169,7 @@ const AdminPOIsPage = () => {
                 try {
                   const userId = user?.email ? `admin:${user.email}` : `admin-web-${r.id}`;
                   const amount =
-                    r.price != null && Number(r.price) > 0 ? Math.round(Number(r.price) * 1000) : 10_000;
+                    r.price != null && Number(r.price) > 0 ? Math.round(Number(r.price)) : 10_000;
                   const description = r.foodName ? `Ủng hộ: ${r.foodName}` : undefined;
                   const payment = await createAppPaymentAPI({
                     poiId: r.id,
