@@ -24,7 +24,7 @@ interface HistoryEntry {
 
 type RootStackParamList = {
   HomeTabs: undefined;
-  POIDetail: { poi: POI };
+  POIDetail: { poi: POI; openedFromQr?: boolean };
   QRScanner: undefined;
   Payment: { poi: POI; amount: number; quantity?: number; unitAmount?: number };
 };

@@ -4,10 +4,8 @@ import {
   parseAdminPOIListResponse,
   type AdminPOI,
 } from "@/api/adminPoi.api";
-import { createAppPaymentAPI } from "@/api/appPayment.api";
 import { getImageUrl } from "@/api/tts.api";
 import { ROUTES } from "@/constants";
-import type { RootState } from "@/redux/store";
 import { logger } from "@/utils/logger";
 import {
   DeleteOutlined,
@@ -16,11 +14,10 @@ import {
   ReloadOutlined,
 } from "@ant-design/icons";
 import ProTable from "@ant-design/pro-table";
-import { Alert, Button, message, Popconfirm, Space, Spin, Tag, Tooltip, Image } from "antd";
-import { QRCodeCanvas } from "qrcode.react";
+import { Alert, Button, message, Popconfirm, Space, Tag, Tooltip, Image } from "antd";
+import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import { saveAs } from "file-saver";
 import { useRef, useState } from "react";
-import { useSelector } from "react-redux";
 import UpsertPOIModal from "./UpsertPOIModal";
 
 /**
@@ -38,9 +35,6 @@ const AdminPOIsPage = () => {
   const actionRef = useRef<any>();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [payingPoiId, setPayingPoiId] = useState<number | null>(null);
-  const user = useSelector((s: RootState) => s.auth.user);
-
   const openCreate = () => {
     setEditingId(null);
     setModalOpen(true);
@@ -62,8 +56,8 @@ const AdminPOIsPage = () => {
           <>
             POI dùng cho app & bản đồ: <strong>địa chỉ, GPS, thông tin ẩm thực, mã QR</strong>, liên kết nhà hàng & người tạo.
             <br />
-            <strong>Quét QR</strong> = mở trang địa điểm / app. <strong>Click vào QR</strong> = tạo link PayOS và mở trang thanh toán (giống nút ủng hộ trên app).
-            TTSAudioGroup chỉ chứa audio đa ngôn ngữ cho POI.
+            <strong>Mã QR</strong> chỉ dùng để khách <strong>quét bằng app</strong> → mở đúng địa điểm, xem thông tin và nghe thuyết minh (không gắn PayOS).
+            Dùng <strong>Tải PNG</strong> để in QR dán bàn/quầy. TTSAudioGroup chứa audio đa ngôn ngữ cho POI.
           </>
         }
       />
@@ -162,43 +156,6 @@ const AdminPOIsPage = () => {
               if (qr == null || qr === "") return "—";
               const s = String(qr).trim();
               const payload = buildPoiQrPayload(s);
-              const paying = payingPoiId === r.id;
-
-              const openPayOS = async () => {
-                if (payingPoiId != null) return;
-                setPayingPoiId(r.id);
-                try {
-                  const userId = user?.email ? `admin:${user.email}` : `admin-web-${r.id}`;
-                  const amount =
-                    r.price != null && Number(r.price) > 0 ? Math.round(Number(r.price)) : 10_000;
-                  const description = r.foodName ? `Ủng hộ: ${r.foodName}` : undefined;
-                  const payment = await createAppPaymentAPI({
-                    poiId: r.id,
-                    userId,
-                    amount,
-                    description,
-                  });
-                  const link = payment?.payosPaymentLink?.trim();
-                  if (link) {
-                    window.open(link, "_blank", "noopener,noreferrer");
-                    if (link.includes("/mock/")) {
-                      message.warning("PayOS đang dùng link thử (mock) — kiểm tra PAYOS_* trên backend.");
-                    } else {
-                      message.success("Đã mở trang thanh toán PayOS.");
-                    }
-                  } else {
-                    message.error("Không nhận được link thanh toán từ server.");
-                  }
-                } catch (e: unknown) {
-                  const msg =
-                    e && typeof e === "object" && "message" in e
-                      ? String((e as { message: string }).message)
-                      : "Tạo thanh toán thất bại";
-                  message.error(msg);
-                } finally {
-                  setPayingPoiId(null);
-                }
-              };
 
               const downloadQR = async (e: React.MouseEvent) => {
                 e.stopPropagation();
@@ -231,16 +188,14 @@ const AdminPOIsPage = () => {
                   <Tooltip
                     title={
                       <>
-                        <div><strong>Quét</strong>: mã địa điểm (camera / app).</div>
-                        <div style={{ marginTop: 4 }}><strong>Click QR</strong>: mở PayOS (ủng hộ).</div>
-                        <div style={{ marginTop: 4 }}><strong>Tải PNG</strong>: in QR ra bàn / quán.</div>
+                        <div>Khách <strong>quét bằng app Phố Ẩm Thực</strong> → mở POI + thuyết minh.</div>
+                        <div style={{ marginTop: 4 }}>
+                          <strong>Tải PNG</strong> để in dán (QR không mở PayOS).
+                        </div>
                       </>
                     }
                   >
-                    <button
-                      type="button"
-                      onClick={openPayOS}
-                      disabled={paying}
+                    <div
                       style={{
                         display: "inline-flex",
                         padding: 4,
@@ -248,18 +203,11 @@ const AdminPOIsPage = () => {
                         borderRadius: 6,
                         border: "1px solid #e2e8f0",
                         lineHeight: 0,
-                        cursor: paying ? "wait" : "pointer",
                       }}
-                      aria-label="Quét QR địa điểm hoặc click để thanh toán PayOS"
+                      aria-hidden
                     >
-                      {paying ? (
-                        <span style={{ width: 56, height: 56, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                          <Spin size="small" />
-                        </span>
-                      ) : (
-                        <QRCodeSVG value={payload} size={56} level="M" marginSize={0} />
-                      )}
-                    </button>
+                      <QRCodeSVG value={payload} size={56} level="M" marginSize={0} />
+                    </div>
                   </Tooltip>
                   <Button
                     type="link"

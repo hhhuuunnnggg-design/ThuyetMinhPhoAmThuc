@@ -20,7 +20,8 @@ import { POI, NearbyPOI } from "../types";
 
 export type RootStackParamList = {
   HomeTabs: undefined;
-  POIDetail: { poi: POI };
+  /** openedFromQr: true khi vào từ Quét QR — hiển thị banner + ưu tiên thuyết minh */
+  POIDetail: { poi: POI; openedFromQr?: boolean };
   QRScanner: undefined;
   Payment: { poi: POI; amount: number; quantity?: number; unitAmount?: number };
 };

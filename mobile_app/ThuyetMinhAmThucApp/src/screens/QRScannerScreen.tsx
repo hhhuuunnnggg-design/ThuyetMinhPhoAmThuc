@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useNavigation } from "@react-navigation/native";
@@ -13,12 +14,15 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Haptics from "expo-haptics";
 import api from "../services/api";
 import { unwrapEntityResponse } from "../utils/apiResponse";
-import { extractPoiQrFromScan } from "../utils/qrScan";
+import {
+  extractPoiQrFromScan,
+  tryExtractNumericIdFromUrlPath,
+} from "../utils/qrScan";
 import { POI } from "../types";
 
 type RootStackParamList = {
   Home: undefined;
-  POIDetail: { poi: POI };
+  POIDetail: { poi: POI; openedFromQr?: boolean };
   QRScanner: undefined;
 };
 
@@ -27,62 +31,87 @@ const QRScannerScreen: React.FC = () => {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const cooldownUntilRef = useRef(0);
 
   useEffect(() => {
     requestPermission();
   }, []);
 
+  const resetForRescan = () => {
+    setScanError(null);
+    setScanned(false);
+    cooldownUntilRef.current = Date.now() + 600;
+  };
+
   const handleBarCodeScanned = async ({ type, data }: { type: string; data: string }) => {
     if (scanned || loading) return;
+    if (Date.now() < cooldownUntilRef.current) return;
     setScanned(true);
     setLoading(true);
+    setScanError(null);
 
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     try {
-      const code = extractPoiQrFromScan(data);
-      // code có thể là mã QR POI (UUID) hoặc số ID
-      let poi: any = null;
+      const raw = data.trim();
+      const code = extractPoiQrFromScan(raw);
+      let poi: POI | null = null;
 
-      // Thử tìm theo QR code
       try {
         const res: any = await api.get(`/api/v1/app/pois/qr/${encodeURIComponent(code)}`);
         poi = unwrapEntityResponse<POI>(res.data);
-      } catch {}
+      } catch {
+        /* ignore */
+      }
 
-      // Thử tìm theo ID
       if (!poi) {
         try {
           const id = parseInt(code, 10);
-          if (!isNaN(id)) {
+          if (!Number.isNaN(id)) {
             const res: any = await api.get(`/api/v1/app/pois/${id}`);
             poi = unwrapEntityResponse<POI>(res.data);
           }
-        } catch {}
+        } catch {
+          /* ignore */
+        }
+      }
+
+      if (!poi) {
+        const tailId = tryExtractNumericIdFromUrlPath(raw);
+        if (tailId != null) {
+          try {
+            const res: any = await api.get(`/api/v1/app/pois/${tailId}`);
+            poi = unwrapEntityResponse<POI>(res.data);
+          } catch {
+            /* ignore */
+          }
+        }
       }
 
       if (poi) {
-        navigation.navigate("POIDetail", { poi });
+        navigation.navigate("POIDetail", { poi, openedFromQr: true });
+        setScanned(false);
       } else {
+        const preview =
+          raw.length > 72 ? `${raw.slice(0, 70)}…` : raw;
+        const msg =
+          "Không tìm thấy địa điểm trong hệ thống.\n\n" +
+          "QR phải là mã do Admin Phố Ẩm Thực tạo (cột QR → Tải PNG), hoặc UUID/số id POI của backend.\n\n" +
+          "Mã vừa quét:\n" +
+          preview;
+        setScanError(msg);
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         Alert.alert(
-          "Không tìm thấy",
-          `Không tìm thấy POI với mã: ${code}`,
-          [
-            {
-              text: "Quét lại",
-              onPress: () => setScanned(false),
-            },
-            {
-              text: "Quay lại",
-              onPress: () => navigation.goBack(),
-            },
-          ]
+          "Không tìm thấy POI",
+          "Chi tiết và mã vừa quét hiển thị ở khung phía dưới. Dùng QR từ Admin → Quản lý POI (Tải PNG).",
+          [{ text: "Đã hiểu", onPress: () => {} }]
         );
       }
     } catch (error: any) {
-      Alert.alert("Lỗi", "Không thể tra cứu POI: " + (error?.message || "Lỗi không xác định"), [
-        { text: "Thử lại", onPress: () => setScanned(false) },
-      ]);
+      const errMsg = "Không thể tra cứu: " + (error?.message || "Lỗi không xác định");
+      setScanError(errMsg);
+      Alert.alert("Lỗi", errMsg, [{ text: "Thử lại", onPress: resetForRescan }]);
     } finally {
       setLoading(false);
     }
@@ -144,12 +173,23 @@ const QRScannerScreen: React.FC = () => {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.hintText}>
-            {loading
-              ? "Đang tra cứu..."
-              : "Đưa mã QR vào khung hình"}
-          </Text>
-          {loading && <ActivityIndicator color="#fff" style={{ marginTop: 10 }} />}
+          {scanError ? (
+            <View style={styles.errorPanel}>
+              <ScrollView style={styles.errorScroll} nestedScrollEnabled>
+                <Text style={styles.errorText}>{scanError}</Text>
+              </ScrollView>
+              <TouchableOpacity style={styles.retryButton} onPress={resetForRescan} activeOpacity={0.85}>
+                <Text style={styles.retryButtonText}>↻ Quét lại</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.hintText}>
+                {loading ? "Đang tra cứu..." : "Đưa mã QR POI (Admin) vào khung"}
+              </Text>
+              {loading && <ActivityIndicator color="#fff" style={{ marginTop: 10 }} />}
+            </>
+          )}
         </View>
       </View>
     </View>
@@ -287,6 +327,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
+  },
+  errorPanel: {
+    width: "92%",
+    maxWidth: 400,
+    backgroundColor: "rgba(30,10,10,0.92)",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#f97316",
+    padding: 12,
+    marginBottom: 8,
+  },
+  errorScroll: {
+    maxHeight: 140,
+    marginBottom: 10,
+  },
+  errorText: {
+    color: "#ffedd5",
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  retryButton: {
+    backgroundColor: "#ff6b35",
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
   },
 });
 

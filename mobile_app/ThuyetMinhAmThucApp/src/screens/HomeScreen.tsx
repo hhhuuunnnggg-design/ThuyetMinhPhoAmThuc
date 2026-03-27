@@ -25,7 +25,7 @@ import { haversineDistance, formatDistance } from "../utils/geo";
 
 type RootStackParamList = {
   Home: undefined;
-  POIDetail: { poi: POI };
+  POIDetail: { poi: POI; openedFromQr?: boolean };
   QRScanner: undefined;
 };
 

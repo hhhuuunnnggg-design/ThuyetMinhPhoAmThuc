@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -23,7 +23,7 @@ import { POI, AudioInfo, DeviceConfig } from "../types";
 
 type RootStackParamList = {
   Home: undefined;
-  POIDetail: { poi: POI };
+  POIDetail: { poi: POI; openedFromQr?: boolean };
   QRScanner: undefined;
   Payment: { poi: POI; amount: number; quantity?: number; unitAmount?: number };
 };
@@ -40,7 +40,16 @@ function unitPriceVnd(poi: POI): number {
 const POIDetailScreen: React.FC = () => {
   const route = useRoute<RouteProp<RootStackParamList, "POIDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { poi } = route.params;
+  const { poi, openedFromQr } = route.params;
+  const fromQr = openedFromQr === true;
+
+  useLayoutEffect(() => {
+    if (fromQr) {
+      navigation.setOptions({
+        title: poi.foodName?.trim() || "Địa điểm",
+      });
+    }
+  }, [fromQr, navigation, poi.foodName]);
 
   const [preferredLang, setPreferredLang] = useState<string>("vi");
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
@@ -269,6 +278,18 @@ const POIDetailScreen: React.FC = () => {
         </View>
       )}
 
+      {fromQr && (
+        <View style={styles.qrEntryBanner}>
+          <Text style={styles.qrEntryBannerEmoji}>📷</Text>
+          <View style={styles.qrEntryBannerTextWrap}>
+            <Text style={styles.qrEntryBannerTitle}>Mở từ mã QR</Text>
+            <Text style={styles.qrEntryBannerSub}>
+              Xem thông tin món bên dưới — chạm <Text style={styles.qrEntryBannerBold}>▶ Phát</Text> để nghe thuyết minh.
+            </Text>
+          </View>
+        </View>
+      )}
+
       {/* POI Info */}
       <View style={styles.infoSection}>
         <Text style={styles.foodName}>{poi.foodName || "POI #" + poi.id}</Text>
@@ -311,14 +332,16 @@ const POIDetailScreen: React.FC = () => {
 
       {/* Player — ngôn ngữ theo Cài đặt (hoặc bản có sẵn đầu tiên) */}
       {audioEntries.length > 0 && (
-        <View style={styles.playerSection}>
+        <View style={[styles.playerSection, fromQr && styles.playerSectionFromQr]}>
           {loadingAudio ? (
             <ActivityIndicator size="large" color="#ff6b35" />
           ) : (
             <View style={styles.playerControls}>
               {playbackAudio ? (
                 <View style={styles.currentAudioInfo}>
-                  <Text style={styles.playerSectionLabel}>Thuyết minh</Text>
+                  <Text style={styles.playerSectionLabel}>
+                    {fromQr ? "Thuyết minh (QR)" : "Thuyết minh"}
+                  </Text>
                   <Text style={styles.currentAudioLang}>
                     {LANGUAGE_LABELS[playbackAudio.languageCode] || playbackAudio.languageCode}
                   </Text>
@@ -421,6 +444,39 @@ const styles = StyleSheet.create({
   headerImagePlaceholderText: {
     fontSize: 80,
   },
+  qrEntryBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 14,
+    backgroundColor: "#fff8f5",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#ffd8c2",
+    gap: 12,
+  },
+  qrEntryBannerEmoji: {
+    fontSize: 28,
+  },
+  qrEntryBannerTextWrap: {
+    flex: 1,
+  },
+  qrEntryBannerTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#c2410c",
+  },
+  qrEntryBannerSub: {
+    fontSize: 13,
+    color: "#7c2d12",
+    marginTop: 4,
+    lineHeight: 19,
+  },
+  qrEntryBannerBold: {
+    fontWeight: "700",
+    color: "#ea580c",
+  },
   infoSection: {
     padding: 20,
   },
@@ -477,6 +533,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderTopWidth: 1,
     borderTopColor: "#eee",
+  },
+  playerSectionFromQr: {
+    backgroundColor: "#fffaf5",
+    borderTopColor: "#ffedd5",
+    borderBottomWidth: 1,
+    borderBottomColor: "#ffedd5",
   },
   playerControls: {
     width: "100%",
