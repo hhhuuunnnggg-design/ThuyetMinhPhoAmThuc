@@ -18,7 +18,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
 @Entity
-@Table(name = "translation_training")
+// @Table(name = "translation_training")
 @Data
 @Builder
 @NoArgsConstructor

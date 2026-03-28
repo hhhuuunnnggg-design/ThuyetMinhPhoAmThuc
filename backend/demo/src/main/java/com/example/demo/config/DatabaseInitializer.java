@@ -2,6 +2,7 @@ package com.example.demo.config;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -136,7 +137,7 @@ public class DatabaseInitializer implements CommandLineRunner {
             superAdminRole = this.roleRepository.save(superAdminRole);
         }
 
-        // SHOP_OWNER — cùng endpoint admin POI/nhà hàng/TTS nhưng POIServiceImpl / RestaurantServiceImpl lọc theo user trong JWT
+        // SHOP_OWNER — cùng endpoint admin POI/nhà hàng/TTS/narration logs nhưng backend lọc theo user trong JWT
         Role shopOwnerRole = this.roleRepository.findByName("SHOP_OWNER").orElse(null);
         if (shopOwnerRole == null) {
             List<Permission> shopPermissions = allPermissions.stream()
@@ -144,17 +145,36 @@ public class DatabaseInitializer implements CommandLineRunner {
                         String mod = p.getModule();
                         return "TTS".equals(mod) || "TTS_GROUPS".equals(mod)
                                 || "POI_ADMIN".equals(mod) || "RESTAURANT_ADMIN".equals(mod)
-                                || "APP_CLIENT".equals(mod);
+                                || "APP_CLIENT".equals(mod)
+                                || "NARRATION_LOGS".equals(mod);
                     })
                     .toList();
 
             shopOwnerRole = new Role();
             shopOwnerRole.setName("SHOP_OWNER");
             shopOwnerRole.setDescription(
-                    "Chủ quán — POI/TTS/nhà hàng: API giống admin nhưng chỉ thấy & sửa bản ghi do chính user đó tạo (user_id trên JWT)");
+                    "Chủ quán — POI/TTS/nhà hàng/narration logs: API giống admin nhưng chỉ thấy dữ liệu gắn POI do chính user đó tạo (user_id trên JWT)");
             shopOwnerRole.setActive(true);
             shopOwnerRole.setPermissions(shopPermissions);
             this.roleRepository.save(shopOwnerRole);
+        } else {
+            Optional<Permission> narrationLogPerm = allPermissions.stream()
+                    .filter(p -> "NARRATION_LOGS".equals(p.getModule())
+                            && "/api/v1/admin/narration-logs".equals(p.getApiPath())
+                            && "GET".equalsIgnoreCase(p.getMethod()))
+                    .findFirst();
+            if (narrationLogPerm.isPresent()) {
+                Permission np = narrationLogPerm.get();
+                boolean already = shopOwnerRole.getPermissions().stream()
+                        .anyMatch(x -> "/api/v1/admin/narration-logs".equals(x.getApiPath())
+                                && "GET".equalsIgnoreCase(x.getMethod()));
+                if (!already) {
+                    ArrayList<Permission> merged = new ArrayList<>(shopOwnerRole.getPermissions());
+                    merged.add(np);
+                    shopOwnerRole.setPermissions(merged);
+                    this.roleRepository.save(shopOwnerRole);
+                }
+            }
         }
 
         // ========== USERS ==========

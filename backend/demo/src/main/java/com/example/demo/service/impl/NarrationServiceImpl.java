@@ -6,11 +6,13 @@ import java.time.Instant;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.domain.NarrationLog;
 import com.example.demo.domain.response.app.ResNarrationLogDTO;
 import com.example.demo.repository.NarrationLogRepository;
 import com.example.demo.service.NarrationService;
+import com.example.demo.util.SecurityUtil;
 
 @Service
 public class NarrationServiceImpl implements NarrationService {
@@ -41,8 +43,13 @@ public class NarrationServiceImpl implements NarrationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ResNarrationLogDTO> getAllLogs(Pageable pageable) {
-        return narrationLogRepository.findAll(pageable).map(log -> {
+        Long ownerScope = SecurityUtil.getPoiOwnerScopeUserIdOrNull();
+        Page<NarrationLog> page = ownerScope != null
+                ? narrationLogRepository.findAllForPoiCreatedByUserId(ownerScope, pageable)
+                : narrationLogRepository.findAll(pageable);
+        return page.map(log -> {
             var audio = log.getTtsAudio();
             var group = audio.getGroup();
             String audioName = group != null ? group.getFoodName() : null;

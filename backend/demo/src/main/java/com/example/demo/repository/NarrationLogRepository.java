@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,6 +15,14 @@ import com.example.demo.domain.NarrationLog;
 
 @Repository
 public interface NarrationLogRepository extends JpaRepository<NarrationLog, Long> {
+
+    /**
+     * SHOP_OWNER: chỉ log gắn audio thuộc nhóm TTS của POI do {@code ownerUserId} tạo.
+     */
+    @Query("SELECT n FROM NarrationLog n "
+            + "JOIN n.ttsAudio a JOIN a.group g JOIN g.poi p JOIN p.user u "
+            + "WHERE u.id = :ownerUserId")
+    Page<NarrationLog> findAllForPoiCreatedByUserId(@Param("ownerUserId") Long ownerUserId, Pageable pageable);
 
     Optional<NarrationLog> findFirstByDeviceIdAndTtsAudio_IdAndPlayedAtBeforeOrderByPlayedAtDesc(
             String deviceId,
