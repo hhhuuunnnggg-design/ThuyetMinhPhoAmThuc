@@ -12,9 +12,6 @@ import com.example.demo.service.GeofenceService.RankedPOI;
 @Service
 public class GeofenceServiceImpl implements GeofenceService {
 
-    /**
-     * Bán kính trái đất (mét).
-     */
     private static final double EARTH_RADIUS_M = 6_371_000;
 
     @Override
@@ -22,19 +19,28 @@ public class GeofenceServiceImpl implements GeofenceService {
         return pois.stream()
                 .filter(poi -> poi.getLatitude() != null && poi.getLongitude() != null)
                 .map(poi -> {
+                    // khoảng cách từ user đến POI
                     double dist = haversineDistance(lat, lng, poi.getLatitude(), poi.getLongitude());
+                    // bán kính kích hoạt của POI
                     double radius = poi.getTriggerRadiusMeters() != null ? poi.getTriggerRadiusMeters() : 50.0;
-                    double depth = radius > 0 ? (radius - dist) / radius : 0.0; // 0 = mép, 1 = tâm
+                    // ưu tiên của POI
                     int priority = poi.getPriority() != null ? poi.getPriority() : 0;
-                    // score = priority*1_000_000 - distance + depth*10_000
-                    double score = priority * 1_000_000.0 - dist + depth * 10_000.0;
-                    return new RankedPOI(poi, dist, depth, score);
+                    // độ sâu của POI
+                    double depth = radius > 0 ? (radius - dist) / radius : 0.0;
+                    // tạo đối tượng RankedPOI
+                    return new RankedPOI(poi, dist, depth, priority);
                 })
+                // chỉ xét POI trong bán kính kích hoạt
                 .filter(rp -> rp.distanceMeters() <= (rp.poi().getTriggerRadiusMeters() != null
                         ? rp.poi().getTriggerRadiusMeters() : 50.0))
-                .sorted(Comparator.comparingDouble(RankedPOI::score).reversed())
+                // 1. Khoảng cách tăng dần  2. Priority giảm dần  3. id tăng dần
+                // sắp xếp theo khoảng cách, ưu tiên, id
+                .sorted(Comparator
+                        .<RankedPOI>comparingDouble(RankedPOI::distanceMeters)
+                        .thenComparingInt((RankedPOI rp) -> rp.priority()).reversed()
+                        .thenComparingLong(rp -> rp.poi().getId() != null ? rp.poi().getId() : 0L))
                 .toList();
-        }
+    }
 
     @Override
     public RankedPOI findBestPOI(double lat, double lng, List<POI> pois) {

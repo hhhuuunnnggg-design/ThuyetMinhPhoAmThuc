@@ -89,51 +89,53 @@ Bước 4: Kiểm tra offline:
 
 ### 5. Xử lý khi nhiều POI cùng trigger
 
-#### 5.1. Công thức tính điểm (Backend — `GeofenceServiceImpl`)
+#### 5.1. Luật ưu tiên 3 cấp (Backend + App Mobile)
 
 ```
-score = priority × 1_000_000  −  distance  +  relativeDepth × 10_000
-```
-
-| Thành phần | Ý nghĩa |
-|---|---|
-| `priority × 1_000_000` | **Yếu tố THỐNG TRỊ.** Priority cách nhau 1 đơn vị = cách nhau ~1000km "ngầm". Priority cao nhất luôn thắng. |
-| `− distance` | Mét — gần hơn thì điểm cao hơn. |
-| `+ relativeDepth × 10_000` | Bonus khi càng gần tâm vùng kích hoạt. Chỉ phân được khi priority + distance bằng nhau. |
-
-```
-relativeDepth = (radius − distance) / radius
-→ 1.0 = đang đứng ở tâm POI
-→ 0.0 = đang ở mép vùng kích hoạt
+1. Có trong trigger radius?    →  chỉ POI nào isInside mới được xét
+2. Khoảng cách nhỏ nhất       →  yếu tố CHÍNH quyết định thắng cuộc
+3. Priority cao hơn            →  tie-breaker khi khoảng cách bằng nhau
+4. id nhỏ hơn                 →  tie-breaker cuối cùng (đảm bảo thứ tự ổn định)
 ```
 
 #### 5.2. Ví dụ
 
+**Cùng priority, khác khoảng cách:**
 ```
-POI A: priority = 5,  distance = 30m,  radius = 50m
-POI B: priority = 5,  distance = 31m,  radius = 50m
+POI A: priority = 5,  distance = 45m,  radius = 50m
+POI B: priority = 5,  distance = 20m,  radius = 30m
 
-→ A.isInside = (30 ≤ 50) = true
-→ B.isInside = (31 ≤ 50) = true
+→ A.isInside = (45 ≤ 50) = true
+→ B.isInside = (20 ≤ 30) = true
 
-Backend score:
-  A = 5_000_000 − 30 + (20/50)×10_000 = 4_999_970
-  B = 5_000_000 − 31 + (19/50)×10_000 = 4_999_949
+→ A: sortDist=45, sortPriority=5
+→ B: sortDist=20, sortPriority=5
 
-→ A thắng (gần hơn 1m)
+→ B thắng (20m < 45m)  ← khoảng cách là yếu tố quyết định
 ```
 
-#### 5.3. Khi user đứng đúng TÂM (cùng khoảng cách)
-
+**Khác priority, cùng khoảng cách:**
 ```
-POI A: priority = 5,  distance = 50m,  radius = 50m
-POI B: priority = 5,  distance = 50m,  radius = 50m
+POI A: priority = 10, distance = 50m, radius = 50m
+POI B: priority = 1,  distance = 50m, radius = 50m
 
-→ relativeDepth cả hai đều = 0
-→ A và B cùng score = 4_999_950
+→ A.isInside = true, B.isInside = true
 
-→ Tie-breaker: POI có id nhỏ hơn (do database trả về theo thứ tự)
+→ A: sortDist=50, sortPriority=10
+→ B: sortDist=50, sortPriority=1
+
+→ A thắng (cùng distance → priority cao hơn)
 ```
+
+**Khác priority, khác khoảng cách:**
+```
+POI A: priority = 10, distance = 45m, radius = 50m
+POI B: priority = 1,  distance = 20m, radius = 30m
+
+→ B thắng (20m < 45m, dù priority thấp hơn nhiều)
+```
+
+> **Nguyên tắc thiết kế:** Khoảng cách phản ánh vị trí vật lý — đứng gần quán nào thì nghe quán đó là tự nhiên nhất. Priority chỉ phân định khi khoảng cách không quyết định được (hai quán cách xa tương đương).
 
 ### 6. Cooldown (Tránh phát lặp)
 
@@ -162,9 +164,9 @@ canPlay(poiId):
 ```
 1. POI nào CÓ ĐỦ ĐIỀU KIỆN trigger (trong bán kính)?
    │
-   ├── Priority cao nhất → phát trước
+   ├── Khoảng cách nhỏ nhất  →  phát trước  (yếu tố CHÍNH)
    │
-   └── Cùng priority → distance nhỏ nhất → phát trước
-       │
-       └── Tie (cùng distance + radius) → id nhỏ hơn → phát trước
+   ├── Cùng khoảng cách →  priority cao hơn  →  phát trước  (tie-breaker 1)
+   │
+   └── Cùng khoảng cách + priority  →  id nhỏ hơn  →  phát trước  (tie-breaker cuối)
 ```

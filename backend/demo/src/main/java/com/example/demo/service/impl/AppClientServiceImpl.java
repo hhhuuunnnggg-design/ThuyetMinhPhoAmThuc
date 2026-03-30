@@ -3,6 +3,7 @@ package com.example.demo.service.impl;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -226,6 +227,43 @@ public class AppClientServiceImpl implements AppClientService {
                 .orElseThrow(() -> new IdInvalidException("Không tìm thấy POI: " + poiId));
         TTSAudio audio = ttsAudioRepository.findById(audioId)
                 .orElseThrow(() -> new IdInvalidException("Không tìm thấy audio: " + audioId));
+
+        // ============================================================
+        // GEOFENCE DEBUG LOG — khi user vào POI, log tất cả POI trong vùng
+        // ============================================================
+        if (lat != null && lng != null) {
+            List<POI> allActivePOIs = poiRepository.findByIsActiveTrue(
+                    org.springframework.data.domain.Pageable.unpaged()).getContent();
+            List<GeofenceService.RankedPOI> ranked = geofenceService.rankPOIs(lat, lng, allActivePOIs);
+
+            System.out.println("========================================");
+            System.out.println("[GEOFENCE] User entering POI — deviceId=" + deviceId
+                    + " | lat=" + lat + " lng=" + lng);
+            System.out.println("[GEOFENCE] POIs in trigger radius (sorted):");
+            for (int i = 0; i < ranked.size(); i++) {
+                GeofenceService.RankedPOI rp = ranked.get(i);
+                POI p = rp.poi();
+                double radius = p.getTriggerRadiusMeters() != null ? p.getTriggerRadiusMeters() : 50.0;
+                String winner = (i == 0) ? " *** WINNER ***" : "";
+                System.out.printf(Locale.US,
+                        "  [%d] POI id=%d name=\"%s\" | dist=%.1fm radius=%.1fm priority=%d | isInside=%s%s%n",
+                        i + 1,
+                        p.getId(),
+                        p.getFoodName(),
+                        rp.distanceMeters(),
+                        radius,
+                        rp.priority(),
+                        rp.distanceMeters() <= radius,
+                        winner);
+            }
+            if (ranked.isEmpty()) {
+                System.out.println("  (no POIs in trigger radius)");
+            }
+            System.out.println("[GEOFENCE] Selected POI: id=" + poiId + " name=\"" + poi.getFoodName() + "\"");
+            System.out.println("[GEOFENCE] Requested audio: id=" + audioId + " lang=" + languageCode);
+            System.out.println("========================================");
+        }
+        // ============================================================
 
         // Đánh dấu active narration trước đó của device là EXPIRED
         activeNarrationRepository.findByDeviceIdAndStatus(deviceId, NarrationStatus.PLAYING)
