@@ -125,7 +125,7 @@ const QRScannerScreen: React.FC = () => {
         barcodeScannerSettings={{
           barcodeTypes: ["qr"],
         }}
-        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+        onBarcodeScanned={handleBarCodeScanned}
       />
 
       {/* Overlay */}
