@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   Dimensions,
   Platform,
-  SafeAreaView,
   Alert,
   Animated,
   PanResponder,
@@ -15,6 +14,7 @@ import {
   Image,
   Linking,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Slider from "@react-native-community/slider";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 import { Audio } from "expo-av";

@@ -97,19 +97,23 @@ const MapScreenWrapper: React.FC = () => {
   );
 };
 
-const HomeTabs: React.FC = () => (
-  <Tab.Navigator
-    screenOptions={{
-      headerShown: false,
-      tabBarActiveTintColor: "#ff6b35",
-      tabBarInactiveTintColor: "#999",
-      tabBarStyle: {
-        height: 60,
-        paddingBottom: 8,
-        paddingTop: 8,
-      },
-    }}
-  >
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const HomeTabs: React.FC = () => {
+  const insets = useSafeAreaInsets();
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: "#ff6b35",
+        tabBarInactiveTintColor: "#999",
+        tabBarStyle: {
+          height: 60 + insets.bottom,
+          paddingBottom: 8 + insets.bottom,
+          paddingTop: 8,
+        },
+      }}
+    >
     <Tab.Screen
       name="Home"
       component={HomeScreen}
@@ -144,8 +148,8 @@ const HomeTabs: React.FC = () => (
       }}
     />
   </Tab.Navigator>
-);
-
+  );
+};
 const AppNavigator: React.FC = () => (
   <NavigationContainer>
     <Stack.Navigator

@@ -28,6 +28,11 @@
     },
     "android": {
       "usesCleartextTraffic": true,
+      "softwareKeyboardLayoutMode": "pan",
+      "navigationBar": {
+        "visible": "sticky-immersive",
+        "backgroundColor": "#00000000"
+      },
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ff6b35"
