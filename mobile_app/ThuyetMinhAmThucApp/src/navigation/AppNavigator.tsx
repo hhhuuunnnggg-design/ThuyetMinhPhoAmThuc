@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { NavigationContainer, useFocusEffect } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Text, View, StyleSheet } from "react-native";
+import { Text, View, StyleSheet, Platform } from "react-native";
 import * as Location from "expo-location";
 
 import HomeScreen from "../screens/HomeScreen";
@@ -101,6 +101,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const HomeTabs: React.FC = () => {
   const insets = useSafeAreaInsets();
+
+  // iOS tự xử lý safe area cho tab bar → không cần điều chỉnh thêm
+  // Android cần cộng thêm insets.bottom để tránh bị thanh điều hướng che
+  const bottomInset = Platform.OS === "android" ? insets.bottom : 0;
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -108,8 +113,8 @@ const HomeTabs: React.FC = () => {
         tabBarActiveTintColor: "#ff6b35",
         tabBarInactiveTintColor: "#999",
         tabBarStyle: {
-          height: 60 + insets.bottom,
-          paddingBottom: 8 + insets.bottom,
+          height: 60 + bottomInset,
+          paddingBottom: 8 + bottomInset,
           paddingTop: 8,
         },
       }}
