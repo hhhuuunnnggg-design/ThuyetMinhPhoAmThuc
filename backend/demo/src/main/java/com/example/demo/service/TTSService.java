@@ -9,6 +9,12 @@ import com.example.demo.domain.request.tts.ReqTTSDTO;
 import com.example.demo.domain.response.tts.ResVoiceDTO;
 
 public interface TTSService {
+    /**
+     * Chuyển đổi text thành speech
+     * @param request
+     * @return
+     * @throws IOException
+     */
     ResponseEntity<Resource> synthesizeSpeech(ReqTTSDTO request) throws IOException;
 
     /**
@@ -16,5 +22,10 @@ public interface TTSService {
      */
     byte[] synthesizeViettelSpeechBytes(ReqTTSDTO request) throws IOException;
 
+    /**
+     * Lấy danh sách giọng đọc có sẵn
+     * @return
+     * @throws IOException
+     */
     ResVoiceDTO[] getAvailableVoices() throws IOException;
 }

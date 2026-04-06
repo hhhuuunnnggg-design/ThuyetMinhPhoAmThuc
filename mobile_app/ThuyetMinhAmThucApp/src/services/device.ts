@@ -87,6 +87,7 @@ class DeviceService {
   }
 
   /**
+   * kiểm tra cấu hình thiết bị có đủ điều kiện để chạy offline không
    * OFFLINE: RAM >= MIN_RAM_MB && Storage >= MIN_STORAGE_MB
    * STREAMING: otherwise
    */

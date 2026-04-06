@@ -40,6 +40,8 @@ export interface OfflinePOI {
   distanceMeters: number | null;
   activeListenerCount: number;
   downloadedOffline: boolean;
+  /** Rỗng khi load từ list SQLite; POIDetailScreen bổ sung qua getAllAudiosForPOI / API */
+  audios?: Record<string, AudioInfo>;
 }
 
 /** ID POI hợp lệ cho SQLite (tránh poi_id NULL → lỗi 19 NOT NULL). */
@@ -398,6 +400,8 @@ function mapRowToPOI(row: any): OfflinePOI {
     version: row.version ?? 0,
     restaurantName: row.restaurantName ?? null,
     restaurantVerified: row.restaurantVerified === 1,
+    /** Danh sách POI offline không join đủ lang — POIDetailScreen sẽ gọi getAllAudiosForPOI */
+    audios: {},
     createdAt: row.createdAt ?? "",
     updatedAt: row.updatedAt ?? null,
     distanceMeters: row.distanceMeters ?? null,

@@ -1,10 +1,15 @@
 import {
   createTTSGroupAPI,
+  getTTSGroupsAPI,
   getVoicesAPI,
   type TTSRequest,
   type Voice,
 } from "@/api/tts.api";
-import { fetchAdminPOIsAPI, parseAdminPOIListResponse } from "@/api/adminPoi.api";
+import {
+  fetchAdminPOIsAPI,
+  parseAdminPOIListResponse,
+  type AdminPOI,
+} from "@/api/adminPoi.api";
 import { logger } from "@/utils/logger";
 import {
   Button,
@@ -79,15 +84,47 @@ const CreateTTSAudioModal = ({ open, onCancel, onSuccess }: CreateTTSAudioModalP
   const fetchPOIs = async () => {
     try {
       setLoadingPOIs(true);
-      const raw: any = await fetchAdminPOIsAPI(1, 500, "createdAt", "desc");
-      const { data } = parseAdminPOIListResponse(raw);
+
+      // Lấy tất cả poiId đã có nhóm TTS (bỏ trùng)
+      const usedPoiIds = new Set<number>();
+      let gPage = 1;
+      const gSize = 200;
+      while (true) {
+        const gr: any = await getTTSGroupsAPI(gPage, gSize);
+        const gData = gr?.data?.result ?? gr?.result ?? [];
+        const gMeta = gr?.data?.meta ?? gr?.meta;
+        gData.forEach((g: any) => { if (g.poiId) usedPoiIds.add(g.poiId); });
+        if (gData.length < gSize || (gMeta && gPage >= gMeta.pages)) break;
+        gPage++;
+      }
+
+      // Lấy tất cả POI
+      const pageSize = 200;
+      const all: AdminPOI[] = [];
+      let page = 1;
+      let total = 0;
+      do {
+        const raw: any = await fetchAdminPOIsAPI(page, pageSize, "createdAt", "desc");
+        const parsed = parseAdminPOIListResponse(raw);
+        total = parsed.total;
+        all.push(...parsed.data);
+        if (parsed.data.length < pageSize || all.length >= total) break;
+        page += 1;
+      } while (true);
+
       setPoiOptions(
-        data.map((p) => ({
-          value: p.id,
-          label: `${p.id} — ${p.foodName || p.address || "POI"} ${
-            p.latitude ? `(${p.latitude.toFixed(4)}, ${p.longitude?.toFixed(4)})` : ""
-          }`,
-        }))
+        all
+          .filter((p) => !usedPoiIds.has(p.id))
+          .map((p) => {
+            const geo =
+              p.latitude != null && p.longitude != null
+                ? ` (${p.latitude.toFixed(4)}, ${p.longitude.toFixed(4)})`
+                : "";
+            return {
+              value: p.id,
+              label: `${p.id} — ${p.foodName || p.address || "POI"}${geo}`,
+            };
+          })
       );
     } catch (error: any) {
       logger.error("Fetch POIs error:", error);
@@ -138,6 +175,11 @@ const CreateTTSAudioModal = ({ open, onCancel, onSuccess }: CreateTTSAudioModalP
           name="poiId"
           label="Điểm kinh doanh"
           rules={[{ required: true, message: "Phải chọn POI trước" }]}
+          extra={
+            <span style={{ fontSize: 12, color: "#64748b" }}>
+              Chỉ hiện <strong>POI chưa có nhóm TTS</strong>. Mỗi POI chỉ có thể gắn với một bài thuyết minh.
+            </span>
+          }
         >
           <Select
             showSearch

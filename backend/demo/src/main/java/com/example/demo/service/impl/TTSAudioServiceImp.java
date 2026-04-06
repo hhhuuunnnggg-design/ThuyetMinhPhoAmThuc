@@ -352,7 +352,7 @@ public class TTSAudioServiceImp implements TTSAudioService {
     }
 
     /**
-     * Tạo audio cho tất cả ngôn ngữ khi create group.
+     * Tạo audio cho tất cả ngôn ngữ khi create group. tạo audio trước
      */
     private void generateAudiosForGroup(TTSAudioGroup group, String text, String viVoice,
             Float speed, Integer ttsReturnOption, Boolean withoutFilter) throws IOException {
@@ -384,7 +384,7 @@ public class TTSAudioServiceImp implements TTSAudioService {
     }
 
     /**
-     * Synthesize audio cho 1 ngôn ngữ cụ thể.
+     * Synthesize audio cho 1 ngôn ngữ cụ thể()
      * Trả về AudioResult hoặc null nếu service không khả dụng.
      */
     private AudioResult synthesizeForLang(String groupKey, String lang, String text, String voice,
@@ -424,7 +424,7 @@ public class TTSAudioServiceImp implements TTSAudioService {
     }
 
     /**
-     * Tạo mới hoặc cập nhật bản ghi TTSAudio (giữ id để không gãy FK narration_logs).
+     * Tạo mới hoặc cập nhật bản ghi TTSAudio (giữ id để không gãy FK narration_logs). lưu hoặc update audio
      */
     private void saveOrUpdateAudioRecord(TTSAudioGroup group, String lang, String textForLang, AudioResult audio) {
         Optional<TTSAudio> existingOpt = ttsAudioRepository.findByGroupIdAndLanguageCode(group.getId(), lang);

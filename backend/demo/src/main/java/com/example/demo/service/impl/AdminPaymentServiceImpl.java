@@ -63,8 +63,13 @@ public class AdminPaymentServiceImpl implements AdminPaymentService {
     }
 
     @Override
-    public ResAdminPaymentStatsDTO getStatsForCurrentMonthVietnam() {
-        YearMonth ym = YearMonth.now(VN);
+    public ResAdminPaymentStatsDTO getStatsForMonthVietnam(String monthStr) {
+        YearMonth ym;
+        if (monthStr != null && !monthStr.isBlank()) {
+            ym = YearMonth.parse(monthStr);
+        } else {
+            ym = YearMonth.now(VN);
+        }
         Instant start = ym.atDay(1).atStartOfDay(VN).toInstant();
         Instant end = ym.plusMonths(1).atDay(1).atStartOfDay(VN).toInstant();
 

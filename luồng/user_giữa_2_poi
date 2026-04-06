@@ -1,0 +1,2 @@
+
+    List<RankedPOI> rankPOIs(double lat, double lng, List<POI> pois);

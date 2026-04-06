@@ -1,0 +1,11 @@
+1/ Tạo audio cho tất cả ngôn ngữ khi create group.       void generateAudiosForGroup()
+2/ public String translate(String text, String targetLang)
+3/ cho 1 ngôn ngữ cụ thể()
+
+private AudioResult synthesizeForLang(String groupKey, String lang, String text, String voice,
+            float speed, int format, boolean withoutFilter) 
+
+
+
+
+determineRunningMode()   kiểm tra cấu hình đt

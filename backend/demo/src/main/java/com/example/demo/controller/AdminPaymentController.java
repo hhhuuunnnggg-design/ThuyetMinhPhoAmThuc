@@ -60,9 +60,10 @@ public class AdminPaymentController {
     }
 
     @GetMapping("/stats/month")
-    @ApiMessage("Thống kê thanh toán tháng hiện tại (VN)")
-    public ResponseEntity<ResAdminPaymentStatsDTO> statsMonth() {
-        return ResponseEntity.ok(adminPaymentService.getStatsForCurrentMonthVietnam());
+    @ApiMessage("Thống kê thanh toán theo tháng (VN)")
+    public ResponseEntity<ResAdminPaymentStatsDTO> statsMonth(
+            @RequestParam(required = false) String month) {
+        return ResponseEntity.ok(adminPaymentService.getStatsForMonthVietnam(month));
     }
 
     @PostMapping("/{id}/sync-payos")

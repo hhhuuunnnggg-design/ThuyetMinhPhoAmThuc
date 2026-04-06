@@ -16,7 +16,7 @@ public interface AdminPaymentService {
             String status,
             Long restaurantId);
 
-    ResAdminPaymentStatsDTO getStatsForCurrentMonthVietnam();
+    ResAdminPaymentStatsDTO getStatsForMonthVietnam(String month);
 
     ResAdminPaymentDTO syncPaymentFromPayOS(Long paymentId) throws IdInvalidException;
 }

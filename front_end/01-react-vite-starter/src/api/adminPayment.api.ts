@@ -94,8 +94,10 @@ export const parseAdminPaymentListResponse = (
   return { data: [], total: 0 };
 };
 
-export const fetchAdminPaymentsStatsMonthAPI = () => {
-  return axios.get(API_ENDPOINTS.ADMIN.PAYMENTS_STATS_MONTH);
+export const fetchAdminPaymentsStatsMonthAPI = (month?: string) => {
+  return axios.get(API_ENDPOINTS.ADMIN.PAYMENTS_STATS_MONTH, {
+    params: month ? { month } : undefined,
+  });
 };
 
 export const parseAdminPaymentStatsResponse = (

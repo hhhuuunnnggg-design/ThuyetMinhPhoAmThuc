@@ -14,6 +14,7 @@ import { Audio } from "expo-av";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Haptics from "expo-haptics";
 import api, { getAudioStreamUrl, logNarration } from "../services/api";
+import { unwrapEntityResponse } from "../utils/apiResponse";
 import { storageService } from "../services/storage";
 import { deviceService } from "../services/device";
 import { offlineDbService } from "../services/offlineDb";
@@ -40,7 +41,11 @@ function unitPriceVnd(poi: POI): number {
 const POIDetailScreen: React.FC = () => {
   const route = useRoute<RouteProp<RootStackParamList, "POIDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { poi } = route.params;
+  const { poi: routePoi } = route.params;
+
+  /** POI đầy đủ audios — list/home/offline thường thiếu map audios, cần bổ sung */
+  const [poi, setPoi] = useState<POI>(routePoi);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   const [preferredLang, setPreferredLang] = useState<string>("vi");
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
@@ -62,6 +67,48 @@ const POIDetailScreen: React.FC = () => {
       void loadPreferences();
     }, [loadPreferences])
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    const base = routePoi;
+    setPoi(base);
+    const hasAudios =
+      base.audios &&
+      typeof base.audios === "object" &&
+      Object.keys(base.audios).length > 0;
+    if (hasAudios) {
+      return;
+    }
+    setLoadingDetail(true);
+    (async () => {
+      try {
+        const fromSql = await offlineDbService.getAllAudiosForPOI(base.id);
+        if (!cancelled && Object.keys(fromSql).length > 0) {
+          setPoi({ ...base, audios: fromSql });
+          return;
+        }
+        const res: any = await api.get(`/api/v1/app/pois/${base.id}`);
+        const full = unwrapEntityResponse<POI>(res.data);
+        if (!cancelled && full && typeof full === "object") {
+          setPoi({
+            ...base,
+            ...full,
+            audios:
+              full.audios && Object.keys(full.audios).length > 0
+                ? full.audios
+                : base.audios ?? {},
+          });
+        }
+      } catch (e) {
+        console.warn("POIDetail enrich POI failed", e);
+      } finally {
+        if (!cancelled) setLoadingDetail(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [routePoi]);
 
   useEffect(() => {
     checkRunningMode();
@@ -309,56 +356,63 @@ const POIDetailScreen: React.FC = () => {
         )}
       </View>
 
-      {/* Player — ngôn ngữ theo Cài đặt (hoặc bản có sẵn đầu tiên) */}
-      {audioEntries.length > 0 && (
-        <View style={styles.playerSection}>
-          {loadingAudio ? (
-            <ActivityIndicator size="large" color="#ff6b35" />
-          ) : (
-            <View style={styles.playerControls}>
-              {playbackAudio ? (
-                <View style={styles.currentAudioInfo}>
-                  <Text style={styles.playerSectionLabel}>Thuyết minh</Text>
-                  <Text style={styles.currentAudioLang}>
-                    {LANGUAGE_LABELS[playbackAudio.languageCode] || playbackAudio.languageCode}
+      {/* Thuyết minh — luôn hiện khối; list trước đó thường thiếu audios (offline SQLite mapRowToPOI) */}
+      <View style={styles.playerSection}>
+        {loadingDetail ? (
+          <ActivityIndicator size="small" color="#ff6b35" />
+        ) : loadingAudio ? (
+          <ActivityIndicator size="large" color="#ff6b35" />
+        ) : audioEntries.length === 0 ? (
+          <View style={styles.noAudioBox}>
+            <Text style={styles.playerSectionLabel}>Thuyết minh</Text>
+            <Text style={styles.noAudioText}>
+              Chưa có bản ghi audio cho địa điểm này. Kiểm tra đã tạo nhóm TTS trên admin hoặc đồng bộ offline.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.playerControls}>
+            {playbackAudio ? (
+              <View style={styles.currentAudioInfo}>
+                <Text style={styles.playerSectionLabel}>Thuyết minh</Text>
+                <Text style={styles.currentAudioLang}>
+                  {LANGUAGE_LABELS[playbackAudio.languageCode] || playbackAudio.languageCode}
+                </Text>
+                {playbackAudio.fileSize ? (
+                  <Text style={styles.currentAudioSize}>
+                    {(playbackAudio.fileSize / (1024 * 1024)).toFixed(1)} MB
                   </Text>
-                  {playbackAudio.fileSize && (
-                    <Text style={styles.currentAudioSize}>
-                      {(playbackAudio.fileSize / (1024 * 1024)).toFixed(1)} MB
-                    </Text>
-                  )}
-                </View>
-              ) : null}
+                ) : null}
+              </View>
+            ) : null}
 
-              <View style={styles.controlButtons}>
-                {playbackAudio && (
-                  <>
+            <View style={styles.controlButtons}>
+              {playbackAudio ? (
+                <>
+                  <TouchableOpacity
+                    style={styles.playButton}
+                    onPress={() => playAudio(playbackAudio)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.playButtonText}>
+                      {playingAudioId ? "🔊 Đang phát..." : "▶ Phát"}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {playingAudioId ? (
                     <TouchableOpacity
-                      style={styles.playButton}
-                      onPress={() => playAudio(playbackAudio)}
+                      style={styles.stopButton}
+                      onPress={handleStop}
                       activeOpacity={0.8}
                     >
-                      <Text style={styles.playButtonText}>
-                        {playingAudioId ? "🔊 Đang phát..." : "▶ Phát"}
-                      </Text>
+                      <Text style={styles.stopButtonText}>⏹ Dừng</Text>
                     </TouchableOpacity>
-
-                    {playingAudioId && (
-                      <TouchableOpacity
-                        style={styles.stopButton}
-                        onPress={handleStop}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.stopButtonText}>⏹ Dừng</Text>
-                      </TouchableOpacity>
-                    )}
-                  </>
-                )}
-              </View>
+                  ) : null}
+                </>
+              ) : null}
             </View>
-          )}
-        </View>
-      )}
+          </View>
+        )}
+      </View>
 
       {/* Số suất + thanh toán */}
       <View style={styles.paymentBlock}>
@@ -477,6 +531,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderTopWidth: 1,
     borderTopColor: "#eee",
+  },
+  noAudioBox: {
+    width: "100%",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  noAudioText: {
+    fontSize: 14,
+    color: "#888",
+    lineHeight: 22,
+    textAlign: "center",
+    marginTop: 6,
   },
   playerControls: {
     width: "100%",
