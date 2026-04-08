@@ -15,6 +15,9 @@ import api from "../services/api";
 import { unwrapEntityResponse } from "../utils/apiResponse";
 import { extractPoiQrFromScan } from "../utils/qrScan";
 import { POI } from "../types";
+import * as Location from "expo-location";
+import { deviceService } from "../services/device";
+import { loggerService } from "../utils/logger";
 
 type RootStackParamList = {
   Home: undefined;
@@ -60,6 +63,38 @@ const QRScannerScreen: React.FC = () => {
           }
         } catch {}
       }
+
+      // --- LOGGING ---
+      // Get location if available
+      let lat: number | null = null;
+      let lng: number | null = null;
+      try {
+        const loc = await Location.getLastKnownPositionAsync();
+        if (loc) {
+          lat = loc.coords.latitude;
+          lng = loc.coords.longitude;
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      // Get device specs
+      const deviceInfo = await deviceService.getDeviceInfo();
+
+      // Log to local .txt file
+      await loggerService.logQRScan(deviceInfo, lat, lng, code);
+
+      // Log to backend API
+      try {
+        await api.post("/api/v1/app/device/qr-log", {
+          ...deviceInfo,
+          latitude: lat,
+          longitude: lng,
+        });
+      } catch (e) {
+        console.error("Lỗi khi ghi log API:", e);
+      }
+      // ---------------
 
       if (poi) {
         navigation.navigate("POIDetail", { poi });
