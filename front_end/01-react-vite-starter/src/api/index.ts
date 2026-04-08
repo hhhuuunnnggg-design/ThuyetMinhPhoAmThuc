@@ -11,6 +11,7 @@ export * from "./user.api";
 export * from "./adminPoi.api";
 export * from "./app.api";
 export * from "./narrationLog.api";
+export * from "./deviceConfig.api";
 // Re-export axios as named export for convenience
 export { default } from "./axios";
 

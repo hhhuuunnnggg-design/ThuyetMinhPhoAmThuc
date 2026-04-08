@@ -286,7 +286,7 @@ const UpsertPOIModal = ({ open, onCancel, onSuccess, editingId }: Props) => {
               min={0}
               step={1000}
               formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-              parser={(v) => Number(String(v).replace(/,/g, ""))}
+              parser={(v) => Number(String(v).replace(/,/g, "")) as any}
             />
           </Form.Item>
 

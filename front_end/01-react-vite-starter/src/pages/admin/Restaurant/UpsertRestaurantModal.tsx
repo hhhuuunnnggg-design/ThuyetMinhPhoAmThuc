@@ -6,7 +6,7 @@ import {
   type UpsertRestaurantRequest,
 } from "@/api/adminRestaurant.api";
 import { logger } from "@/utils/logger";
-import { Form, Input, InputNumber, Modal, Select, Slider, message } from "antd";
+import { Form, Input, Modal, Select, Slider, message } from "antd";
 import { useEffect, useState } from "react";
 
 type Props = {

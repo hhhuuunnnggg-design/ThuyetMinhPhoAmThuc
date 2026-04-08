@@ -93,7 +93,7 @@ export const TTSDetailView = ({
     if (isPlaying && audioDuration > 0) {
       setCurrentTime(0);
       audioTimeRef.current = setInterval(() => {
-        setCurrentTime((prev) => {
+        setCurrentTime((prev: number) => {
           if (prev >= audioDuration) {
             audioTimeRef.current && clearInterval(audioTimeRef.current);
             return audioDuration;
@@ -121,7 +121,7 @@ export const TTSDetailView = ({
       const res = await generateMultilingualForGroupAPI(selected.groupId);
       const data = res?.data?.data ?? res?.data ?? res;
       if (data) {
-        setMultilingualMap(data);
+        setMultilingualMap(data as Record<string, AudioData>);
         message.success("Đã tạo audio đa ngôn ngữ!");
       }
     } catch {
@@ -163,7 +163,7 @@ export const TTSDetailView = ({
         // Mở PayOS checkout trong tab mới
         window.open(payment.payosPaymentLink, "_blank");
         message.success("Đã mở trang thanh toán PayOS!");
-      } else if (payment.mock === "true" || payment.mock === true) {
+      } else if ((payment as any).mock === "true" || (payment as any).mock === true) {
         setPayModalOpen(false);
         message.info("Chế độ mock: PayOS chưa được cấu hình phía backend.");
       } else {
@@ -185,7 +185,7 @@ export const TTSDetailView = ({
       ? "Lịch sử & cách chế biến"
       : "Thuyết minh món ăn";
 
-  const availableLangs = Object.entries(multilingualMap).map(([code, data]) => ({
+  const availableLangs = Object.entries(multilingualMap).map(([code, data]: [string, any]) => ({
     languageCode: code,
     s3Url: data.s3Url,
     fileSize: data.fileSize,
@@ -339,11 +339,11 @@ export const TTSDetailView = ({
           <InputNumber
             style={{ width: "100%" }}
             value={payAmount}
-            onChange={(v) => setPayAmount(v)}
+            onChange={(v: number | null) => setPayAmount(v)}
             min={1000}
             step={1000}
-            formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-            parser={(v) => Number(String(v).replace(/,/g, "")) || 0}
+            formatter={(v: any) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+            parser={(v: any) => Number(String(v).replace(/,/g, "")) || 0}
             placeholder="Nhập số tiền VND"
           />
         </div>

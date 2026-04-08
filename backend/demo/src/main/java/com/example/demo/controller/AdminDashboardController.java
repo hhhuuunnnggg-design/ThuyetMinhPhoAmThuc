@@ -82,4 +82,30 @@ public class AdminDashboardController {
                 req.getTriggerRadiusMeters() != null ? req.getTriggerRadiusMeters() : 50,
                 req.getPoiCount()));
     }
+
+    @GetMapping("/device-configs")
+    @ApiMessage("Danh sách cấu hình thiết bị (Log)")
+    public ResponseEntity<com.example.demo.domain.dto.ResultPaginationDTO> getDeviceConfigs(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+
+        org.springframework.data.domain.Sort sort = sortDir.equalsIgnoreCase("asc")
+                ? org.springframework.data.domain.Sort.by(sortBy).ascending()
+                : org.springframework.data.domain.Sort.by(sortBy).descending();
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page - 1, size, sort);
+        org.springframework.data.domain.Page<com.example.demo.domain.response.admin.ResAdminDeviceConfigDTO> devices = adminDashboardService.getDeviceConfigs(pageable);
+
+        com.example.demo.domain.dto.ResultPaginationDTO response = new com.example.demo.domain.dto.ResultPaginationDTO();
+        com.example.demo.domain.dto.ResultPaginationDTO.Meta meta = new com.example.demo.domain.dto.ResultPaginationDTO.Meta();
+        meta.setPage(devices.getNumber() + 1);
+        meta.setPageSize(devices.getSize());
+        meta.setPages(devices.getTotalPages());
+        meta.setTotal(devices.getTotalElements());
+        response.setMeta(meta);
+        response.setResult(devices.getContent());
+
+        return ResponseEntity.ok(response);
+    }
 }

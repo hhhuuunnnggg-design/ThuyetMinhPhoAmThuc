@@ -1,7 +1,7 @@
 import { Button } from "antd";
 import { MapContainer, TileLayer, Marker, Circle } from "react-leaflet";
 import { Map } from "leaflet";
-import React, { useEffect, useState } from "react";
+import React from "react";
 import type { TTSAudio } from "@/api/tts.api";
 import { GeoPosition } from "../types";
 import { MapCenter } from "./MapCenter";
@@ -67,7 +67,7 @@ export const TTSMap = ({
             icon={createUserIcon()}
             draggable={true}
             eventHandlers={{
-              dragend: (e) => {
+              dragend: (e: any) => {
                 const marker = e.target;
                 const newPos = marker.getLatLng();
                 onMarkerDrag(newPos.lat, newPos.lng);
@@ -104,7 +104,7 @@ export const TTSMap = ({
                     click: () => {
                       onMarkerClick(audio.id);
                     },
-                    mouseover: (e) => {
+                    mouseover: (e: any) => {
                       e.target.getElement()?.setAttribute("title", audio.foodName || "Food");
                     },
                   }}

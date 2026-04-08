@@ -171,7 +171,7 @@ const TTSPage = () => {
     (lang: string) => {
       setNarrationLang(lang);
       if (selected) {
-        playAudioForLanguage(selected.id, lang, selected.groupKey);
+        playAudioForLanguage(selected.id, lang, selected.groupKey ?? undefined);
       }
     },
     [selected, playAudioForLanguage],

@@ -13,6 +13,7 @@ interface MapViewProps {
   onMarkerClick: (id: number) => void;
   mapRef: React.MutableRefObject<Map | null>;
   hasManualPanRef: React.MutableRefObject<boolean>;
+  activePOIIds?: Set<number>;
 }
 
 export const MapView = ({
@@ -25,6 +26,7 @@ export const MapView = ({
   onMarkerClick,
   mapRef,
   hasManualPanRef,
+  activePOIIds,
 }: MapViewProps) => {
   return (
     <div className="gps-map-page">
@@ -53,6 +55,7 @@ export const MapView = ({
         onMarkerClick={onMarkerClick}
         mapRef={mapRef}
         hasManualPanRef={hasManualPanRef}
+        activePOIIds={activePOIIds}
       />
     </div>
   );

@@ -2,8 +2,9 @@ import { useCurrentApp } from "@/components/context/app.context";
 import { ROUTES } from "@/constants";
 import { Outlet, useLocation } from "react-router-dom";
 import AppHeader from "./AppHeader";
+import React from "react";
 
-function ClientLayout() {
+function ClientLayout({ children }: { children?: React.ReactNode }) {
   const location = useLocation();
   const { user } = useCurrentApp();
 
@@ -25,7 +26,7 @@ function ClientLayout() {
   return (
     <div>
       {!shouldHideHeader && <AppHeader />}
-      <Outlet />
+      {children || <Outlet />}
     </div>
   );
 }

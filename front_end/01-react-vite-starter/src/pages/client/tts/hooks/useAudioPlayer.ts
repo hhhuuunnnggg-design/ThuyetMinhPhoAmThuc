@@ -115,8 +115,8 @@ export const useAudioPlayer = ({
           poiId: selected.poiId,
           audioId,
           languageCode: languageCode.toLowerCase(),
-          latitude: position?.lat ?? null,
-          longitude: position?.lng ?? null,
+          latitude: position?.lat ?? undefined,
+          longitude: position?.lng ?? undefined,
         });
 
         const activeId = await resolveActiveNarrationId({
@@ -213,7 +213,7 @@ export const useAudioPlayer = ({
 
     if (!isPlaying) {
       setUserPaused(false);
-      void playAudioInternal(selected.id, false, undefined, selected.groupKey);
+      void playAudioInternal(selected.id, false, undefined, selected.groupKey ?? undefined);
     } else {
       const duration = playStartTimeRef.current
         ? Math.round((Date.now() - playStartTimeRef.current) / 1000)

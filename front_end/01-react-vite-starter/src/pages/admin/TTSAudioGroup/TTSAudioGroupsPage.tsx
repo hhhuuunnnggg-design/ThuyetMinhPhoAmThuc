@@ -1,7 +1,5 @@
 import {
   deleteTTSGroupAPI,
-  generateMultilingualForGroupAPI,
-  getGroupAudioAPI,
   getTTSGroupsAPI,
   type AudioData,
   type TTSAudioGroup,
@@ -44,7 +42,6 @@ const LANGUAGE_LABELS: Record<string, string> = {
 
 const TTSAudioGroupsPage = () => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [generatingGroupId, setGeneratingGroupId] = useState<number | null>(null);
   const [playingAudioKey, setPlayingAudioKey] = useState<string | null>(null);
   const [editGroupId, setEditGroupId] = useState<number | null>(null);
   const actionRef = useRef<any>();
@@ -60,19 +57,7 @@ const TTSAudioGroupsPage = () => {
     }
   };
 
-  const handleGenerateMultilingual = async (groupId: number) => {
-    try {
-      setGeneratingGroupId(groupId);
-      await generateMultilingualForGroupAPI(groupId);
-      message.success("Đã tạo audio đa ngôn ngữ thành công!");
-      actionRef.current?.reload();
-    } catch (error: any) {
-      message.error("Tạo audio đa ngôn ngữ thất bại: " + (error?.message || "Lỗi không xác định"));
-      logger.error("Generate multilingual error:", error);
-    } finally {
-      setGeneratingGroupId(null);
-    }
-  };
+
 
   const handlePlayAudio = (groupKey: string, lang: string) => {
     const url = `${config.api.baseURL}${API_ENDPOINTS.TTS.GROUP_AUDIO(groupKey, lang)}`;
@@ -178,7 +163,7 @@ const TTSAudioGroupsPage = () => {
       render: (_: any, record: TTSAudioGroup) => (
         <Space size={4} wrap>
           {/* Nút phát cho từng ngôn ngữ trong audioMap */}
-          {Object.entries(record.audioMap || {}).map(([lang, audio]) => (
+          {Object.entries(record.audioMap || {}).map(([lang, _audio]) => (
             <Tooltip key={lang} title={`Phát ${LANGUAGE_LABELS[lang] || lang}`}>
               <Button
                 type={playingAudioKey === `${record.groupKey}:${lang}` ? "primary" : "default"}
@@ -259,7 +244,7 @@ const TTSAudioGroupsPage = () => {
         actionRef={actionRef}
         rowKey="id"
         search={{ labelWidth: "auto" }}
-        request={async (params) => {
+        request={async (params: any) => {
           try {
             const response: any = await getTTSGroupsAPI(params.current || 1, params.pageSize || 10);
             if (response?.data?.meta && response?.data?.result) {
@@ -365,7 +350,7 @@ const TTSAudioGroupsPage = () => {
         pagination={{
           defaultPageSize: 10,
           showSizeChanger: true,
-          showTotal: (total) => `Tổng ${total} nhóm`,
+          showTotal: (total: number) => `Tổng ${total} nhóm`,
         }}
       />
     </div>

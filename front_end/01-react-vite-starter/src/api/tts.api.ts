@@ -34,6 +34,15 @@ export interface UpdateTTSAudioGroupRequest {
   originalSpeed: number;
   originalFormat: number;
   originalWithoutFilter?: boolean;
+  foodName?: string | null;
+  price?: number | null;
+  description?: string | null;
+  imageUrl?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  accuracy?: number | null;
+  triggerRadiusMeters?: number | null;
+  priority?: number | null;
 }
 
 // ===== RESPONSE =====
@@ -110,6 +119,17 @@ export interface TTSAudioGroup {
   originalSpeed?: number | null;
   originalFormat?: number | null;
   originalWithoutFilter?: boolean | null;
+
+  // ===== THÔNG TIN ẨM THỰC VÀ GPS MỞ RỘNG TỪ POI =====
+  foodName?: string | null;
+  price?: number | null;
+  description?: string | null;
+  imageUrl?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  accuracy?: number | null;
+  triggerRadiusMeters?: number | null;
+  priority?: number | null;
 
   // ===== AUDIO ĐA NGÔN NGỮ =====
   audioMap: Record<string, AudioData>;

@@ -399,4 +399,25 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         int idx = (int) Math.ceil(p * sorted.length) - 1;
         return sorted[Math.max(0, Math.min(idx, sorted.length - 1))];
     }
+
+    @Override
+    public org.springframework.data.domain.Page<com.example.demo.domain.response.admin.ResAdminDeviceConfigDTO> getDeviceConfigs(org.springframework.data.domain.Pageable pageable) {
+        return deviceConfigRepository.findAll(pageable).map(d -> com.example.demo.domain.response.admin.ResAdminDeviceConfigDTO.builder()
+                .id(d.getId())
+                .deviceId(d.getDeviceId())
+                .osVersion(d.getOsVersion())
+                .appVersion(d.getAppVersion())
+                .ramMB(d.getRamMB())
+                .storageFreeMB(d.getStorageFreeMB())
+                .networkType(d.getNetworkType())
+                .offlineModeEnabled(d.getOfflineModeEnabled())
+                .totalDownloadedMB(d.getTotalDownloadedMB())
+                .lastLat(d.getLastLat())
+                .lastLng(d.getLastLng())
+                .lastSeenAt(d.getLastSeenAt())
+                .runningMode(d.getRunningMode())
+                .createdAt(d.getCreatedAt())
+                .updatedAt(d.getUpdatedAt())
+                .build());
+    }
 }

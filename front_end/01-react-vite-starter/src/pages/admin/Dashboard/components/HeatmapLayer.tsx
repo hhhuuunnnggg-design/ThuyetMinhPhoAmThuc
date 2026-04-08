@@ -9,7 +9,7 @@ interface HeatmapLayerProps {
 }
 
 export const HeatmapLayer = ({ points }: HeatmapLayerProps) => {
-  const heatRef = useRef<ReturnType<typeof L.heatLayer> | null>(null);
+  const heatRef = useRef<any>(null);
   const map = useMap();
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export const HeatmapLayer = ({ points }: HeatmapLayerProps) => {
 
     if (points.length === 0) return;
 
-    heatRef.current = L.heatLayer(points, {
+    heatRef.current = (L as any).heatLayer(points, {
       radius: 40,
       blur: 25,
       maxZoom: 19,

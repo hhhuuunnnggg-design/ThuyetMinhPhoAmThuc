@@ -45,4 +45,9 @@ public interface AdminDashboardService {
      */
     ResLoadTestResultDTO startLoadTest(int concurrentUsers, int durationSeconds,
             int triggerRadiusMeters, Integer poiCount);
+
+    /**
+     * Lấy log thiết bị quét QR theo page.
+     */
+    org.springframework.data.domain.Page<com.example.demo.domain.response.admin.ResAdminDeviceConfigDTO> getDeviceConfigs(org.springframework.data.domain.Pageable pageable);
 }
