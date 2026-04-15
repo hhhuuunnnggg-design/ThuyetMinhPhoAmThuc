@@ -33,7 +33,8 @@
   "git.autofetch": false,
   "java.project.sourcePaths": [
     "front_end/01-react-vite-starter"
-  ]
+  ],
+  "java.compile.nullAnalysis.mode": "automatic"
 
   
 }

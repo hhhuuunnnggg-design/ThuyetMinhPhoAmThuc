@@ -11,7 +11,7 @@ public class DemoApplication {
     public static void main(String[] args) {
 
         Dotenv dotenv = Dotenv.configure()
-                .directory("./backend/demo") // thư mục gốc project
+                .directory(".") // thư mục hiện tại (backend/demo)
                 .filename(".env") // tên file
                 .ignoreIfMissing()
                 .load();
