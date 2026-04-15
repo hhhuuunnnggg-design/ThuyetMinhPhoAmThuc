@@ -21,8 +21,9 @@ public interface TTSAudioGroupRepository extends JpaRepository<TTSAudioGroup, Lo
     @EntityGraph(attributePaths = { "poi", "poi.user" })
     Optional<TTSAudioGroup> findById(Long id);
 
-    /** Rõ ràng theo khóa ngoại POI — tránh sai lệch khi Spring parse tên method derived. */
-    @Query("SELECT g FROM TTSAudioGroup g WHERE g.poi.id = :poiId")
+    /** Rõ ràng theo khóa ngoại POI — tránh sai lệch khi Spring parse tên method derived.
+     *  ORDER BY g.id ASC để primaryGroup = groups.get(0) luôn là group cũ nhất (ổn định). */
+    @Query("SELECT g FROM TTSAudioGroup g WHERE g.poi.id = :poiId ORDER BY g.id ASC")
     List<TTSAudioGroup> findByPoiId(@Param("poiId") Long poiId);
 
     List<TTSAudioGroup> findByFoodNameContainingIgnoreCase(String foodName);

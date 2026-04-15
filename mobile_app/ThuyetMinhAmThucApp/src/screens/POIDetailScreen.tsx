@@ -24,7 +24,7 @@ import { POI, AudioInfo, DeviceConfig } from "../types";
 
 type RootStackParamList = {
   Home: undefined;
-  POIDetail: { poi: POI };
+  POIDetail: { poi: POI; fromQrScan?: boolean };
   QRScanner: undefined;
   Payment: { poi: POI; amount: number; quantity?: number; unitAmount?: number };
 };
@@ -41,7 +41,7 @@ function unitPriceVnd(poi: POI): number {
 const POIDetailScreen: React.FC = () => {
   const route = useRoute<RouteProp<RootStackParamList, "POIDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { poi: routePoi } = route.params;
+  const { poi: routePoi, fromQrScan } = route.params;
 
   /** POI đầy đủ audios — list/home/offline thường thiếu map audios, cần bổ sung */
   const [poi, setPoi] = useState<POI>(routePoi);
@@ -56,6 +56,8 @@ const POIDetailScreen: React.FC = () => {
   const audioRef = useRef<Audio.Sound | null>(null);
   const narrLogStartMsRef = useRef<number | null>(null);
   const narrLogAudioIdRef = useRef<number | null>(null);
+  /** Đảm bảo auto-play chỉ chạy đúờng một lần khi đến từ QR scanner. */
+  const autoPlayDoneRef = useRef(false);
 
   const loadPreferences = useCallback(async () => {
     const lang = await storageService.getPreferredLanguage();
@@ -72,6 +74,8 @@ const POIDetailScreen: React.FC = () => {
     let cancelled = false;
     const base = routePoi;
     setPoi(base);
+    // Reset auto-play khi POI mới được truyền vào
+    autoPlayDoneRef.current = false;
     const hasAudios =
       base.audios &&
       typeof base.audios === "object" &&
@@ -128,6 +132,33 @@ const POIDetailScreen: React.FC = () => {
       unloadAudio();
     };
   }, []);
+
+  /**
+   * Auto-play một lần khi vào từ QR scanner và audios đã được load.
+   * Điều kiện: fromQrScan && chưa tự phát && đang không loading && có audio.
+   */
+  useEffect(() => {
+    if (
+      !fromQrScan ||
+      autoPlayDoneRef.current ||
+      loadingDetail ||
+      loadingAudio
+    ) {
+      return;
+    }
+    const entries = Object.entries(poi.audios || {});
+    if (entries.length === 0) return;
+
+    // Chọn audio theo ngôn ngữ ưa thích, fallback về bản đầu tiên
+    const target: AudioInfo | undefined =
+      entries.find(([lang]) => lang === preferredLang)?.[1] ??
+      (entries[0]?.[1] as AudioInfo | undefined);
+
+    if (target && !playingAudioId) {
+      autoPlayDoneRef.current = true;
+      void playAudio(target);
+    }
+  }, [fromQrScan, loadingDetail, loadingAudio, poi.audios, preferredLang]);
 
   const checkRunningMode = async () => {
     try {

@@ -4,7 +4,6 @@ import {
   parseAdminPOIListResponse,
   type AdminPOI,
 } from "@/api/adminPoi.api";
-import { createAppPaymentAPI } from "@/api/appPayment.api";
 import { getImageUrl } from "@/api/tts.api";
 import { ROUTES } from "@/constants";
 import type { RootState } from "@/redux/store";
@@ -14,6 +13,7 @@ import {
   EditOutlined,
   PlusOutlined,
   ReloadOutlined,
+  CreditCardOutlined,
 } from "@ant-design/icons";
 import ProTable from "@ant-design/pro-table";
 import { Alert, Button, message, Popconfirm, Space, Spin, Tag, Tooltip, Image } from "antd";
@@ -21,6 +21,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import UpsertPOIModal from "./UpsertPOIModal";
+import { createAppPaymentAPI } from "@/api/appPayment.api";
 
 /**
  * Nội dung QR: URL https://.../open-poi?qr=<uuid> để camera điện thoại nhận dạng là link
@@ -50,6 +51,43 @@ const AdminPOIsPage = () => {
     setModalOpen(true);
   };
 
+  /** Mở trang thanh toán PayOS cho POI — luồng riêng, không gắn vào QR địa điểm. */
+  const openPayOS = async (r: AdminPOI) => {
+    if (payingPoiId != null) return;
+    setPayingPoiId(r.id);
+    try {
+      const userId = user?.email ? `admin:${user.email}` : `admin-web-${r.id}`;
+      const amount =
+        r.price != null && Number(r.price) > 0 ? Math.round(Number(r.price)) : 10_000;
+      const description = r.foodName ? `Ủng hộ: ${r.foodName}` : undefined;
+      const payment = await createAppPaymentAPI({
+        poiId: r.id,
+        userId,
+        amount,
+        description,
+      });
+      const link = payment?.payosPaymentLink?.trim();
+      if (link) {
+        window.open(link, "_blank", "noopener,noreferrer");
+        if (link.includes("/mock/")) {
+          message.warning("PayOS đang dùng link thử (mock) — kiểm tra PAYOS_* trên backend.");
+        } else {
+          message.success("Đã mở trang thanh toán PayOS.");
+        }
+      } else {
+        message.error("Không nhận được link thanh toán từ server.");
+      }
+    } catch (e: unknown) {
+      const msg =
+        e && typeof e === "object" && "message" in e
+          ? String((e as { message: string }).message)
+          : "Tạo thanh toán thất bại";
+      message.error(msg);
+    } finally {
+      setPayingPoiId(null);
+    }
+  };
+
   return (
     <div style={{ padding: 24 }}>
       <Alert
@@ -59,9 +97,10 @@ const AdminPOIsPage = () => {
         message="Điểm POI (địa điểm kinh doanh)"
         description={
           <>
-            POI dùng cho app & bản đồ: <strong>địa chỉ, GPS, thông tin ẩm thực, mã QR</strong>, liên kết nhà hàng & người tạo.
+            POI dùng cho app &amp; bản đồ: <strong>địa chỉ, GPS, thông tin ẩm thực, mã QR</strong>, liên kết nhà hàng &amp; người tạo.
             <br />
-            <strong>Quét QR</strong> = mở trang địa điểm / app. <strong>Click vào QR</strong> = tạo link PayOS và mở trang thanh toán (giống nút ủng hộ trên app).
+            <strong>Quét QR</strong> = mở trang địa điểm (camera / app).
+            <strong> Nút Thanh toán</strong> (💳) ở cột Thao tác = tạo link PayOS để ủng hộ — tách riêng khỏi QR địa điểm.
             TTSAudioGroup chỉ chứa audio đa ngôn ngữ cho POI.
           </>
         }
@@ -152,7 +191,7 @@ const AdminPOIsPage = () => {
             render: (_: unknown, r: AdminPOI) => r.category || "—",
           },
           {
-            title: "QR",
+            title: "QR Địa điểm",
             dataIndex: "qrCode",
             width: 108,
             align: "center",
@@ -161,80 +200,31 @@ const AdminPOIsPage = () => {
               if (qr == null || qr === "") return "—";
               const s = String(qr).trim();
               const payload = buildPoiQrPayload(s);
-              const paying = payingPoiId === r.id;
-
-              const openPayOS = async () => {
-                if (payingPoiId != null) return;
-                setPayingPoiId(r.id);
-                try {
-                  const userId = user?.email ? `admin:${user.email}` : `admin-web-${r.id}`;
-                  const amount =
-                    r.price != null && Number(r.price) > 0 ? Math.round(Number(r.price)) : 10_000;
-                  const description = r.foodName ? `Ủng hộ: ${r.foodName}` : undefined;
-                  const payment = await createAppPaymentAPI({
-                    poiId: r.id,
-                    userId,
-                    amount,
-                    description,
-                  });
-                  const link = payment?.payosPaymentLink?.trim();
-                  if (link) {
-                    window.open(link, "_blank", "noopener,noreferrer");
-                    if (link.includes("/mock/")) {
-                      message.warning("PayOS đang dùng link thử (mock) — kiểm tra PAYOS_* trên backend.");
-                    } else {
-                      message.success("Đã mở trang thanh toán PayOS.");
-                    }
-                  } else {
-                    message.error("Không nhận được link thanh toán từ server.");
-                  }
-                } catch (e: unknown) {
-                  const msg =
-                    e && typeof e === "object" && "message" in e
-                      ? String((e as { message: string }).message)
-                      : "Tạo thanh toán thất bại";
-                  message.error(msg);
-                } finally {
-                  setPayingPoiId(null);
-                }
-              };
-
               return (
-                <Tooltip
-                  title={
-                    <>
-                      <div>
-                        <strong>Quét</strong>: mã địa điểm (camera / app).
-                      </div>
-                      <div style={{ marginTop: 4 }}>
-                        <strong>Click</strong>: mở PayOS (ủng hộ), giống app.
-                      </div>
-                    </>
-                  }
-                >
-                  <button
-                    type="button"
-                    onClick={openPayOS}
-                    disabled={paying}
-                    style={{
-                      display: "inline-flex",
-                      padding: 4,
-                      background: "#fff",
-                      borderRadius: 6,
-                      border: "1px solid #e2e8f0",
-                      lineHeight: 0,
-                      cursor: paying ? "wait" : "pointer",
-                    }}
-                    aria-label="Quét QR địa điểm hoặc click để thanh toán PayOS"
-                  >
-                    {paying ? (
-                      <span style={{ width: 56, height: 56, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                        <Spin size="small" />
-                      </span>
-                    ) : (
+                <Tooltip title="Quét QR này bằng camera điện thoại để mở trang địa điểm.">
+                  <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        padding: 4,
+                        background: "#fff",
+                        borderRadius: 6,
+                        border: "1px solid #e2e8f0",
+                        lineHeight: 0,
+                        cursor: "default",
+                      }}
+                    >
                       <QRCodeSVG value={payload} size={56} level="M" marginSize={0} />
-                    )}
-                  </button>
+                    </div>
+                    <a
+                      href={payload}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: 11, color: "#94a3b8" }}
+                    >
+                      Mở trang
+                    </a>
+                  </div>
                 </Tooltip>
               );
             },
@@ -255,11 +245,20 @@ const AdminPOIsPage = () => {
           {
             title: "Thao tác",
             valueType: "option",
-            width: 120,
+            width: 150,
             render: (_, r) => (
               <Space>
                 <Tooltip title="Sửa POI">
                   <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEdit(r.id)} />
+                </Tooltip>
+                <Tooltip title="Thanh toán PayOS (tạo link ủng hộ)">
+                  <Button
+                    type="link"
+                    size="small"
+                    icon={payingPoiId === r.id ? <Spin size="small" /> : <CreditCardOutlined />}
+                    disabled={payingPoiId != null}
+                    onClick={() => openPayOS(r)}
+                  />
                 </Tooltip>
                 <Popconfirm
                   title="Xóa POI?"

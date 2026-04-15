@@ -24,7 +24,11 @@ public class CorsConfig {
                         "http://localhost:3001",
                         // Expo web (npx expo start --web), mặc định cổng 8081
                         "http://localhost:8081",
-                        "http://127.0.0.1:8081"));
+                        "http://127.0.0.1:8081",
+                        // Thêm địa chỉ mạng LAN để Mobile phone truy cập được
+                        "http://192.168.1.109:3000",
+                        "http://192.168.1.109:8081"
+                ));
 
         // các method nào đc kết nối
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));

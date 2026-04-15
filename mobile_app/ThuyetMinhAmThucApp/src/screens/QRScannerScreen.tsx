@@ -13,12 +13,12 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Haptics from "expo-haptics";
 import api from "../services/api";
 import { unwrapEntityResponse } from "../utils/apiResponse";
-import { extractPoiQrFromScan } from "../utils/qrScan";
+import { parsePoiQrPayload } from "../utils/qrScan";
 import { POI } from "../types";
 
 type RootStackParamList = {
   Home: undefined;
-  POIDetail: { poi: POI };
+  POIDetail: { poi: POI; fromQrScan?: boolean };
   QRScanner: undefined;
 };
 
@@ -40,33 +40,35 @@ const QRScannerScreen: React.FC = () => {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     try {
-      const code = extractPoiQrFromScan(data);
-      // code có thể là mã QR POI (UUID) hoặc số ID
+      // Parse QR theo 3 format: JSON payload, URL ?qr=, raw UUID/số
+      const parsed = parsePoiQrPayload(data);
       let poi: any = null;
 
-      // Thử tìm theo QR code
-      try {
-        const res: any = await api.get(`/api/v1/app/pois/qr/${encodeURIComponent(code)}`);
-        poi = unwrapEntityResponse<POI>(res.data);
-      } catch {}
-
-      // Thử tìm theo ID
-      if (!poi) {
+      if (parsed.mode === "id") {
+        // Đã biết chính xác poiId → gọi thẳng /pois/{id}
         try {
-          const id = parseInt(code, 10);
-          if (!isNaN(id)) {
-            const res: any = await api.get(`/api/v1/app/pois/${id}`);
-            poi = unwrapEntityResponse<POI>(res.data);
-          }
+          const res: any = await api.get(`/api/v1/app/pois/${parsed.value}`);
+          poi = unwrapEntityResponse<POI>(res.data);
+        } catch {}
+      } else if (parsed.mode === "qr") {
+        // QR code (UUID hoặc raw string) → dùng endpoint /pois/qr/{qrCode}
+        try {
+          const res: any = await api.get(
+            `/api/v1/app/pois/qr/${encodeURIComponent(parsed.value)}`
+          );
+          poi = unwrapEntityResponse<POI>(res.data);
         } catch {}
       }
 
       if (poi) {
-        navigation.navigate("POIDetail", { poi });
+        // fromQrScan = true để POIDetailScreen biết phát audio tự động
+        navigation.navigate("POIDetail", { poi, fromQrScan: true });
       } else {
+        const displayCode =
+          parsed.mode !== "unknown" ? String(parsed.value) : data.slice(0, 60);
         Alert.alert(
           "Không tìm thấy",
-          `Không tìm thấy POI với mã: ${code}`,
+          `Không tìm thấy POI với mã: ${displayCode}`,
           [
             {
               text: "Quét lại",

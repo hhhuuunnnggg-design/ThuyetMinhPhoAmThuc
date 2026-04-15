@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: {
       port: Number(env.VITE_FRONTEND_PORT) || 3000,
+      host: true,
     },
     resolve: {
       alias: {
