@@ -26,8 +26,8 @@ public class CorsConfig {
                         "http://localhost:8081",
                         "http://127.0.0.1:8081",
                         // Thêm địa chỉ mạng LAN để Mobile phone truy cập được
-                        "http://192.168.1.109:3000",
-                        "http://192.168.1.109:8081"
+                        "http://192.168.1.51:3000",
+                        "http://192.168.1.51:8081"
                 ));
 
         // các method nào đc kết nối

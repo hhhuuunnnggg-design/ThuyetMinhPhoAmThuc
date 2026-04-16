@@ -9,16 +9,22 @@ import { Link, useSearchParams } from "react-router-dom";
 const LANGUAGE_LABELS: Record<string, string> = {
   vi: "🇻🇳 Tiếng Việt",
   en: "🇬🇧 English",
-  zh: "🇨🇳 中文",
-  ja: "🇯🇵 日本語",
-  ko: "🇰🇷 한국어",
-  fr: "🇫🇷 Français",
-  de: "🇩🇪 Deutsch",
+  zh: "🇨🇳 Trung Quốc",
+  ja: "🇯🇵 Nhật Bản",
+  ko: "🇰🇷 Hàn Quốc",
+  fr: "🇫🇷 Pháp",
+  de: "🇩🇪 Đức",
 };
 
 /** Deep link scheme cho app (nếu đã khai báo trong app config). */
 function buildAppDeepLink(qr: string): string {
   return `vinhkhanh://poi?qr=${encodeURIComponent(qr)}`;
+}
+
+/** Lấy URL audio stream trực tiếp dựa vào backend URL môi trường */
+function getWebAudioUrl(groupKey: string, lang: string): string {
+  const base = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+  return `${base.replace(/\/$/, "")}/api/v1/tts/groups/${groupKey}/audio/${lang}`;
 }
 
 // ============ Component ============
@@ -209,19 +215,9 @@ function POICard({
           </div>
         )}
 
-        {/* Audio badges */}
+        {/* Audio Player */}
         {audioEntries.length > 0 && (
-          <div style={audioSection}>
-            <div style={sectionTitle}>🎙 Ngôn ngữ thuyết minh</div>
-            <div style={audioBadgeRow}>
-              {audioEntries.map(([lang]) => (
-                <span key={lang} style={audioBadge}>
-                  {LANGUAGE_LABELS[lang] ?? lang}
-                </span>
-              ))}
-            </div>
-            <p style={audioHintText}>Mở app để nghe thuyết minh tự động.</p>
-          </div>
+          <AudioPlayerSection audioEntries={audioEntries} groupKey={poi.groupKey} />
         )}
       </div>
 
@@ -251,6 +247,59 @@ function InfoRow({
         {icon} {label}
       </span>
       <span style={infoValue}>{value}</span>
+    </div>
+  );
+}
+
+function AudioPlayerSection({
+  audioEntries,
+  groupKey,
+}: {
+  audioEntries: [string, AudioInfo][];
+  groupKey: string;
+}) {
+  // Ưu tiên tiếng Việt (vi) nếu có, không thì lấy ngôn ngữ đầu tiên
+  const initialLang = audioEntries.find(([l]) => l === "vi") ? "vi" : audioEntries[0]?.[0];
+  const [selectedLang, setSelectedLang] = useState<string | undefined>(initialLang);
+
+  if (!selectedLang) return null;
+
+  const audioUrl = getWebAudioUrl(groupKey, selectedLang);
+
+  return (
+    <div style={audioSection}>
+      <div style={{ ...sectionTitle, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span>🎙 Thuyết minh tự động</span>
+      </div>
+
+      <div style={audioBadgeRow}>
+        {audioEntries.map(([lang]) => {
+          const isActive = lang === selectedLang;
+          return (
+            <button
+              key={lang}
+              onClick={() => setSelectedLang(lang)}
+              style={isActive ? activeAudioBadge : inactiveAudioBadge}
+            >
+              {LANGUAGE_LABELS[lang] ?? lang}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <audio
+          key={audioUrl} // thay đổi key để force thẻ audio render lại khi đổi url
+          controls
+          autoPlay // Tự động phát khi render (có thể bị browser chặn trong 1 số trường hợp, nhưng sẽ phát ngay khi user tương tác)
+          style={{ width: "100%", height: 44 }}
+          src={audioUrl}
+        >
+          Trình duyệt của bạn không hỗ trợ thẻ audio.
+        </audio>
+      </div>
+
+      <p style={audioHintText}>Nhấn nút Play để nghe nếu âm thanh chưa tự phát.</p>
     </div>
   );
 }
@@ -405,14 +454,28 @@ const audioBadgeRow: React.CSSProperties = {
   marginTop: 8,
 };
 
-const audioBadge: React.CSSProperties = {
-  padding: "4px 12px",
-  background: "#f0fdf4",
-  color: "#16a34a",
+const activeAudioBadge: React.CSSProperties = {
+  padding: "6px 14px",
+  background: "#16a34a",
+  color: "#fff",
+  borderRadius: 20,
+  fontSize: 13,
+  fontWeight: 600,
+  border: "1px solid #16a34a",
+  cursor: "pointer",
+  transition: "all 0.2s",
+};
+
+const inactiveAudioBadge: React.CSSProperties = {
+  padding: "6px 14px",
+  background: "#f8fafc",
+  color: "#64748b",
   borderRadius: 20,
   fontSize: 13,
   fontWeight: 500,
-  border: "1px solid #bbf7d0",
+  border: "1px solid #cbd5e1",
+  cursor: "pointer",
+  transition: "all 0.2s",
 };
 
 const audioHintText: React.CSSProperties = {
