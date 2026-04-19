@@ -116,6 +116,10 @@ public class DeviceConfig {
     @Column
     Instant updatedAt;
 
+    @Column
+    @Builder.Default
+    Boolean isActive = true;
+
     /**
      * Xác định chế độ chạy dựa trên cấu hình thiết bị.
      * OFFLINE: RAM ≥ 4096 MB, Storage ≥ 500 MB, đã sync trong vòng 24h

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { NavigationContainer, useFocusEffect } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Text, View, StyleSheet } from "react-native";
+import { Text, View, StyleSheet, Platform } from "react-native";
 import * as Location from "expo-location";
 
 import HomeScreen from "../screens/HomeScreen";
@@ -104,8 +104,8 @@ const HomeTabs: React.FC = () => (
       tabBarActiveTintColor: "#ff6b35",
       tabBarInactiveTintColor: "#999",
       tabBarStyle: {
-        height: 60,
-        paddingBottom: 8,
+        height: Platform.OS === 'android' ? 70 : 60,
+        paddingBottom: Platform.OS === 'android' ? 12 : 8,
         paddingTop: 8,
       },
     }}

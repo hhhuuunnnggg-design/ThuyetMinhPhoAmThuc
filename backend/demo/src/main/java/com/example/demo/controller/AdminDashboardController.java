@@ -54,7 +54,8 @@ public class AdminDashboardController {
     /**
      * Top POIs được nghe nhiều nhất.
      *
-     * @param from  Ngày bắt đầu (ISO yyyy-MM-dd, inclusive). Bỏ qua cùng {@code to} → mặc định 7 ngày gần nhất.
+     * @param from  Ngày bắt đầu (ISO yyyy-MM-dd, inclusive). Bỏ qua cùng {@code to}
+     *              → mặc định 7 ngày gần nhất.
      * @param to    Ngày kết thúc (inclusive)
      * @param limit Số lượng kết quả trả về (mặc định 10)
      */
@@ -81,5 +82,39 @@ public class AdminDashboardController {
                 req.getDurationSeconds(),
                 req.getTriggerRadiusMeters() != null ? req.getTriggerRadiusMeters() : 50,
                 req.getPoiCount()));
+    }
+
+    @GetMapping("/device-configs")
+    @ApiMessage("Danh sách cấu hình thiết bị (Log)")
+    public ResponseEntity<com.example.demo.domain.dto.ResultPaginationDTO> getDeviceConfigs(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+
+        org.springframework.data.domain.Sort sort = sortDir.equalsIgnoreCase("asc")
+                ? org.springframework.data.domain.Sort.by(sortBy).ascending()
+                : org.springframework.data.domain.Sort.by(sortBy).descending();
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page - 1,
+                size, sort);
+        org.springframework.data.domain.Page<com.example.demo.domain.response.admin.ResAdminDeviceConfigDTO> devices = adminDashboardService
+                .getDeviceConfigs(pageable);
+
+        com.example.demo.domain.dto.ResultPaginationDTO response = new com.example.demo.domain.dto.ResultPaginationDTO();
+        com.example.demo.domain.dto.ResultPaginationDTO.Meta meta = new com.example.demo.domain.dto.ResultPaginationDTO.Meta();
+        meta.setPage(devices.getNumber() + 1);
+        meta.setPageSize(devices.getSize());
+        meta.setPages(devices.getTotalPages());
+        meta.setTotal(devices.getTotalElements());
+        response.setMeta(meta);
+        response.setResult(devices.getContent());
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/device-configs/active-count")
+    @ApiMessage("Đếm số thiết bị đang hoạt động")
+    public ResponseEntity<Long> getActiveDeviceConfigCount() {
+        return ResponseEntity.ok(adminDashboardService.countActiveDeviceConfigs());
     }
 }

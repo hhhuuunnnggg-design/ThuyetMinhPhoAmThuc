@@ -85,6 +85,29 @@ public class AppClientController {
     }
 
     /**
+     * Ghi log cấu hình thiết bị khi quét QR.
+     * Cập nhật thông tin vào bảng device_configs
+     */
+    @PostMapping("/device/qr-log")
+    @ApiMessage("Ghi log thiết bị quét QR")
+    public ResponseEntity<ResDeviceConfigDTO> logDeviceQRScan(@Valid @RequestBody com.example.demo.domain.request.app.ReqDeviceQRScanLogDTO req) {
+        ResDeviceConfigDTO result = appClientService.logQRScanDeviceConfig(req);
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Cập nhật trạng thái thiết bị đóng hoặc mở app.
+     */
+    @PostMapping("/device/active-state")
+    @ApiMessage("Cập nhật trạng thái active thiết bị")
+    public ResponseEntity<Void> updateDeviceActiveState(
+            @RequestParam String deviceId,
+            @RequestParam boolean isActive) {
+        appClientService.updateDeviceActiveState(deviceId, isActive);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
      * Kiểm tra chế độ chạy của thiết bị (OFFLINE vs STREAMING).
      */
     @GetMapping("/device/running-mode")

@@ -16,6 +16,7 @@ import {
   SoundOutlined,
   TagsOutlined,
   TeamOutlined,
+  MobileOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Avatar, Dropdown, Layout, Menu, Space, message } from "antd";
@@ -100,6 +101,11 @@ const AdminLayout = () => {
         label: <Link to={ROUTES.ADMIN.NARRATION_LOGS}>Narration Logs</Link>,
         key: "narration-logs",
         icon: <FileTextOutlined />,
+      },
+      {
+        label: <Link to={ROUTES.ADMIN.DEVICE_CONFIG_LOGS}>Cấu hình Thiết bị</Link>,
+        key: "device-configs",
+        icon: <MobileOutlined />,
       },
       {
         label: <Link to={ROUTES.ADMIN.PAYMENTS}>Thanh toán</Link>,

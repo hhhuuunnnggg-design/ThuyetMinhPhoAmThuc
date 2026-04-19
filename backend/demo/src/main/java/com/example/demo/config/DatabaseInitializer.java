@@ -58,7 +58,8 @@ public class DatabaseInitializer implements CommandLineRunner {
             // Users permissions
             arr.add(createPermission("Xem tất cả danh sách người dùng", "/api/v1/users/fetch-all", "GET", "USERS"));
             arr.add(createPermission("Xóa người dùng", "/api/v1/users/{id}", "DELETE", "USERS"));
-            arr.add(createPermission("thay đổi trạng thái người dùng", "/api/v1/users/changeActivity/{id}", "PUT", "USERS"));
+            arr.add(createPermission("thay đổi trạng thái người dùng", "/api/v1/users/changeActivity/{id}", "PUT",
+                    "USERS"));
             arr.add(createPermission("Upload avatar", "/api/v1/users/avatar", "POST", "USERS"));
             arr.add(createPermission("Upload cover photo", "/api/v1/users/coverPhoto", "POST", "USERS"));
             arr.add(createPermission("Admin tạo người dùng", "/api/v1/users/admin/create", "POST", "USERS"));
@@ -88,29 +89,39 @@ public class DatabaseInitializer implements CommandLineRunner {
             arr.add(createPermission("Cập nhật TTS audio", "/api/v1/tts/audios/{id}", "PUT", "TTS"));
             arr.add(createPermission("Xóa TTS audio", "/api/v1/tts/audios/{id}", "DELETE", "TTS"));
             arr.add(createPermission("Tải xuống TTS audio", "/api/v1/tts/audios/{id}/download", "GET", "TTS"));
-            arr.add(createPermission("Upload ảnh món ăn lên TTS audio", "/api/v1/tts/audios/{id}/image", "POST", "TTS"));
-            arr.add(createPermission("Upload ảnh món ăn (không cần audio ID)", "/api/v1/tts/images/upload", "POST", "TTS"));
+            arr.add(createPermission("Upload ảnh món ăn lên TTS audio", "/api/v1/tts/audios/{id}/image", "POST",
+                    "TTS"));
+            arr.add(createPermission("Upload ảnh món ăn (không cần audio ID)", "/api/v1/tts/images/upload", "POST",
+                    "TTS"));
             arr.add(createPermission("Tạo audio đa ngôn ngữ (batch)", "/api/v1/tts/multilingual", "POST", "TTS"));
-            arr.add(createPermission("Tạo đa ngôn ngữ cho audio đã tồn tại", "/api/v1/tts/audios/{id}/generate-multilingual", "POST", "TTS"));
+            arr.add(createPermission("Tạo đa ngôn ngữ cho audio đã tồn tại",
+                    "/api/v1/tts/audios/{id}/generate-multilingual", "POST", "TTS"));
 
             // TTS Groups permissions
             arr.add(createPermission("Xem danh sách tất cả groups", "/api/v1/tts/groups", "GET", "TTS_GROUPS"));
             arr.add(createPermission("Xem group theo ID", "/api/v1/tts/groups/{id}", "GET", "TTS_GROUPS"));
-            arr.add(createPermission("Xem group theo groupKey", "/api/v1/tts/groups/key/{groupKey}", "GET", "TTS_GROUPS"));
-            arr.add(createPermission("Xóa group và tất cả audio trong group", "/api/v1/tts/groups/{id}", "DELETE", "TTS_GROUPS"));
+            arr.add(createPermission("Xem group theo groupKey", "/api/v1/tts/groups/key/{groupKey}", "GET",
+                    "TTS_GROUPS"));
+            arr.add(createPermission("Xóa group và tất cả audio trong group", "/api/v1/tts/groups/{id}", "DELETE",
+                    "TTS_GROUPS"));
             arr.add(createPermission("Cập nhật metadata group TTS", "/api/v1/tts/groups/{id}", "PUT", "TTS_GROUPS"));
-            arr.add(createPermission("Tạo audio đa ngôn ngữ cho group", "/api/v1/tts/groups/{id}/generate-multilingual", "POST", "TTS_GROUPS"));
+            arr.add(createPermission("Tạo audio đa ngôn ngữ cho group", "/api/v1/tts/groups/{id}/generate-multilingual",
+                    "POST", "TTS_GROUPS"));
 
             // App client permissions (POI + narration)
             arr.add(createPermission("App client - lấy danh sách POI", "/api/v1/app/pois", "GET", "APP_CLIENT"));
-            arr.add(createPermission("App client - kiểm tra phát narration", "/api/v1/app/narration/check", "POST", "APP_CLIENT"));
-            arr.add(createPermission("App client - ghi log narration", "/api/v1/app/narration/log", "POST", "APP_CLIENT"));
+            arr.add(createPermission("App client - kiểm tra phát narration", "/api/v1/app/narration/check", "POST",
+                    "APP_CLIENT"));
+            arr.add(createPermission("App client - ghi log narration", "/api/v1/app/narration/log", "POST",
+                    "APP_CLIENT"));
 
             // Narration logs permissions (admin)
-            arr.add(createPermission("Xem danh sách narration logs", "/api/v1/admin/narration-logs", "GET", "NARRATION_LOGS"));
+            arr.add(createPermission("Xem danh sách narration logs", "/api/v1/admin/narration-logs", "GET",
+                    "NARRATION_LOGS"));
 
             // POI Admin — SHOP_OWNER có quyền API nhưng backend lọc theo JWT:
-            // SUPER_ADMIN / is_admin xem & sửa mọi POI; SHOP_OWNER chỉ POI do user_id của họ tạo (POIServiceImpl).
+            // SUPER_ADMIN / is_admin xem & sửa mọi POI; SHOP_OWNER chỉ POI do user_id của
+            // họ tạo (POIServiceImpl).
             arr.add(createPermission("Xem danh sách POI (admin)", "/api/v1/admin/pois", "GET", "POI_ADMIN"));
             arr.add(createPermission("Xem chi tiết POI (admin)", "/api/v1/admin/pois/{id}", "GET", "POI_ADMIN"));
             arr.add(createPermission("Tạo POI (admin)", "/api/v1/admin/pois", "POST", "POI_ADMIN"));
@@ -118,11 +129,15 @@ public class DatabaseInitializer implements CommandLineRunner {
             arr.add(createPermission("Xóa POI (admin)", "/api/v1/admin/pois/{id}", "DELETE", "POI_ADMIN"));
 
             // Restaurant Admin permissions
-            arr.add(createPermission("Xem danh sách nhà hàng (admin)", "/api/v1/admin/restaurants", "GET", "RESTAURANT_ADMIN"));
-            arr.add(createPermission("Xem chi tiết nhà hàng (admin)", "/api/v1/admin/restaurants/{id}", "GET", "RESTAURANT_ADMIN"));
+            arr.add(createPermission("Xem danh sách nhà hàng (admin)", "/api/v1/admin/restaurants", "GET",
+                    "RESTAURANT_ADMIN"));
+            arr.add(createPermission("Xem chi tiết nhà hàng (admin)", "/api/v1/admin/restaurants/{id}", "GET",
+                    "RESTAURANT_ADMIN"));
             arr.add(createPermission("Tạo nhà hàng (admin)", "/api/v1/admin/restaurants", "POST", "RESTAURANT_ADMIN"));
-            arr.add(createPermission("Cập nhật nhà hàng (admin)", "/api/v1/admin/restaurants/{id}", "PUT", "RESTAURANT_ADMIN"));
-            arr.add(createPermission("Xóa nhà hàng (admin)", "/api/v1/admin/restaurants/{id}", "DELETE", "RESTAURANT_ADMIN"));
+            arr.add(createPermission("Cập nhật nhà hàng (admin)", "/api/v1/admin/restaurants/{id}", "PUT",
+                    "RESTAURANT_ADMIN"));
+            arr.add(createPermission("Xóa nhà hàng (admin)", "/api/v1/admin/restaurants/{id}", "DELETE",
+                    "RESTAURANT_ADMIN"));
 
             this.permissionRepository.saveAll(arr);
         }
@@ -140,7 +155,8 @@ public class DatabaseInitializer implements CommandLineRunner {
             superAdminRole = this.roleRepository.save(superAdminRole);
         }
 
-        // SHOP_OWNER — cùng endpoint admin POI/nhà hàng/TTS/narration logs nhưng backend lọc theo user trong JWT
+        // SHOP_OWNER — cùng endpoint admin POI/nhà hàng/TTS/narration logs nhưng
+        // backend lọc theo user trong JWT
         Role shopOwnerRole = this.roleRepository.findByName("SHOP_OWNER").orElse(null);
         if (shopOwnerRole == null) {
             List<Permission> shopPermissions = allPermissions.stream()
@@ -213,7 +229,8 @@ public class DatabaseInitializer implements CommandLineRunner {
             this.userRepository.save(shopUser);
         }
 
-        // SHOP_OWNER thứ hai (B) — dashboard Top POI / real-time chỉ thấy POI do chính user này tạo
+        // SHOP_OWNER thứ hai (B) — dashboard Top POI / real-time chỉ thấy POI do chính
+        // user này tạo
         if (this.userRepository.findByEmail("shop2@gmail.com").isEmpty()) {
             User shopB = new User();
             shopB.setEmail("shop2@gmail.com");

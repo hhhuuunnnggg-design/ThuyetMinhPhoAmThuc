@@ -117,6 +117,7 @@ export const ROUTES = {
     PAYMENTS: "/admin/payments",
     LOAD_TEST: "/admin/load-test",
     TRANSLATION: "/admin/translation",
+    DEVICE_CONFIG_LOGS: "/admin/device-configs",
   },
   PAYMENT: {
     SUCCESS: "/payment/success",

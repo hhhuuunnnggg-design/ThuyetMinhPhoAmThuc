@@ -24,4 +24,6 @@ public interface DeviceConfigRepository extends JpaRepository<DeviceConfig, Long
 
     @Query("SELECT COUNT(d) FROM DeviceConfig d WHERE d.lastSeenAt >= :since")
     long countActiveDevices(@Param("since") Instant since);
+
+    long countByIsActiveTrue();
 }

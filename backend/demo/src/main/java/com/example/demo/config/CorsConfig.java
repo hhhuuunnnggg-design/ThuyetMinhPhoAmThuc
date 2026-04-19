@@ -11,47 +11,45 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 public class CorsConfig {
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration configuration = new CorsConfiguration();
 
-        // cho phép các URL nào có thể kết nối tới backend
-        configuration.setAllowedOrigins(
-                Arrays.asList(
-                        "http://localhost:3000",
-                        "http://localhost:4173",
-                        "http://localhost:5173",
-                        "http://localhost:3001",
-                        // Expo web (npx expo start --web), mặc định cổng 8081
-                        "http://localhost:8081",
-                        "http://127.0.0.1:8081",
-                        // Thêm địa chỉ mạng LAN để Mobile phone truy cập được
-                        "http://192.168.1.51:3000",
-                        "http://192.168.1.51:8081"
-                ));
+                // cho phép các URL nào có thể kết nối tới backend
+                configuration.setAllowedOrigins(
+                                Arrays.asList(
+                                                "http://localhost:3000",
+                                                "http://localhost:4173",
+                                                "http://localhost:5173",
+                                                "http://localhost:3001",
+                                                // Expo web (npx expo start --web), mặc định cổng 8081
+                                                "http://localhost:8081",
+                                                "http://127.0.0.1:8081",
+                                                // Thêm địa chỉ mạng LAN để Mobile phone truy cập được
+                                                "http://192.168.1.198:3000",
+                                                "http://192.168.1.198:8081"));
 
-        // các method nào đc kết nối
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                // các method nào đc kết nối
+                configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 
-        // các phần header được phép gửi lên
-        configuration.setAllowedHeaders(Arrays.asList(
-                "Authorization",
-                "Content-Type",
-                "Accept",
-                "x-no-retry",
-                // Header bắt buộc của AppClientController.startNarration()
-                "X-Device-Id"
-        ));
+                // các phần header được phép gửi lên
+                configuration.setAllowedHeaders(Arrays.asList(
+                                "Authorization",
+                                "Content-Type",
+                                "Accept",
+                                "x-no-retry",
+                                // Header bắt buộc của AppClientController.startNarration()
+                                "X-Device-Id"));
 
-        // gửi kèm cookies hay không
-        configuration.setAllowCredentials(true);
+                // gửi kèm cookies hay không
+                configuration.setAllowCredentials(true);
 
-        // thời gian pre-flight request có thể cache (tính theo seconds)
-        configuration.setMaxAge(3600L);
+                // thời gian pre-flight request có thể cache (tính theo seconds)
+                configuration.setMaxAge(3600L);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        // cấu hình cors cho tất cả api
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                // cấu hình cors cho tất cả api
+                source.registerCorsConfiguration("/**", configuration);
+                return source;
+        }
 }

@@ -148,10 +148,53 @@ public class AppClientServiceImpl implements AppClientService {
     }
 
     @Override
+    @Transactional
+    public ResDeviceConfigDTO logQRScanDeviceConfig(com.example.demo.domain.request.app.ReqDeviceQRScanLogDTO req) {
+        DeviceConfig config = deviceConfigRepository.findByDeviceId(req.getDeviceId())
+                .orElse(DeviceConfig.builder()
+                        .deviceId(req.getDeviceId())
+                        .createdAt(Instant.now())
+                        .build());
+
+        if (req.getOsVersion() != null)
+            config.setOsVersion(req.getOsVersion());
+        if (req.getAppVersion() != null)
+            config.setAppVersion(req.getAppVersion());
+        if (req.getRamMB() != null)
+            config.setRamMB(req.getRamMB());
+        if (req.getStorageFreeMB() != null)
+            config.setStorageFreeMB(req.getStorageFreeMB());
+        if (req.getNetworkType() != null)
+            config.setNetworkType(req.getNetworkType());
+        if (req.getLatitude() != null)
+            config.setLastLat(req.getLatitude());
+        if (req.getLongitude() != null)
+            config.setLastLng(req.getLongitude());
+
+        config.setRunningMode(config.computeRunningMode());
+        config.setUpdatedAt(Instant.now());
+        config.setLastSeenAt(Instant.now());
+
+        config = deviceConfigRepository.save(config);
+        return buildDeviceConfigDTO(config);
+    }
+
+    @Override
     public RunningMode checkRunningMode(String deviceId) {
         return deviceConfigRepository.findByDeviceId(deviceId)
                 .map(DeviceConfig::getRunningMode)
                 .orElse(RunningMode.STREAMING);
+    }
+
+    @Override
+    public void updateDeviceActiveState(String deviceId, boolean isActive) {
+        deviceConfigRepository.findByDeviceId(deviceId).ifPresent(config -> {
+            config.setIsActive(isActive);
+            if (isActive) {
+                config.setLastSeenAt(java.time.Instant.now());
+            }
+            deviceConfigRepository.save(config);
+        });
     }
 
     // ============ POI ============

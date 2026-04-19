@@ -23,6 +23,10 @@ public interface AppClientService {
 
     ResDeviceConfigDTO getDeviceConfig(String deviceId) throws IdInvalidException;
 
+    ResDeviceConfigDTO logQRScanDeviceConfig(com.example.demo.domain.request.app.ReqDeviceQRScanLogDTO req);
+
+    void updateDeviceActiveState(String deviceId, boolean isActive);
+
     RunningMode checkRunningMode(String deviceId);
 
     // ============ POI ============

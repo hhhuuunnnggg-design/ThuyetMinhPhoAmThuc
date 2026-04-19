@@ -1,0 +1,1 @@
+ALTER TABLE device_configs ADD COLUMN is_active BOOLEAN DEFAULT TRUE;
