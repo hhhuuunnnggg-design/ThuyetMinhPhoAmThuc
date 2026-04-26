@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.domain.request.admin.ReqLoadTestDTO;
 import com.example.demo.domain.response.admin.ResDashboardDTO;
 import com.example.demo.domain.response.admin.ResLoadTestResultDTO;
+import com.example.demo.domain.response.admin.ResOnlineStatsDTO;
 import com.example.demo.domain.response.admin.ResTopPOIDTO;
 import com.example.demo.domain.response.admin.ResTranslationStatsDTO;
 import com.example.demo.domain.response.app.ResActiveNarrationDTO;
@@ -116,5 +117,15 @@ public class AdminDashboardController {
     @ApiMessage("Đếm số thiết bị đang hoạt động")
     public ResponseEntity<Long> getActiveDeviceConfigCount() {
         return ResponseEntity.ok(adminDashboardService.countActiveDeviceConfigs());
+    }
+
+    /**
+     * Thống kê realtime: số người online ngay lúc này + tổng người dùng hôm nay.
+     * Frontend polling 5s, mobile không gọi endpoint này.
+     */
+    @GetMapping("/dashboard/online-stats")
+    @ApiMessage("Thống kê online realtime")
+    public ResponseEntity<ResOnlineStatsDTO> getOnlineStats() {
+        return ResponseEntity.ok(adminDashboardService.getOnlineStats());
     }
 }

@@ -66,7 +66,8 @@ public class AppClientController {
      */
     @PostMapping("/device/sync")
     @ApiMessage("Sync thiết bị")
-    public ResponseEntity<ResDeviceConfigDTO> syncDevice(@Valid @RequestBody ReqDeviceSyncDTO req) throws IdInvalidException {
+    public ResponseEntity<ResDeviceConfigDTO> syncDevice(@Valid @RequestBody ReqDeviceSyncDTO req)
+            throws IdInvalidException {
         ResDeviceConfigDTO result = appClientService.syncDevice(
                 req.getDeviceId(),
                 req.getLatitude(),
@@ -90,7 +91,8 @@ public class AppClientController {
      */
     @PostMapping("/device/qr-log")
     @ApiMessage("Ghi log thiết bị quét QR")
-    public ResponseEntity<ResDeviceConfigDTO> logDeviceQRScan(@Valid @RequestBody com.example.demo.domain.request.app.ReqDeviceQRScanLogDTO req) {
+    public ResponseEntity<ResDeviceConfigDTO> logDeviceQRScan(
+            @Valid @RequestBody com.example.demo.domain.request.app.ReqDeviceQRScanLogDTO req) {
         ResDeviceConfigDTO result = appClientService.logQRScanDeviceConfig(req);
         return ResponseEntity.ok(result);
     }
@@ -102,8 +104,10 @@ public class AppClientController {
     @ApiMessage("Cập nhật trạng thái active thiết bị")
     public ResponseEntity<Void> updateDeviceActiveState(
             @RequestParam String deviceId,
-            @RequestParam boolean isActive) {
-        appClientService.updateDeviceActiveState(deviceId, isActive);
+            @RequestParam boolean isActive,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng) {
+        appClientService.updateDeviceActiveState(deviceId, isActive, lat, lng);
         return ResponseEntity.ok().build();
     }
 
@@ -148,8 +152,9 @@ public class AppClientController {
 
     /**
      * Lấy POIs gần vị trí hiện tại.
-     * @param lat  Vĩ độ
-     * @param lng  Kinh độ
+     * 
+     * @param lat      Vĩ độ
+     * @param lng      Kinh độ
      * @param radiusKm Bán kính tìm kiếm (km). Mặc định 2km.
      */
     @GetMapping("/pois/nearby")
@@ -196,7 +201,8 @@ public class AppClientController {
     }
 
     /**
-     * Dừng phiên đang PLAYING của thiết bị (theo {@code X-Device-Id}) — rời vùng POI / nút dừng / phát xong.
+     * Dừng phiên đang PLAYING của thiết bị (theo {@code X-Device-Id}) — rời vùng
+     * POI / nút dừng / phát xong.
      */
     @PostMapping("/narration/stop")
     @ApiMessage("Dừng thuyết minh theo thiết bị")
@@ -212,7 +218,8 @@ public class AppClientController {
 
     /**
      * Ghi log phát thuyết minh (PLAYING/COMPLETED/SKIPPED).
-     * Frontend gọi khi bắt đầu/kết thúc phát — khác với ActiveNarration (dashboard real-time).
+     * Frontend gọi khi bắt đầu/kết thúc phát — khác với ActiveNarration (dashboard
+     * real-time).
      */
     @PostMapping("/narration/log")
     @ApiMessage("Ghi log narration")
@@ -251,7 +258,8 @@ public class AppClientController {
      */
     @PostMapping("/payment/create")
     @ApiMessage("Tạo thanh toán")
-    public ResponseEntity<ResPaymentDTO> createPayment(@Valid @RequestBody ReqPaymentCreateDTO req) throws IdInvalidException {
+    public ResponseEntity<ResPaymentDTO> createPayment(@Valid @RequestBody ReqPaymentCreateDTO req)
+            throws IdInvalidException {
         return ResponseEntity.ok(appClientService.createPayment(
                 req.getPoiId(),
                 req.getUserId(),

@@ -13,7 +13,7 @@ import { RouteProp, useRoute, useNavigation, useFocusEffect } from "@react-navig
 import { Audio } from "expo-av";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Haptics from "expo-haptics";
-import api, { getAudioStreamUrl, logNarration } from "../services/api";
+import api, { getAudioStreamUrl, logNarration, stopCurrentNarration } from "../services/api";
 import { unwrapEntityResponse } from "../utils/apiResponse";
 import { storageService } from "../services/storage";
 import { deviceService } from "../services/device";
@@ -245,6 +245,7 @@ const POIDetailScreen: React.FC = () => {
               }
             })();
           }
+          void stopCurrentNarration("COMPLETED").catch(() => {});
           setPlayingAudioId(null);
           void handleAudioEnd(audio);
         }
@@ -270,6 +271,13 @@ const POIDetailScreen: React.FC = () => {
     const aid = narrLogAudioIdRef.current;
     narrLogStartMsRef.current = null;
     narrLogAudioIdRef.current = null;
+    
+    try {
+      await stopCurrentNarration("SKIPPED");
+    } catch {
+      /* ignore */
+    }
+
     if (startMs != null && aid != null) {
       try {
         const deviceId = await deviceService.getDeviceId();

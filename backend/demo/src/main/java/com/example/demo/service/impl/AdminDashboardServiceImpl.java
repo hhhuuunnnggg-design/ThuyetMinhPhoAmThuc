@@ -25,6 +25,7 @@ import com.example.demo.domain.response.admin.ResDashboardDTO;
 import com.example.demo.domain.response.admin.ResDashboardDTO.POIQueueCount;
 import com.example.demo.domain.response.admin.ResLoadTestResultDTO;
 import com.example.demo.domain.response.admin.ResLoadTestResultDTO.PhaseLatency;
+import com.example.demo.domain.response.admin.ResOnlineStatsDTO;
 import com.example.demo.domain.response.admin.ResTopPOIDTO;
 import com.example.demo.domain.response.admin.ResTranslationStatsDTO;
 import com.example.demo.domain.response.app.ResActiveNarrationDTO;
@@ -82,7 +83,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         long activeDevices = deviceConfigRepository.countActiveDevices(last24h);
         long offlineDevices = deviceConfigRepository.countOfflineModeDevices();
 
-        long currentlyPlaying = activeNarrationRepository.countCurrentlyPlaying();
+        long currentlyPlaying = activeNarrationRepository.countCurrentlyPlayingOnline(Instant.now().minusSeconds(15));
         long activeSessions = queueSessionRepository.findAllActiveSessions().size();
         long totalNarrationsToday = narrationLogRepository.countByPlayedAtAfter(todayStart);
         if (totalNarrationsToday == 0) {
@@ -191,8 +192,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                     poi != null ? poi.getAddress() : null,
                     cnt,
                     todayCount,
-                    rank[0]++
-            );
+                    rank[0]++);
             return dto;
         }).collect(Collectors.toList());
     }
@@ -259,7 +259,8 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
             tasks.add(() -> {
                 long endTime = System.currentTimeMillis() + durationSeconds * 1000L;
                 while (System.currentTimeMillis() < endTime) {
-                    // Simulated device ID (used for test diversity, not actual API calls in mock mode)
+                    // Simulated device ID (used for test diversity, not actual API calls in mock
+                    // mode)
                     @SuppressWarnings("unused")
                     String deviceId = "load-test-device-" + random.nextInt(10000);
                     double lat = 10.7624 + (random.nextDouble() - 0.5) * 0.01;
@@ -311,7 +312,8 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                     // Random delay between iterations
                     try {
                         Thread.sleep(random.nextInt(500) + 100);
-                    } catch (InterruptedException ignored) {}
+                    } catch (InterruptedException ignored) {
+                    }
                 }
                 return null;
             });
@@ -401,29 +403,63 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     }
 
     @Override
-    public org.springframework.data.domain.Page<com.example.demo.domain.response.admin.ResAdminDeviceConfigDTO> getDeviceConfigs(org.springframework.data.domain.Pageable pageable) {
-        return deviceConfigRepository.findAll(pageable).map(d -> com.example.demo.domain.response.admin.ResAdminDeviceConfigDTO.builder()
-                .id(d.getId())
-                .deviceId(d.getDeviceId())
-                .osVersion(d.getOsVersion())
-                .appVersion(d.getAppVersion())
-                .ramMB(d.getRamMB())
-                .storageFreeMB(d.getStorageFreeMB())
-                .networkType(d.getNetworkType())
-                .offlineModeEnabled(d.getOfflineModeEnabled())
-                .totalDownloadedMB(d.getTotalDownloadedMB())
-                .lastLat(d.getLastLat())
-                .lastLng(d.getLastLng())
-                .lastSeenAt(d.getLastSeenAt())
-                .runningMode(d.getRunningMode())
-                .createdAt(d.getCreatedAt())
-                .updatedAt(d.getUpdatedAt())
-                .isActive(d.getIsActive())
-                .build());
+    public org.springframework.data.domain.Page<com.example.demo.domain.response.admin.ResAdminDeviceConfigDTO> getDeviceConfigs(
+            org.springframework.data.domain.Pageable pageable) {
+        return deviceConfigRepository.findAll(pageable)
+                .map(d -> com.example.demo.domain.response.admin.ResAdminDeviceConfigDTO.builder()
+                        .id(d.getId())
+                        .deviceId(d.getDeviceId())
+                        .osVersion(d.getOsVersion())
+                        .appVersion(d.getAppVersion())
+                        .ramMB(d.getRamMB())
+                        .storageFreeMB(d.getStorageFreeMB())
+                        .networkType(d.getNetworkType())
+                        .offlineModeEnabled(d.getOfflineModeEnabled())
+                        .totalDownloadedMB(d.getTotalDownloadedMB())
+                        .lastLat(d.getLastLat())
+                        .lastLng(d.getLastLng())
+                        .lastSeenAt(d.getLastSeenAt())
+                        .runningMode(d.getRunningMode())
+                        .createdAt(d.getCreatedAt())
+                        .updatedAt(d.getUpdatedAt())
+                        .isActive(d.getIsActive())
+                        .build());
     }
 
     @Override
     public long countActiveDeviceConfigs() {
         return deviceConfigRepository.countByIsActiveTrue();
+    }
+
+    @Override
+    public ResOnlineStatsDTO getOnlineStats() {
+        // Online ngay lúc này = heartbeat trong vòng 2 phút gần nhất
+        Instant twoMinAgo = Instant.now().minusSeconds(15);
+        long onlineNow = deviceConfigRepository.countOnlineNow(twoMinAgo);
+
+        // Người dùng unique trong ngày (cứ mở app là tính)
+        Instant todayStart = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant();
+        long usersToday = deviceConfigRepository.countActiveDevices(todayStart);
+
+        // Đang phát ngay lúc này
+        long playingNow = activeNarrationRepository.countCurrentlyPlayingOnline(twoMinAgo);
+
+        // Lấy danh sách các thiết bị đang online có toạ độ
+        java.util.List<ResOnlineStatsDTO.OnlineDevice> onlineDevices = deviceConfigRepository.findOnlineNowDevices(twoMinAgo)
+                .stream()
+                .filter(d -> d.getLastLat() != null && d.getLastLng() != null)
+                .map(d -> ResOnlineStatsDTO.OnlineDevice.builder()
+                        .deviceId(d.getDeviceId())
+                        .lat(d.getLastLat())
+                        .lng(d.getLastLng())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+
+        return ResOnlineStatsDTO.builder()
+                .onlineNow(onlineNow)
+                .usersToday(usersToday)
+                .playingNow(playingNow)
+                .onlineDevices(onlineDevices)
+                .build();
     }
 }

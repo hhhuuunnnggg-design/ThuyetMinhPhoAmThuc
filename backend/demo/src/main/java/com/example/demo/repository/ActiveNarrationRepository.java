@@ -21,8 +21,8 @@ public interface ActiveNarrationRepository extends JpaRepository<ActiveNarration
 
     List<ActiveNarration> findByPoiIdAndStatus(Long poiId, NarrationStatus status);
 
-    @Query("SELECT COUNT(a) FROM ActiveNarration a WHERE a.status = 'PLAYING'")
-    long countCurrentlyPlaying();
+    @Query("SELECT COUNT(a) FROM ActiveNarration a WHERE a.status = 'PLAYING' AND a.deviceId IN (SELECT d.deviceId FROM DeviceConfig d WHERE d.isActive = true AND d.lastSeenAt >= :since)")
+    long countCurrentlyPlayingOnline(@Param("since") Instant since);
 
     @Query("SELECT COUNT(a) FROM ActiveNarration a WHERE a.poi.id = :poiId AND a.status = 'PLAYING'")
     long countPlayingByPoi(@Param("poiId") Long poiId);
@@ -39,10 +39,15 @@ public interface ActiveNarrationRepository extends JpaRepository<ActiveNarration
     int getActiveCountByPoiId(@Param("poiId") Long poiId);
 
     /**
-     * Đang phát — JOIN FETCH để map DTO. {@code ownerUserId} null = mọi POI; non-null = chỉ POI do user đó tạo.
+     * Đang phát — JOIN FETCH để map DTO. Chỉ lấy những thiết bị đang online (tránh app bị tắt đột ngột/tắt ngầm).
      */
     @Query("SELECT a FROM ActiveNarration a JOIN FETCH a.poi p JOIN FETCH a.audio "
             + "WHERE a.status = 'PLAYING' "
-            + "AND (:ownerUserId IS NULL OR p.user.id = :ownerUserId)")
-    List<ActiveNarration> findPlayingWithPoiAndAudio(@Param("ownerUserId") Long ownerUserId);
+            + "AND (:ownerUserId IS NULL OR p.user.id = :ownerUserId) "
+            + "AND a.deviceId IN (SELECT d.deviceId FROM DeviceConfig d WHERE d.isActive = true AND d.lastSeenAt >= :since)")
+    List<ActiveNarration> findPlayingWithPoiAndAudioOnline(@Param("ownerUserId") Long ownerUserId, @Param("since") Instant since);
+
+    /** Số lượng device khác nhau đã có narration (bất kỳ trạng thái) từ {@code since} đến nay. */
+    @Query("SELECT COUNT(DISTINCT a.deviceId) FROM ActiveNarration a WHERE a.createdAt >= :since")
+    long countDistinctDevicesToday(@Param("since") Instant since);
 }

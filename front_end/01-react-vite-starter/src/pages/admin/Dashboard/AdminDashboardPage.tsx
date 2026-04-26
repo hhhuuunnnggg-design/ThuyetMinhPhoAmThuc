@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getAdminActiveNarrationsAPI, type ActiveNarration } from "@/api/app.api";
+import { fetchAdminPOIsAPI, parseAdminPOIListResponse, type AdminPOI } from "@/api/adminPoi.api";
+import { getAdminActiveNarrationsAPI, getOnlineStatsAPI, type ActiveNarration, type OnlineStats } from "@/api/app.api";
 import { logger } from "@/utils/logger";
 import { Badge, Card, Col, Progress, Row, Statistic, Table, Tag, Tooltip } from "antd";
 import { ReloadOutlined } from "@ant-design/icons";
-import { MapContainer, TileLayer, Circle, Marker, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Circle, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { HeatmapLayer } from "./components/HeatmapLayer";
+import { UserMarkerLayer } from "./components/UserMarkerLayer";
 import L from "leaflet";
 
 // POI circle marker icon showing active listener count
@@ -39,13 +41,16 @@ const DEFAULT_CENTER: [number, number] = [10.7769, 106.7009];
 
 const POI_RADIUS_DEFAULT = 50; // metres
 
-// Map inner component — auto-fits bounds to POI markers
+// Map inner component — auto-fits bounds to POI markers ONCE
 const MapFitter = ({ pois }: { pois: POIMarkerData[] }) => {
   const map = useMap();
+  const hasFitRef = useRef(false);
+
   useEffect(() => {
-    if (pois.length === 0) return;
+    if (pois.length === 0 || hasFitRef.current) return;
     const bounds = L.latLngBounds(pois.map((p) => [p.lat, p.lng]));
     map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+    hasFitRef.current = true;
   }, [map, pois]);
   return null;
 };
@@ -53,6 +58,9 @@ const MapFitter = ({ pois }: { pois: POIMarkerData[] }) => {
 interface POIMarkerData {
   poiId: number;
   poiName: string;
+  address?: string | null;
+  category?: string | null;
+  isActive?: boolean | null;
   lat: number;
   lng: number;
   count: number;
@@ -61,8 +69,11 @@ interface POIMarkerData {
 
 const AdminDashboardPage = () => {
   const [activeNarrations, setActiveNarrations] = useState<ActiveNarration[]>([]);
+  const [allPOIs, setAllPOIs] = useState<AdminPOI[]>([]);
+  const [onlineStats, setOnlineStats] = useState<OnlineStats>({ onlineNow: 0, usersToday: 0, playingNow: 0, onlineDevices: [] });
   const [loading, setLoading] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const onlinePollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchActive = useCallback(async () => {
     try {
@@ -84,6 +95,37 @@ const AdminDashboardPage = () => {
     };
   }, [fetchActive]);
 
+  // Poll online stats mỗi 5s
+  const fetchOnlineStats = useCallback(async () => {
+    try {
+      const res: any = await getOnlineStatsAPI();
+      if (res?.data) {
+        const d = res.data.data ?? res.data;
+        if (d && typeof d.onlineNow === "number") setOnlineStats(d);
+      }
+    } catch (err) {
+      logger.error("Fetch online stats error:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchOnlineStats();
+    onlinePollingRef.current = setInterval(() => void fetchOnlineStats(), 5000);
+    return () => {
+      if (onlinePollingRef.current) clearInterval(onlinePollingRef.current);
+    };
+  }, [fetchOnlineStats]);
+
+  // Load all POIs once for the map
+  useEffect(() => {
+    fetchAdminPOIsAPI(1, 1000)
+      .then((res: any) => {
+        const parsed = parseAdminPOIListResponse(res.data);
+        setAllPOIs(parsed.data);
+      })
+      .catch((err) => logger.error("Fetch all POIs error:", err));
+  }, []);
+
   // Group playing narrations by POI (by poiId)
   const byPOI = useMemo(() => {
     const map = new Map<number, ActiveNarration[]>();
@@ -98,26 +140,35 @@ const AdminDashboardPage = () => {
   }, [activeNarrations]);
 
   // POI markers with count
-  const poiMarkers = useMemo<POIMarkerData[]>(() => {
-    return Array.from(byPOI.entries()).map(([poiId, narrations]) => {
-      const first = narrations[0];
-      return {
-        poiId,
-        poiName: first.poiName || `POI #${poiId}`,
-        lat: first.latitude ?? 10.7769,
-        lng: first.longitude ?? 106.7009,
-        count: narrations.length,
-        radius: POI_RADIUS_DEFAULT,
-      };
-    });
-  }, [byPOI]);
+  const poiMarkers = useMemo(() => {
+    return allPOIs
+      .filter((poi) => poi.latitude != null && poi.longitude != null && typeof poi.id === "number")
+      .map((poi) => {
+        const activeList = byPOI.get(poi.id!) || [];
+        return {
+          poiId: poi.id!,
+          poiName: poi.foodName || `POI #${poi.id}`,
+          address: poi.address,
+          category: poi.category,
+          isActive: poi.isActive,
+          lat: poi.latitude!,
+          lng: poi.longitude!,
+          count: activeList.length,
+          radius: 30, // Geofence trigger radius (thực tế backend dùng radiusKm, đây là demo UI vòng tròn)
+        };
+      });
+  }, [allPOIs, byPOI]);
 
-  // Heatmap points: each user is a point; intensity = 1 (leaflet.heat normalises)
+  // Heatmap points: all online devices (playing or not) have intensity = 1
   const heatPoints = useMemo<[number, number, number][]>(() => {
-    return activeNarrations
-      .filter((n) => n.status === "PLAYING" && n.latitude != null && n.longitude != null)
-      .map((n) => [n.latitude!, n.longitude!, 1] as [number, number, number]);
-  }, [activeNarrations]);
+    const points: [number, number, number][] = [];
+    (onlineStats?.onlineDevices || []).forEach((d) => {
+      if (d.lat != null && d.lng != null) {
+        points.push([d.lat, d.lng, 1]);
+      }
+    });
+    return points;
+  }, [onlineStats]);
 
   // Map center: first POI with coords, or default
   const mapCenter = useMemo<[number, number]>(() => {
@@ -213,139 +264,189 @@ const AdminDashboardPage = () => {
         </Tooltip>
       </div>
 
-      {/* ---- Heatmap ---- */}
+      {/* ---- Realtime Map ---- */}
       <Card
         title={
           <span style={{ fontWeight: 600 }}>
-            Bản đồ mật độ người nghe
+            🗺️ Bản đồ người dùng realtime
           </span>
         }
         extra={
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            {/* Legend */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            {/* Heatmap density legend */}
+            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}>
               <span style={{ fontSize: 11, color: "#888" }}>Mật độ:</span>
-              <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <div style={{ width: 14, height: 14, background: "#22c55e", borderRadius: 2 }} />
-                <span style={{ color: "#888" }}>Ít</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <div style={{ width: 14, height: 14, background: "#facc15", borderRadius: 2 }} />
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <div style={{ width: 14, height: 14, background: "#f97316", borderRadius: 2 }} />
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <div style={{ width: 14, height: 14, background: "#ef4444", borderRadius: 2 }} />
-                <span style={{ color: "#888" }}>Đông</span>
-              </div>
+              {["#22c55e", "#facc15", "#f97316", "#ef4444"].map((c) => (
+                <div key={c} style={{ width: 12, height: 12, background: c, borderRadius: 2 }} />
+              ))}
             </div>
-            <span style={{ fontSize: 12, color: "#52c41a", fontWeight: 600 }}>
-              {playingCount} người đang nghe
+            <span style={{ fontSize: 12, color: "#52c41a", fontWeight: 700 }}>
+              🟢 {playingCount} đang nghe
             </span>
           </div>
         }
         style={{ marginBottom: 24 }}
         styles={{ body: { padding: 0 } }}
       >
-        <div style={{ height: 360, position: "relative" }}>
-          {poiMarkers.length === 0 && heatPoints.length === 0 ? (
+        <div style={{ height: 480, position: "relative" }}>
+          <MapContainer
+            center={mapCenter}
+            zoom={15}
+            style={{ height: "100%", width: "100%" }}
+            zoomControl={true}
+            scrollWheelZoom={true}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+
+            {/* Auto-fit bounds to POIs when available */}
+            {poiMarkers.length > 0 && <MapFitter pois={poiMarkers} />}
+
+            {/* POI trigger-radius circles */}
+            {poiMarkers.map((poi) => (
+              <Circle
+                key={poi.poiId}
+                center={[poi.lat, poi.lng]}
+                radius={poi.radius}
+                pathOptions={{
+                  color: poi.count > 0 ? "#22c55e" : "#9ca3af",
+                  fillColor: poi.count > 0 ? "#22c55e" : "#9ca3af",
+                  fillOpacity: 0.08,
+                  weight: 1.5,
+                  dashArray: "5, 5",
+                }}
+              />
+            ))}
+
+            {/* POI number markers */}
+            {poiMarkers.map((poi) => (
+              <Marker
+                key={`marker-${poi.poiId}`}
+                position={[poi.lat, poi.lng]}
+                icon={poiIcon(poi.count)}
+              >
+                <Popup closeButton={false}>
+                  <div style={{ minWidth: 200, fontFamily: "Inter, sans-serif" }}>
+                    <h4 style={{ margin: 0, paddingBottom: 8, borderBottom: "1px solid #eee", color: "#22c55e", fontSize: 15 }}>
+                      {poi.poiName}
+                    </h4>
+                    <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.6, color: "#333" }}>
+                      <div style={{ marginBottom: 4 }}><b>📍 Đ/c:</b> {poi.address || "—"}</div>
+                      <div style={{ marginBottom: 4 }}><b>🏷️ Loại:</b> {poi.category || "—"}</div>
+                      <div style={{ marginBottom: 4 }}><b>📶 STT:</b> {poi.isActive ? "✅ Hoạt động" : "❌ Tạm dừng"}</div>
+                      <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px dashed #eee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontSize: 12, color: "#888" }}>Đang nghe lúc này:</span>
+                        <span style={{ fontWeight: "900", fontSize: 16, color: poi.count > 0 ? "#22c55e" : "#888" }}>
+                          {poi.count}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+
+            {/* Individual mobile user markers removed to prevent overlapping POI count marker */}
+            <UserMarkerLayer onlineDevices={onlineStats?.onlineDevices || []} />
+
+            {/* Heatmap density overlay */}
+            <HeatmapLayer points={heatPoints} />
+          </MapContainer>
+
+          {/* Overlay khi rỗng */}
+          {playingCount === 0 && (
             <div
               style={{
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#999",
-                fontSize: 14,
+                position: "absolute",
+                bottom: 16,
+                left: "50%",
+                transform: "translateX(-50%)",
+                background: "rgba(0,0,0,0.55)",
+                color: "#fff",
+                padding: "6px 16px",
+                borderRadius: 20,
+                fontSize: 13,
+                pointerEvents: "none",
+                zIndex: 1000,
               }}
             >
-              Không có dữ liệu vị trí — chưa có ai đang nghe
+              Chưa có ai đang nghe — bản đồ mặc định TP.HCM
             </div>
-          ) : (
-            <MapContainer
-              center={mapCenter}
-              zoom={15}
-              style={{ height: "100%", width: "100%" }}
-              zoomControl={true}
-              scrollWheelZoom={true}
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-
-              {/* Auto-fit bounds to POIs */}
-              <MapFitter pois={poiMarkers} />
-
-              {/* POI trigger-radius circles */}
-              {poiMarkers.map((poi) => (
-                <Circle
-                  key={poi.poiId}
-                  center={[poi.lat, poi.lng]}
-                  radius={poi.radius}
-                  pathOptions={{
-                    color: poi.count > 0 ? "#22c55e" : "#9ca3af",
-                    fillColor: poi.count > 0 ? "#22c55e" : "#9ca3af",
-                    fillOpacity: 0.08,
-                    weight: 1.5,
-                    dashArray: "5, 5",
-                  }}
-                />
-              ))}
-
-              {/* POI number markers */}
-              {poiMarkers.map((poi) => (
-                <Marker
-                  key={`marker-${poi.poiId}`}
-                  position={[poi.lat, poi.lng]}
-                  icon={poiIcon(poi.count)}
-                />
-              ))}
-
-              {/* Heatmap */}
-              <HeatmapLayer points={heatPoints} />
-            </MapContainer>
           )}
         </div>
       </Card>
 
       {/* ---- Stats ---- */}
       <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={6}>
-          <Card>
+        <Col span={4}>
+          <Card styles={{ body: { padding: "16px 20px" } }}>
             <Statistic
-              title="Đang phát ngay lúc này"
+              title={
+                <span style={{ fontSize: 12 }}>
+                  🟢 Đang online ngay lúc này
+                </span>
+              }
+              value={onlineStats.onlineNow}
+              suffix="thiết bị"
+              valueStyle={{ color: "#22c55e", fontSize: 22 }}
+            />
+            <div style={{ fontSize: 11, color: "#888", marginTop: 4 }}>
+              heartbeat ≤ 2 phút
+            </div>
+          </Card>
+        </Col>
+        <Col span={4}>
+          <Card styles={{ body: { padding: "16px 20px" } }}>
+            <Statistic
+              title={
+                <span style={{ fontSize: 12 }}>👥 Người dùng hôm nay</span>
+              }
+              value={onlineStats.usersToday}
+              suffix="người"
+              valueStyle={{ color: "#6366f1", fontSize: 22 }}
+            />
+            <div style={{ fontSize: 11, color: "#888", marginTop: 4 }}>
+              unique device ID
+            </div>
+          </Card>
+        </Col>
+        <Col span={4}>
+          <Card styles={{ body: { padding: "16px 20px" } }}>
+            <Statistic
+              title={<span style={{ fontSize: 12 }}>▶️ Đang phát ngay lúc này</span>}
               value={playingCount}
-              valueStyle={{ color: "#1890ff" }}
+              valueStyle={{ color: "#1890ff", fontSize: 22 }}
             />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
+        <Col span={4}>
+          <Card styles={{ body: { padding: "16px 20px" } }}>
             <Statistic
-              title="Tổng POI đang active"
+              title={<span style={{ fontSize: 12 }}>📍 POI đang active</span>}
               value={activePOICount}
-              valueStyle={{ color: "#52c41a" }}
+              valueStyle={{ color: "#52c41a", fontSize: 22 }}
             />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
+        <Col span={4}>
+          <Card styles={{ body: { padding: "16px 20px" } }}>
             <Statistic
-              title="Người đang nghe"
+              title={<span style={{ fontSize: 12 }}>🎧 Người đang nghe</span>}
               value={playingCount}
               suffix="người"
-              valueStyle={{ color: "#fa8c16" }}
+              valueStyle={{ color: "#fa8c16", fontSize: 22 }}
             />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
+        <Col span={4}>
+          <Card styles={{ body: { padding: "16px 20px" } }}>
             <Statistic
-              title="Ngôn ngữ đang phát"
+              title={<span style={{ fontSize: 12 }}>🌐 Ngôn ngữ đang phát</span>}
               value={playingLanguages}
               suffix="ngôn ngữ"
+              valueStyle={{ fontSize: 22 }}
             />
           </Card>
         </Col>

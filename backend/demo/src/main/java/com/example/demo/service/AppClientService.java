@@ -25,7 +25,7 @@ public interface AppClientService {
 
     ResDeviceConfigDTO logQRScanDeviceConfig(com.example.demo.domain.request.app.ReqDeviceQRScanLogDTO req);
 
-    void updateDeviceActiveState(String deviceId, boolean isActive);
+    void updateDeviceActiveState(String deviceId, boolean isActive, Double lat, Double lng);
 
     RunningMode checkRunningMode(String deviceId);
 

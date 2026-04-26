@@ -187,11 +187,15 @@ public class AppClientServiceImpl implements AppClientService {
     }
 
     @Override
-    public void updateDeviceActiveState(String deviceId, boolean isActive) {
+    public void updateDeviceActiveState(String deviceId, boolean isActive, Double lat, Double lng) {
         deviceConfigRepository.findByDeviceId(deviceId).ifPresent(config -> {
             config.setIsActive(isActive);
             if (isActive) {
                 config.setLastSeenAt(java.time.Instant.now());
+                if (lat != null && lng != null) {
+                    config.setLastLat(lat);
+                    config.setLastLng(lng);
+                }
             }
             deviceConfigRepository.save(config);
         });
@@ -405,7 +409,8 @@ public class AppClientServiceImpl implements AppClientService {
     @Override
     @Transactional(readOnly = true)
     public List<ResActiveNarrationDTO> getActiveNarrationsScoped(Long poiOwnerUserId) {
-        return activeNarrationRepository.findPlayingWithPoiAndAudio(poiOwnerUserId)
+        Instant twoMinAgo = Instant.now().minusSeconds(15);
+        return activeNarrationRepository.findPlayingWithPoiAndAudioOnline(poiOwnerUserId, twoMinAgo)
                 .stream()
                 .map(this::buildActiveNarrationDTO)
                 .collect(Collectors.toList());
@@ -513,9 +518,12 @@ public class AppClientServiceImpl implements AppClientService {
     }
 
     /**
-     * URL để app tải file offline. Ưu tiên {@code s3Url} trên bản ghi TTSAudio (thường là {@code /uploads/...}).
-     * Nếu trống hoặc còn link S3/AWS cũ (file đã chuyển về local), fallback endpoint stream theo groupKey —
-     * cùng logic {@link com.example.demo.service.impl.TTSAudioServiceImp#getAudioResource}.
+     * URL để app tải file offline. Ưu tiên {@code s3Url} trên bản ghi TTSAudio
+     * (thường là {@code /uploads/...}).
+     * Nếu trống hoặc còn link S3/AWS cũ (file đã chuyển về local), fallback
+     * endpoint stream theo groupKey —
+     * cùng logic
+     * {@link com.example.demo.service.impl.TTSAudioServiceImp#getAudioResource}.
      */
     private String resolveAppAudioUrl(TTSAudioGroup group, TTSAudio a) {
         String raw = a.getS3Url();
@@ -604,6 +612,8 @@ public class AppClientServiceImpl implements AppClientService {
                 .status(an.getStatus().name())
                 .latitude(an.getLatitude())
                 .longitude(an.getLongitude())
+                .poiLatitude(an.getPoi().getLatitude())
+                .poiLongitude(an.getPoi().getLongitude())
                 .build();
     }
 

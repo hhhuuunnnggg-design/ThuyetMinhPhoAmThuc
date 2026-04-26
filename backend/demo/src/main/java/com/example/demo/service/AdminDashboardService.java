@@ -6,6 +6,7 @@ import java.util.List;
 import com.example.demo.domain.response.app.ResActiveNarrationDTO;
 import com.example.demo.domain.response.admin.ResDashboardDTO;
 import com.example.demo.domain.response.admin.ResLoadTestResultDTO;
+import com.example.demo.domain.response.admin.ResOnlineStatsDTO;
 import com.example.demo.domain.response.admin.ResTopPOIDTO;
 import com.example.demo.domain.response.admin.ResTranslationStatsDTO;
 
@@ -55,4 +56,9 @@ public interface AdminDashboardService {
      * Đếm tổng số thiết bị còn đang hoạt động.
      */
     long countActiveDeviceConfigs();
+
+    /**
+     * Thống kê online realtime: đang online ngay lúc này + người dùng hôm nay.
+     */
+    ResOnlineStatsDTO getOnlineStats();
 }

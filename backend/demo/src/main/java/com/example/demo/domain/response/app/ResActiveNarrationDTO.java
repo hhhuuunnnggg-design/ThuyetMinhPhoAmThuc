@@ -21,6 +21,9 @@ public class ResActiveNarrationDTO {
     Instant startedAt;
     Instant estimatedEndAt;
     String status;
-    Double latitude;
-    Double longitude;
+    Double latitude;  // Vị trí người dùng
+    Double longitude; // Vị trí người dùng
+    
+    Double poiLatitude; // Vị trí trung tâm POI
+    Double poiLongitude;// Vị trí trung tâm POI
 }

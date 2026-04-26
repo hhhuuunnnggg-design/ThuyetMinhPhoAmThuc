@@ -89,6 +89,8 @@ export interface ActiveNarration {
   status: string;
   latitude: number;
   longitude: number;
+  poiLatitude: number;
+  poiLongitude: number;
 }
 
 // ============ Device APIs ============
@@ -214,6 +216,20 @@ export const getActiveNarrationsAPI = () => {
 /** Dashboard admin — SUPER_ADMIN xem hết; SHOP_OWNER chỉ thấy POI do mình tạo (JWT). */
 export const getAdminActiveNarrationsAPI = () => {
   return axios.get<IBackendRes<ActiveNarration[]>>(API_ENDPOINTS.ADMIN.DASHBOARD_ACTIVE_NARRATIONS);
+};
+
+export interface OnlineStats {
+  /** Số thiết bị đang online ngay lúc này (heartbeat ≤ 2 phút). */
+  onlineNow: number;
+  /** Số người dùng unique trong ngày hôm nay. */
+  usersToday: number;
+  /** Số bản narration đang PLAYING ngay lúc này. */
+  playingNow: number;
+}
+
+/** Thống kê realtime: online ngay lúc này + tổng người dùng hôm nay. */
+export const getOnlineStatsAPI = () => {
+  return axios.get<IBackendRes<OnlineStats>>(API_ENDPOINTS.ADMIN.DASHBOARD_ONLINE_STATS);
 };
 
 export interface TopPOI {

@@ -22,8 +22,15 @@ public interface DeviceConfigRepository extends JpaRepository<DeviceConfig, Long
     @Query("SELECT COUNT(d) FROM DeviceConfig d WHERE d.runningMode = 'OFFLINE'")
     long countOfflineModeDevices();
 
+    @Query("SELECT d FROM DeviceConfig d WHERE d.lastSeenAt >= :since AND d.isActive = true")
+    List<DeviceConfig> findOnlineNowDevices(@Param("since") Instant since);
+
     @Query("SELECT COUNT(d) FROM DeviceConfig d WHERE d.lastSeenAt >= :since")
     long countActiveDevices(@Param("since") Instant since);
+
+    /** Thiết bị thực sự online ngay lúc này (heartbeat trong vòng {@code since}). */
+    @Query("SELECT COUNT(d) FROM DeviceConfig d WHERE d.lastSeenAt >= :since AND d.isActive = true")
+    long countOnlineNow(@Param("since") Instant since);
 
     long countByIsActiveTrue();
 }
