@@ -334,8 +334,10 @@ public class AppClientServiceImpl implements AppClientService {
         // Ước tính thời gian kết thúc (giả định audio ~30-60s)
         long estimatedDuration = 30_000L; // 30s mặc định
         if (audio.getFileSize() != null && audio.getFileSize() > 0) {
-            // Ước tính: ~16kbps cho mp3
-            estimatedDuration = (audio.getFileSize() * 8 / 16) * 1000;
+            // Giả định MP3 voice ở mức 64 kbps (khoảng 8000 bytes/s)
+            // Thời gian (giây) = fileSize / 8000
+            // Thời gian (ms) = fileSize * 1000 / 8000 = fileSize / 8
+            estimatedDuration = audio.getFileSize() / 8;
         }
         active.setEstimatedEndAt(Instant.now().plusMillis(estimatedDuration));
 
